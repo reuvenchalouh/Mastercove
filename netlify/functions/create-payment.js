@@ -1,11 +1,15 @@
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-
+ 
 exports.handler = async function(event) {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
+  
+  // Log to help debug
+  console.log('STRIPE_SECRET_KEY present:', !!process.env.STRIPE_SECRET_KEY);
+  
   try {
     const { paymentMethodId, amount, currency, email, name, address, city, state, zip, items } = JSON.parse(event.body);
     if (!paymentMethodId || !amount || amount < 50) return { statusCode: 400, body: JSON.stringify({ error: 'Invalid payment details.' }) };
-
+ 
     const paymentIntent = await stripe.paymentIntents.create({
       amount, currency: currency || 'usd',
       payment_method: paymentMethodId,
@@ -17,7 +21,7 @@ exports.handler = async function(event) {
       metadata: { customer_name: name, customer_email: email },
       return_url: 'https://mastercove.com/order-confirmed.html'
     });
-
+ 
     if (paymentIntent.status === 'requires_action') {
       return { statusCode: 200, body: JSON.stringify({ requiresAction: true, clientSecret: paymentIntent.client_secret, orderId: paymentIntent.id }) };
     }
@@ -26,6 +30,8 @@ exports.handler = async function(event) {
     }
     return { statusCode: 400, body: JSON.stringify({ error: 'Payment could not be processed.' }) };
   } catch (err) {
+    console.error('Stripe error:', err.message);
     return { statusCode: 400, body: JSON.stringify({ error: err.message || 'Payment failed.' }) };
   }
 };
+ 
