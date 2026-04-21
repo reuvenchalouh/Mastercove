@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<link rel="icon" type="image/png" href="https://slaffkwfwmudvernzjua.supabase.co/storage/v1/object/public/product-images/logo.png"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>About Us — Master Cove</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root{--ink:#1C1A17;--sand:#F5EFE6;--linen:#EDE5D8;--walnut:#6B4C35;--maple:#D4AA7D;--slate:#5C5750;--mist:#A8A09A;--border:#DDD5C8;--white:#FDFBF8;--green:#4A7A5A;}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{font-family:'Outfit',sans-serif;background:var(--white);color:var(--ink);font-size:14px;line-height:1.7;}
+a{text-decoration:none;color:inherit;}
+header{background:var(--white);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;}
+.header-inner{max-width:1380px;margin:0 auto;padding:0 32px;height:68px;display:flex;align-items:center;justify-content:space-between;}
+.logo{display:flex;align-items:center;}
+.logo img{height:44px;object-fit:contain;}
+.nav-links{display:flex;gap:24px;}
+.nav-links a{font-size:13px;color:var(--slate);transition:color .15s;}
+.nav-links a:hover{color:var(--ink);}
+.cart-btn{background:var(--ink);color:#fff;border:none;padding:9px 16px;border-radius:2px;font-size:12.5px;cursor:pointer;transition:background .15s;}
+.cart-btn:hover{background:#2E2A26;}
+
+/* HERO */
+.hero{background:linear-gradient(160deg,#EDE0CE,#D4C0A4);padding:80px 32px;text-align:center;}
+.hero-inner{max-width:680px;margin:0 auto;}
+.hero h1{font-family:'Playfair Display',serif;font-size:42px;font-weight:400;line-height:1.2;margin-bottom:16px;}
+.hero h1 em{color:var(--walnut);font-style:italic;}
+.hero p{font-size:16px;color:var(--slate);font-weight:300;line-height:1.8;}
+
+/* MAIN */
+.main{max-width:800px;margin:0 auto;padding:64px 32px;}
+
+/* SECTIONS */
+.about-section{margin-bottom:56px;}
+.about-section h2{font-family:'Playfair Display',serif;font-size:26px;font-weight:400;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border);}
+.about-section h2 em{color:var(--walnut);font-style:italic;}
+.about-section p{font-size:14.5px;color:var(--slate);margin-bottom:14px;font-weight:300;line-height:1.8;}
+.about-section ul{list-style:none;padding:0;margin:16px 0;}
+.about-section ul li{display:flex;align-items:flex-start;gap:10px;font-size:14px;color:var(--slate);margin-bottom:10px;font-weight:300;}
+.about-section ul li::before{content:'✓';color:var(--walnut);font-weight:600;flex-shrink:0;margin-top:2px;}
+
+/* NOTE BOX */
+.note-box{background:var(--sand);border-left:3px solid var(--walnut);border-radius:0 4px 4px 0;padding:16px 20px;margin:20px 0;}
+.note-box p{font-size:13.5px;color:var(--slate);margin:0;line-height:1.7;}
+
+/* CONTACT */
+.contact-section{background:var(--ink);border-radius:6px;padding:40px;margin-bottom:56px;}
+.contact-section h2{font-family:'Playfair Display',serif;font-size:26px;font-weight:400;color:#fff;margin-bottom:8px;}
+.contact-section h2 em{color:var(--maple);font-style:italic;}
+.contact-section p{font-size:14px;color:rgba(255,255,255,0.5);margin-bottom:28px;font-weight:300;}
+.contact-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.contact-card{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:4px;padding:20px 24px;display:flex;align-items:center;gap:14px;transition:background .15s;}
+.contact-card:hover{background:rgba(255,255,255,0.1);}
+.contact-icon{font-size:22px;flex-shrink:0;}
+.contact-label{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-bottom:4px;}
+.contact-value{font-size:14px;color:#fff;font-weight:500;}
+.contact-value a{color:var(--maple);text-decoration:none;}
+.contact-value a:hover{text-decoration:underline;}
+
+/* SHOP CTA */
+.cta-section{text-align:center;padding:48px 32px;background:var(--sand);border-radius:6px;margin-bottom:56px;}
+.cta-section h2{font-family:'Playfair Display',serif;font-size:28px;font-weight:400;margin-bottom:10px;}
+.cta-section h2 em{color:var(--walnut);font-style:italic;}
+.cta-section p{font-size:14px;color:var(--mist);margin-bottom:24px;font-weight:300;}
+.cta-btn{background:var(--walnut);color:#fff;padding:13px 36px;border-radius:2px;font-size:13.5px;font-weight:500;text-decoration:none;display:inline-block;transition:background .2s;}
+.cta-btn:hover{background:#5A3D2A;}
+
+/* FOOTER */
+footer{background:var(--ink);color:rgba(255,255,255,0.5);padding:40px 0 24px;}
+.foot-inner{max-width:1380px;margin:0 auto;padding:0 32px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;}
+.foot-logo img{height:36px;object-fit:contain;}
+.foot-links{display:flex;gap:20px;}
+.foot-links a{font-size:12px;color:rgba(255,255,255,0.4);transition:color .15s;}
+.foot-links a:hover{color:#fff;}
+.foot-copy{font-size:11.5px;color:rgba(255,255,255,0.25);width:100%;text-align:center;margin-top:20px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.08);}
+
+@media(max-width:600px){
+  .hero h1{font-size:30px;}
+  .main{padding:40px 16px;}
+  .contact-grid{grid-template-columns:1fr;}
+  .header-inner{padding:0 16px;}
+  .nav-links{display:none;}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <a href="index.html" class="logo">
+      <img src="https://slaffkwfwmudvernzjua.supabase.co/storage/v1/object/public/product-images/logo.png" alt="Master Cove"/>
+    </a>
+    <div class="nav-links">
+      <a href="index.html">Shop</a>
+      <a href="about.html" style="color:var(--walnut);font-weight:500;">About</a>
+    </div>
+    <a href="index.html">
+      <button class="cart-btn">← Back to Shop</button>
+    </a>
+  </div>
+</header>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-inner">
+    <h1>Furniture that fits your <em>life</em></h1>
+    <p>Modern, stylish pieces at fair prices — no traditional retail markup.</p>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main">
+
+  <!-- ABOUT -->
+  <div class="about-section">
+    <h2>About <em>Master Cove</em></h2>
+    <p>Master Cove was created to make modern, stylish furniture more accessible.</p>
+    <p>We saw how expensive furniture has become — and how difficult it is to find clean, good-looking pieces at a fair price. So we built Master Cove around a simple idea: offer well-designed furniture without the traditional retail markup.</p>
+    <p>By working directly with manufacturing partners, we're able to keep costs down and pass those savings on to you.</p>
+  </div>
+
+  <!-- WHAT WE OFFER -->
+  <div class="about-section">
+    <h2>What We <em>Offer</em></h2>
+    <p>Our collection focuses on pieces that work for real life:</p>
+    <ul>
+      <li>Modern, clean designs that fit everyday living</li>
+      <li>Functional pieces built for real use</li>
+      <li>Affordable pricing without sacrificing style</li>
+    </ul>
+    <p>We carefully select products that meet our standards for design and practicality — so you're getting pieces that look good and do their job.</p>
+  </div>
+
+  <!-- OUR MODEL -->
+  <div class="about-section">
+    <h2>Our <em>Model</em></h2>
+    <p>To keep prices competitive, many of our items are shipped directly from our international partners. This allows us to offer better value compared to traditional furniture stores.</p>
+    <div class="note-box">
+      <p>Because of this, shipping times may be longer than local retailers, and inventory may vary based on supplier availability. We believe the tradeoff is worth it: better pricing for the same style and function.</p>
+    </div>
+  </div>
+
+  <!-- COMMITMENT -->
+  <div class="about-section">
+    <h2>Our <em>Commitment</em></h2>
+    <ul>
+      <li>Clear communication every step of the way</li>
+      <li>Reliable customer support when you need it</li>
+      <li>Helping you find the right pieces for your space</li>
+    </ul>
+    <p>If you ever have questions, we're here to help.</p>
+  </div>
+
+  <!-- CONTACT -->
+  <div class="contact-section">
+    <h2>Get in <em>Touch</em></h2>
+    <p>Have a question about an order or need help choosing a piece? Reach out — we typically respond within a few hours.</p>
+    <div class="contact-grid">
+      <div class="contact-card">
+        <div class="contact-icon">📧</div>
+        <div>
+          <div class="contact-label">Email</div>
+          <div class="contact-value"><a href="mailto:mastercovestore@gmail.com">mastercovestore@gmail.com</a></div>
+        </div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-icon">📞</div>
+        <div>
+          <div class="contact-label">Phone</div>
+          <div class="contact-value"><a href="tel:+13472060372">(347) 206-0372</a></div>
+        </div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-icon">📍</div>
+        <div>
+          <div class="contact-label">Location</div>
+          <div class="contact-value">Brooklyn, NY</div>
+        </div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-icon">🕐</div>
+        <div>
+          <div class="contact-label">Response Time</div>
+          <div class="contact-value">Within a few hours</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div class="cta-section">
+    <h2>Ready to <em>Shop?</em></h2>
+    <p>Browse our full collection of modern wood furniture.</p>
+    <a href="index.html" class="cta-btn">Browse Collection →</a>
+  </div>
+
+</div>
+
+<footer>
+  <div class="foot-inner">
+    <a href="index.html" class="foot-logo">
+      <img src="https://slaffkwfwmudvernzjua.supabase.co/storage/v1/object/public/product-images/logo.png" alt="Master Cove"/>
+    </a>
+    <div class="foot-links">
+      <a href="index.html">Shop</a>
+      <a href="about.html">About</a>
+      <a href="mailto:mastercovestore@gmail.com">Contact</a>
+    </div>
+    <div class="foot-copy">© 2026 Master Cove LLC. All rights reserved. · Brooklyn, NY</div>
+  </div>
+</footer>
+
+</body>
+</html>
