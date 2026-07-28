@@ -1,6 +1,16 @@
 const { Resend } = require('resend');
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 exports.handler = async function(event) {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
 
@@ -8,26 +18,31 @@ exports.handler = async function(event) {
     const { to, customerName, orderNumber, status, product, address, trackingNumber } = JSON.parse(event.body);
     if (!to || !status || !orderNumber) return { statusCode: 400, body: JSON.stringify({ error: 'Missing required fields' }) };
 
+    const safeName = escapeHtml(customerName);
+    const safeProduct = escapeHtml(product);
+    const safeAddress = escapeHtml(address);
+    const safeTracking = escapeHtml(trackingNumber);
+
     const configs = {
       ordered: {
         subject: 'Your order has been placed with our supplier — ' + orderNumber,
         heading: 'Order Placed with Supplier!',
-        message: `<p>Hi ${customerName},</p>
+        message: `<p>Hi ${safeName},</p>
           <p>Great news! We've placed your order with our supplier and it's being prepared for shipment.</p>
           <p>We'll send you another update as soon as your item ships. This typically takes a few days.</p>`
       },
       shipped: {
         subject: 'Your Master Cove order is on its way! — ' + orderNumber,
         heading: 'Your Order Has Shipped! 🚛',
-        message: `<p>Hi ${customerName},</p>
+        message: `<p>Hi ${safeName},</p>
           <p>Your furniture is on its way!</p>
-          ${trackingNumber ? `<p><strong>Tracking Number:</strong> ${trackingNumber}</p>` : ''}
+          ${safeTracking ? `<p><strong>Tracking Number:</strong> ${safeTracking}</p>` : ''}
           <p>You can expect white-glove delivery to your door. We'll be in touch to schedule a delivery window.</p>`
       },
       delivered: {
         subject: 'Your Master Cove order has been delivered — ' + orderNumber,
         heading: 'Order Delivered! 🎉',
-        message: `<p>Hi ${customerName},</p>
+        message: `<p>Hi ${safeName},</p>
           <p>Your order has been delivered! We hope you love your new furniture.</p>
           <p>If you have any questions or concerns about your order, don't hesitate to reach out — we're here to help.</p>`
       }
@@ -69,10 +84,10 @@ exports.handler = async function(event) {
             ${config.message}
             <div class="order-box">
               <table>
-                <tr><td>Order Number</td><td>${orderNumber}</td></tr>
-                ${product ? `<tr><td>Item(s)</td><td>${product}</td></tr>` : ''}
-                ${address ? `<tr><td>Ship To</td><td>${address}</td></tr>` : ''}
-                ${trackingNumber ? `<tr><td>Tracking #</td><td>${trackingNumber}</td></tr>` : ''}
+                <tr><td>Order Number</td><td>${escapeHtml(orderNumber)}</td></tr>
+                ${safeProduct ? `<tr><td>Item(s)</td><td>${safeProduct}</td></tr>` : ''}
+                ${safeAddress ? `<tr><td>Ship To</td><td>${safeAddress}</td></tr>` : ''}
+                ${safeTracking ? `<tr><td>Tracking #</td><td>${safeTracking}</td></tr>` : ''}
               </table>
             </div>
           </div>
