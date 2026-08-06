@@ -18,9 +18,8 @@ const CATEGORY_MAP = {
   chair:      { google: 'Furniture > Chairs', type: 'Dining Room Furniture > Chairs' },
   sofa:       { google: 'Furniture > Sofas', type: 'Living Room Furniture > Sofas' },
   sectional:  { google: 'Furniture > Sofas', type: 'Living Room Furniture > Sectional Sofas' },
-  armless:    { google: 'Furniture > Sofas', type: 'Living Room Furniture > Armless Sofas' },
   armchair:   { google: 'Furniture > Chairs', type: 'Living Room Furniture > Lounge Chairs & Armchairs' },
-  sleeper:    { google: 'Furniture > Sofas', type: 'Living Room Furniture > Sleeper Sofas' },
+  accentchair:{ google: 'Furniture > Chairs', type: 'Living Room Furniture > Accent Chairs' },
   bar:        { google: 'Furniture > Bar Furniture', type: 'Living Room Furniture > Bar Cabinets' },
   bed:        { google: 'Furniture > Bedroom Furniture > Beds & Bed Frames', type: 'Bedroom Furniture > Beds' },
   other:      { google: 'Furniture', type: 'Furniture' }
