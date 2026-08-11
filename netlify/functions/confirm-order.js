@@ -52,7 +52,7 @@ exports.handler = async function(event) {
 async function sendOwnerNotification({ orderNumber, customerName, customerEmail, items, address, revenue }) {
   try {
     const itemRows = (items || []).map(function(i) {
-      var label = i.name + (i.finish ? ' (' + i.finish + ')' : '');
+      var variantParts = []; if (i.finish) variantParts.push(i.finish); if (i.fabric) variantParts.push(i.fabric); var label = i.name + (variantParts.length ? ' (' + variantParts.join(' / ') + ')' : '');
       var qty = i.qty || i.quantity || 1;
       var supplierLink = i.supplierLink || i.link || '';
       var linkHtml = supplierLink
@@ -121,7 +121,7 @@ async function saveOrder({ email, name, address, city, state, zip, items, amount
       email: email,
       address: address + ', ' + city + ', ' + state + ' ' + zip,
       product: productNames,
-      variant: (items && items[0] && items[0].finish) ? items[0].finish : '',
+      variant: (function(){ var f=items&&items[0]; if(!f)return ''; var vp=[]; if(f.finish)vp.push(f.finish); if(f.fabric)vp.push(f.fabric); return vp.join(' / '); })(),
       revenue: revenue,
       cost: 0,
       link: (items && items[0] && items[0].supplierLink) ? items[0].supplierLink : '',
