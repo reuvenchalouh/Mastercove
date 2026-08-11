@@ -109,7 +109,7 @@ async function saveOrder({ email, name, address, city, state, zip, items, amount
     const orderNumber = 'MC-' + String((count || 0) + 1).padStart(4, '0');
     const productNames = (items || []).map(i => {
       var qty = i.qty || i.quantity || 1;
-      return i.name + (i.finish ? ' (' + i.finish + ')' : '') + (qty > 1 ? ' x' + qty : '');
+      return i.name + (qty > 1 ? ' x' + qty : '');
     }).join(', ');
     const revenue = Math.round(amount) / 100;
     const now = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
