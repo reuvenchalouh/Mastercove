@@ -430,13 +430,44 @@ function buildRoomNav(){
     wrap.appendChild(btn);
   });
 
-  var collLink = document.createElement('a');
-  collLink.href = 'collections.html';
-  collLink.className = 'cat-btn';
-  collLink.style.display = 'flex';
-  collLink.style.alignItems = 'center';
-  collLink.textContent = 'Collections';
-  wrap.appendChild(collLink);
+  var collBtn = document.createElement('button');
+  collBtn.className = 'cat-btn room-btn';
+  collBtn.textContent = 'Collections';
+  collBtn.onclick = function(e){ e.stopPropagation(); toggleCollectionsDropdown(collBtn); };
+  wrap.appendChild(collBtn);
+}
+
+function getCollectionNames(){
+  var seen = {};
+  var names = [];
+  allProducts.forEach(function(p){
+    var name = (p.collection||'').trim();
+    if(name && !seen[name]){ seen[name]=true; names.push(name); }
+  });
+  names.sort();
+  return names;
+}
+
+function toggleCollectionsDropdown(btn){
+  var panel = document.getElementById('mega-dropdown');
+  if(!panel) return;
+  document.querySelectorAll('.room-btn').forEach(function(b){ b.classList.remove('open'); });
+  if(megaOpenRoomKey === 'collections'){ closeMegaDropdown(); return; }
+  megaOpenRoomKey = 'collections';
+  btn.classList.add('open');
+  var rect = btn.getBoundingClientRect();
+  panel.style.top = (rect.bottom + 4) + 'px';
+  panel.style.left = rect.left + 'px';
+  var names = getCollectionNames();
+  var html = '<a href="collections.html" class="mega-all">Shop All Collections</a><div class="mega-divider"></div>';
+  html += names.map(function(name){
+    return '<a href="#" data-collection="'+name.replace(/"/g,'&quot;')+'">'+name+'</a>';
+  }).join('');
+  panel.innerHTML = html;
+  panel.classList.add('open');
+  panel.querySelectorAll('a[data-collection]').forEach(function(a){
+    a.addEventListener('click', function(e){ e.preventDefault(); window.location.href = 'collections.html?collection=' + encodeURIComponent(a.dataset.collection); });
+  });
 }
 
 function buildMobileMenu(){
@@ -487,10 +518,40 @@ function buildMobileMenu(){
     wrap.appendChild(section);
   });
 
-  var collLink = document.createElement('a');
-  collLink.href = 'collections.html';
-  collLink.textContent = 'Collections';
-  wrap.appendChild(collLink);
+  var collSection = document.createElement('div');
+  collSection.className = 'mm-room-section';
+  var collHead = document.createElement('div');
+  collHead.className = 'mm-room-head';
+  var collLabel = document.createElement('a');
+  collLabel.href = 'collections.html';
+  collLabel.className = 'mm-room-label';
+  collLabel.textContent = 'Collections';
+  collHead.appendChild(collLabel);
+
+  var collSub = document.createElement('div');
+  collSub.className = 'mm-sub-links';
+  var collNames = getCollectionNames();
+  collNames.forEach(function(name){
+    var subLink = document.createElement('a');
+    subLink.href = 'collections.html?collection=' + encodeURIComponent(name);
+    subLink.textContent = name;
+    collSub.appendChild(subLink);
+  });
+
+  if(collNames.length){
+    var collToggle = document.createElement('button');
+    collToggle.className = 'mm-room-toggle';
+    collToggle.textContent = '+';
+    collToggle.onclick = function(){
+      var open = collSub.classList.toggle('open');
+      collToggle.textContent = open ? '−' : '+';
+    };
+    collHead.appendChild(collToggle);
+  }
+
+  collSection.appendChild(collHead);
+  collSection.appendChild(collSub);
+  wrap.appendChild(collSection);
 }
 
 function toggleMobileMenu(){
@@ -1083,8 +1144,6 @@ function renderHomeSections(){
 }
 
 document.addEventListener('DOMContentLoaded', async function() {
-  buildRoomNav();
-  buildMobileMenu();
   cart = loadMcCart();
   try { wishlist = JSON.parse(localStorage.getItem('mc_wishlist')||'[]'); } catch(e){ wishlist = []; }
   updateWishlistCount();
@@ -1104,6 +1163,8 @@ document.addEventListener('DOMContentLoaded', async function() {
       allProducts = shuffle(allProducts);
     }
   } catch(e) { console.log('Supabase load error:', e); }
+  buildRoomNav();
+  buildMobileMenu();
   var urlParams = new URLSearchParams(window.location.search);
   var urlCat = urlParams.get('cat');
   var urlRoom = urlParams.get('room');
