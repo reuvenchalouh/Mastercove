@@ -183,7 +183,7 @@ footer{background:var(--ink);color:rgba(255,255,255,.5);padding:52px 40px 28px;}
   .size-grid{gap:8px;}
   .sz-opt{padding:8px 12px;font-size:12px;}
   .drawer{width:92vw;right:-92vw;}
-  body{overflow-x:hidden;}
+  html,body{overflow-x:hidden;width:100%;}
   img{max-width:100%;}
 }
 #pdp-features-list li,#pdp-features-list-left li{display:flex;align-items:flex-start;gap:8px;font-size:15px;color:var(--slate);margin-bottom:10px;font-weight:300;line-height:1.7;font-family:'Outfit',sans-serif;}
@@ -398,6 +398,10 @@ src="https://www.facebook.com/tr?id=2156219968568427&ev=PageView&noscript=1"
 <div class="fab-preview" id="fab-preview"><div class="fab-preview-img" id="fab-preview-img"></div><div class="fab-preview-name" id="fab-preview-name"></div></div>
 <div class="toast" id="toast"></div>
 
+<script>
+if('scrollRestoration' in history){ history.scrollRestoration = 'manual'; }
+window.scrollTo(0,0);
+</script>
 <script>
 var currentProduct=null;
 var qty=1;
@@ -891,6 +895,7 @@ function toggleCart(){document.getElementById('drawer').classList.toggle('open')
 function showToast(msg){var t=document.getElementById('toast');t.textContent='✓  '+msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2400);}
 
 document.addEventListener('DOMContentLoaded',function(){
+  window.scrollTo(0,0);
   cart=loadMcCart();
   updateCart();
   var params=new URLSearchParams(window.location.search);var id=params.get('id');
