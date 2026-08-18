@@ -156,7 +156,7 @@ footer{background:var(--ink);color:rgba(255,255,255,.5);padding:52px 40px 28px;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 @keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
 .fade-up{animation:fadeUp .45s ease both;}
-@media(max-width:900px){
+@media(max-width:768px){
   .header-inner{padding:0 12px;}
   .main-nav{display:none;}
   .cart-pill{padding:7px 12px!important;font-size:12px!important;}
@@ -168,7 +168,7 @@ footer{background:var(--ink);color:rgba(255,255,255,.5);padding:52px 40px 28px;}
   .thumbs{flex-direction:row!important;width:100%!important;overflow-x:auto;gap:6px;margin-bottom:8px;order:2;}
   .thumb{width:56px!important;height:56px!important;flex-shrink:0;}
   .main-img-wrap{width:100%;height:320px;aspect-ratio:unset;order:1;min-height:320px;}
-  #active-main-img{width:100%!important;height:100%!important;object-fit:contain!important;position:absolute!important;inset:0!important;}
+  #active-main-img{width:100%!important;height:100%!important;object-fit:contain!important;position:absolute!important;inset:0!important;transform:translateZ(0)!important;-webkit-transform:translateZ(0)!important;-webkit-backface-visibility:hidden!important;backface-visibility:hidden!important;}
   .pdp-info{position:static;}
   .breadcrumb{padding:8px 16px;}
   .tabs-section{padding:0 16px 40px;}
@@ -183,6 +183,7 @@ footer{background:var(--ink);color:rgba(255,255,255,.5);padding:52px 40px 28px;}
   .size-grid{gap:8px;}
   .sz-opt{padding:8px 12px;font-size:12px;}
   .drawer{width:92vw;right:-92vw;}
+  body{overflow-x:hidden;}
   img{max-width:100%;}
 }
 #pdp-features-list li,#pdp-features-list-left li{display:flex;align-items:flex-start;gap:8px;font-size:15px;color:var(--slate);margin-bottom:10px;font-weight:300;line-height:1.7;font-family:'Outfit',sans-serif;}
@@ -398,10 +399,6 @@ src="https://www.facebook.com/tr?id=2156219968568427&ev=PageView&noscript=1"
 <div class="toast" id="toast"></div>
 
 <script>
-if('scrollRestoration' in history){ history.scrollRestoration = 'manual'; }
-window.scrollTo(0,0);
-</script>
-<script>
 var currentProduct=null;
 var qty=1;
 var cart=[];
@@ -548,7 +545,7 @@ function renderProduct(p){
       if(!initPhotos.length&&p.img)initPhotos=[p.img];
       if(initPhotos.length){
         var mainImgEl=document.createElement('img');mainImgEl.id='active-main-img';
-        mainImgEl.style.cssText='width:100%;height:100%;object-fit:contain;position:absolute;inset:0;border-radius:6px;z-index:1;';
+        mainImgEl.style.cssText='width:100%;height:100%;object-fit:contain;position:absolute;inset:0;border-radius:6px;z-index:1;transform:translateZ(0);-webkit-transform:translateZ(0);-webkit-backface-visibility:hidden;backface-visibility:hidden;';
         mainImgEl.src=initPhotos[0];document.getElementById('main-img').appendChild(mainImgEl);
         var thumbsEl=document.getElementById('thumbs');thumbsEl.innerHTML='';
         initPhotos.forEach(function(src,i){
@@ -583,7 +580,7 @@ function switchMainImg(thumb,src){document.querySelectorAll('.thumb').forEach(fu
 function loadFinishImages(photos){
   if(!photos||!photos.length)return;
   var m=document.getElementById('active-main-img');
-  if(!m){m=document.createElement('img');m.id='active-main-img';m.style.cssText='width:100%;height:100%;object-fit:contain;position:absolute;inset:0;border-radius:6px;z-index:1;';document.getElementById('main-img').appendChild(m);}
+  if(!m){m=document.createElement('img');m.id='active-main-img';m.style.cssText='width:100%;height:100%;object-fit:contain;position:absolute;inset:0;border-radius:6px;z-index:1;transform:translateZ(0);-webkit-transform:translateZ(0);-webkit-backface-visibility:hidden;backface-visibility:hidden;';document.getElementById('main-img').appendChild(m);}
   m.src=photos[0];
   var thumbsEl=document.getElementById('thumbs');thumbsEl.innerHTML='';
   photos.forEach(function(src,i){var div=document.createElement('div');div.className='thumb'+(i===0?' active':'');var img=document.createElement('img');img.src=src;img.style.cssText='width:100%;height:100%;object-fit:cover;';div.appendChild(img);div.addEventListener('click',(function(s){return function(){switchMainImg(this,s);};})(src));thumbsEl.appendChild(div);});
@@ -894,7 +891,6 @@ function toggleCart(){document.getElementById('drawer').classList.toggle('open')
 function showToast(msg){var t=document.getElementById('toast');t.textContent='✓  '+msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2400);}
 
 document.addEventListener('DOMContentLoaded',function(){
-  window.scrollTo(0,0);
   cart=loadMcCart();
   updateCart();
   var params=new URLSearchParams(window.location.search);var id=params.get('id');
