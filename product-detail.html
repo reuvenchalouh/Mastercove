@@ -409,6 +409,14 @@ var currentFabric='';
 var currentSize='';
 var basePrice=0;
 
+function forceReflow(){
+  var wrap=document.querySelector('.main-img-wrap');
+  if(!wrap)return;
+  wrap.style.display='none';
+  void wrap.offsetHeight;
+  wrap.style.display='';
+}
+
 function buildCarousel(products){
   carouselItems=products;
   var track=document.getElementById('carousel-track');track.innerHTML='';
@@ -547,6 +555,9 @@ function renderProduct(p){
         var mainImgEl=document.createElement('img');mainImgEl.id='active-main-img';
         mainImgEl.style.cssText='width:100%;height:100%;object-fit:contain;position:absolute;inset:0;border-radius:6px;z-index:1;transform:translateZ(0);-webkit-transform:translateZ(0);-webkit-backface-visibility:hidden;backface-visibility:hidden;';
         mainImgEl.src=initPhotos[0];document.getElementById('main-img').appendChild(mainImgEl);
+        mainImgEl.onload=forceReflow;
+        setTimeout(forceReflow,60);
+        setTimeout(forceReflow,300);
         var thumbsEl=document.getElementById('thumbs');thumbsEl.innerHTML='';
         initPhotos.forEach(function(src,i){
           var div=document.createElement('div');div.className='thumb'+(i===0?' active':'');
@@ -582,6 +593,8 @@ function loadFinishImages(photos){
   var m=document.getElementById('active-main-img');
   if(!m){m=document.createElement('img');m.id='active-main-img';m.style.cssText='width:100%;height:100%;object-fit:contain;position:absolute;inset:0;border-radius:6px;z-index:1;transform:translateZ(0);-webkit-transform:translateZ(0);-webkit-backface-visibility:hidden;backface-visibility:hidden;';document.getElementById('main-img').appendChild(m);}
   m.src=photos[0];
+  m.onload=forceReflow;
+  setTimeout(forceReflow,60);
   var thumbsEl=document.getElementById('thumbs');thumbsEl.innerHTML='';
   photos.forEach(function(src,i){var div=document.createElement('div');div.className='thumb'+(i===0?' active':'');var img=document.createElement('img');img.src=src;img.style.cssText='width:100%;height:100%;object-fit:cover;';div.appendChild(img);div.addEventListener('click',(function(s){return function(){switchMainImg(this,s);};})(src));thumbsEl.appendChild(div);});
 }
