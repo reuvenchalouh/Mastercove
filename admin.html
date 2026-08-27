@@ -328,6 +328,9 @@ textarea.o-input{resize:vertical;min-height:56px;line-height:1.6;}
               <div class="badge-opt sel" id="mode-finish-btn" onclick="setVariantMode('finish')">Finish-Based (default)</div>
               <div class="badge-opt" id="mode-size-btn" onclick="setVariantMode('size')">Size-Based (Beds, Sets, etc.)</div>
             </div>
+            <div style="margin-top:8px;">
+              <button type="button" id="transfer-data-btn" onclick="transferStructureData()" style="background:var(--linen);border:1px dashed var(--maple);color:var(--walnut);padding:8px 14px;border-radius:2px;font-size:11.5px;cursor:pointer;font-family:'Outfit',sans-serif;width:100%;">⇄ Convert to Size-Based (keep photos &amp; fabrics)</button>
+            </div>
           </div>
           <div class="fdivider"></div>
           <div class="frow"><label>Product Name <span class="req">*</span></label><input class="finput" id="f-name" type="text" placeholder="e.g. 6-Drawer Walnut Dresser"/></div>
@@ -709,6 +712,59 @@ function setVariantMode(mode){
   document.getElementById('dims-row-wrap').style.display=showForFinish;
   document.getElementById('features-row-wrap').style.display=showForFinish;
   document.getElementById('desc-row-wrap').style.display=showForFinish;
+  var transferBtn=document.getElementById('transfer-data-btn');
+  if(transferBtn)transferBtn.textContent=mode==='finish'?'⇄ Convert to Size-Based (keep photos & fabrics)':'⇄ Convert to Finish-Based (keep photos & fabrics)';
+}
+
+function transferStructureData(){
+  if(variantMode==='finish')convertFinishToSize();
+  else convertSizeToFinish();
+}
+
+function convertFinishToSize(){
+  var finishes=getFinishes();
+  if(!finishes.length){showToast('No finish data to transfer','error');return;}
+  var priceVal=parseFloat(document.getElementById('f-price').value)||0;
+  var w=document.getElementById('f-w').value.trim();
+  var d=document.getElementById('f-d').value.trim();
+  var h=document.getElementById('f-h').value.trim();
+  var componentDims=[];
+  if(w||d||h)componentDims.push({label:document.getElementById('f-name').value.trim()||'Item',w:w,d:d,h:h});
+  var desc=document.getElementById('f-desc').value.trim();
+  var features=document.getElementById('f-features').value.trim();
+  clearFinishes();
+  clearTopSizes();
+  setVariantMode('size');
+  addTopSize('',priceVal||'',{},false,finishes,componentDims,'','',desc,features);
+  showToast('Transferred — add a size name below and save','success');
+}
+
+function convertSizeToFinish(){
+  var topSizes=getTopSizes();
+  if(!topSizes.length){showToast('No size data to transfer','error');return;}
+  if(topSizes.length>1){
+    var ok=confirm('Multiple sizes found. Only the first size ("'+(topSizes[0].name||'Unnamed')+'") will be transferred — its finishes become the product finishes, and the other sizes will be discarded. Continue?');
+    if(!ok)return;
+  }
+  var first=topSizes[0];
+  clearFinishes();
+  clearTopSizes();
+  setVariantMode('finish');
+  document.getElementById('f-price').value=first.price||'';
+  if(first.componentDims&&first.componentDims.length){
+    var cd=first.componentDims[0];
+    document.getElementById('f-w').value=cd.w||'';
+    document.getElementById('f-d').value=cd.d||'';
+    document.getElementById('f-h').value=cd.h||'';
+  }
+  if(first.desc)document.getElementById('f-desc').value=first.desc;
+  if(first.features)document.getElementById('f-features').value=first.features;
+  if(first.finishes&&first.finishes.length){
+    first.finishes.forEach(function(f){addFinish(f.color||'',f.name||'',f.photos||[],f.sku||'',f.outOfStock||false,f.link||'',f.fabrics||[]);});
+  } else {
+    addFinish();
+  }
+  showToast('Transferred from size "'+(first.name||'Unnamed')+'"','success');
 }
 function clearTopSizes(){document.getElementById('size-builder-top').innerHTML='';}
 
