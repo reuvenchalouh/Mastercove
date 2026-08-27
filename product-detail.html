@@ -88,7 +88,6 @@ header{background:var(--white);border-bottom:1px solid var(--border);position:st
 .fab-opt:hover .fab-swatch{transform:scale(1.03);outline-color:var(--oak);}
 .fab-opt.active .fab-swatch{outline-color:var(--walnut);outline-width:2.5px;}
 .fab-name{font-size:12.5px;color:var(--ink);font-weight:500;line-height:1.3;margin-top:2px;}
-.fab-material{font-size:10.5px;color:var(--mist);line-height:1.3;font-weight:300;}
 .fab-opt.active .fab-name{color:var(--walnut);}
 .fab-opt.oos{opacity:0.35;cursor:not-allowed;pointer-events:none;}
 .fabric-toggle-wrap{margin-top:10px;}
@@ -191,7 +190,6 @@ footer{background:var(--ink);color:rgba(255,255,255,.5);padding:52px 40px 28px;}
   .drawer{width:92vw;right:-92vw;}
   .fabric-grid{grid-template-columns:repeat(3,1fr)!important;gap:8px!important;}
   .fab-name{font-size:11.5px!important;}
-  .fab-material{font-size:9.5px!important;}
   body{overflow-x:hidden;}
   img{max-width:100%;}
 }
@@ -559,7 +557,7 @@ function renderProduct(p){
       return typeof f==='string'
         ?{color:f,name:'Default',photos:[],outOfStock:false,fabrics:[],sizes:[]}
         :{color:f.color||'#C4976A',name:(f.name&&String(f.name).trim())?String(f.name).trim():'Default',photos:f.photos||[],outOfStock:f.outOfStock||false,
-          fabrics:(f.fabrics||[]).map(function(fab){return{name:fab.name||'',outOfStock:fab.outOfStock||false,photos:fab.photos||[],swatch:fab.swatch||'',material:fab.material||''};}).sort(function(a,b){return a.name.localeCompare(b.name);}),
+          fabrics:(f.fabrics||[]).map(function(fab){return{name:fab.name||'',outOfStock:fab.outOfStock||false,photos:fab.photos||[],swatch:fab.swatch||''};}).sort(function(a,b){return a.name.localeCompare(b.name);}),
           sizes:(f.sizes||[]).map(function(sz){return{name:sz.name||'',price:sz.price||0,outOfStock:sz.outOfStock||false,photos:sz.photos||[],dims:sz.dims||{}};})};
     }).sort(function(a,b){return a.name.localeCompare(b.name);});
 
@@ -680,7 +678,6 @@ function renderFabrics(fabrics){
     if(thumb)sw.style.backgroundImage='url(\''+thumb+'\')';
     var lb=document.createElement('span');lb.className='fab-name';lb.textContent=fab.name+(fab.outOfStock?' — Out of Stock':'');
     div.appendChild(sw);div.appendChild(lb);
-    if(fab.material){var matLb=document.createElement('span');matLb.className='fab-material';matLb.textContent=fab.material;div.appendChild(matLb);}
     div.addEventListener('click',function(){selectFabric(this,fab.name||'',fab.photos||[]);});
     if(thumb){
       div.addEventListener('mouseenter',function(){showFabPreview(div,thumb,fab.name||'');});
@@ -710,7 +707,7 @@ var currentTopSize=null;
 function renderTopSizeMode(topSizes,fallbackImg){
   var sizes=(topSizes||[]).map(function(s){
     return{name:s.name||'',price:s.price||0,outOfStock:s.outOfStock||false,dims:s.dims||{},sku:s.sku||'',componentDims:s.componentDims||[],desc:s.desc||'',features:s.features||'',
-      finishes:(s.finishes||[]).map(function(f){return{color:f.color||'#C4976A',name:f.name||'',outOfStock:f.outOfStock||false,photos:f.photos||[],sku:f.sku||'',fabrics:(f.fabrics||[]).map(function(fab){return{name:fab.name||'',outOfStock:fab.outOfStock||false,photos:fab.photos||[],swatch:fab.swatch||'',material:fab.material||''};}).sort(function(a,b){return a.name.localeCompare(b.name);})};}).sort(function(a,b){return a.name.localeCompare(b.name);})};
+      finishes:(s.finishes||[]).map(function(f){return{color:f.color||'#C4976A',name:f.name||'',outOfStock:f.outOfStock||false,photos:f.photos||[],sku:f.sku||'',fabrics:(f.fabrics||[]).map(function(fab){return{name:fab.name||'',outOfStock:fab.outOfStock||false,photos:fab.photos||[],swatch:fab.swatch||''};}).sort(function(a,b){return a.name.localeCompare(b.name);})};}).sort(function(a,b){return a.name.localeCompare(b.name);})};
   });
   var grid=document.getElementById('top-size-grid');grid.innerHTML='';
   sizes.forEach(function(sz,j){
@@ -815,7 +812,6 @@ function renderTopSizeFabrics(fabrics){
     if(thumb)sw.style.backgroundImage='url(\''+thumb+'\')';
     var lb=document.createElement('span');lb.className='fab-name';lb.textContent=fab.name+(fab.outOfStock?' — Out of Stock':'');
     div.appendChild(sw);div.appendChild(lb);
-    if(fab.material){var matLb=document.createElement('span');matLb.className='fab-material';matLb.textContent=fab.material;div.appendChild(matLb);}
     div.addEventListener('click',function(){selectTopSizeFabric(div,fab.name||'',fab.photos||[]);});
     if(thumb){
       div.addEventListener('mouseenter',function(){showFabPreview(div,thumb,fab.name||'');});
