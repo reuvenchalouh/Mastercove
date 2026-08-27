@@ -555,7 +555,7 @@ function renderProduct(p){
       return typeof f==='string'
         ?{color:f,name:'Default',photos:[],outOfStock:false,fabrics:[],sizes:[]}
         :{color:f.color||'#C4976A',name:(f.name&&String(f.name).trim())?String(f.name).trim():'Default',photos:f.photos||[],outOfStock:f.outOfStock||false,
-          fabrics:(f.fabrics||[]).map(function(fab){return{name:fab.name||'',outOfStock:fab.outOfStock||false,photos:fab.photos||[],swatch:fab.swatch||''};}).sort(function(a,b){return a.name.localeCompare(b.name);}),
+          fabrics:(f.fabrics||[]).map(function(fab){return{name:fab.name||'',outOfStock:fab.outOfStock||false,photos:fab.photos||[],swatch:fab.swatch||'',type:fab.type||''};}),
           sizes:(f.sizes||[]).map(function(sz){return{name:sz.name||'',price:sz.price||0,outOfStock:sz.outOfStock||false,photos:sz.photos||[],dims:sz.dims||{}};})};
     }).sort(function(a,b){return a.name.localeCompare(b.name);});
 
@@ -729,7 +729,7 @@ var currentTopSize=null;
 function renderTopSizeMode(topSizes,fallbackImg){
   var sizes=(topSizes||[]).map(function(s){
     return{name:s.name||'',price:s.price||0,outOfStock:s.outOfStock||false,dims:s.dims||{},sku:s.sku||'',componentDims:s.componentDims||[],desc:s.desc||'',features:s.features||'',
-      finishes:(s.finishes||[]).map(function(f){return{color:f.color||'#C4976A',name:f.name||'',outOfStock:f.outOfStock||false,photos:f.photos||[],sku:f.sku||'',fabrics:(f.fabrics||[]).map(function(fab){return{name:fab.name||'',outOfStock:fab.outOfStock||false,photos:fab.photos||[],swatch:fab.swatch||''};}).sort(function(a,b){return a.name.localeCompare(b.name);})};}).sort(function(a,b){return a.name.localeCompare(b.name);})};
+      finishes:(s.finishes||[]).map(function(f){return{color:f.color||'#C4976A',name:f.name||'',outOfStock:f.outOfStock||false,photos:f.photos||[],sku:f.sku||'',fabrics:(f.fabrics||[]).map(function(fab){return{name:fab.name||'',outOfStock:fab.outOfStock||false,photos:fab.photos||[],swatch:fab.swatch||'',type:fab.type||''};})};}).sort(function(a,b){return a.name.localeCompare(b.name);})};
   });
   var grid=document.getElementById('top-size-grid');grid.innerHTML='';
   sizes.forEach(function(sz,j){
