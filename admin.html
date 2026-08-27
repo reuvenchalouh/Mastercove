@@ -613,7 +613,7 @@ function addFinish(color,name,photos,sku,outOfStock,finLink,fabrics){
   document.getElementById('finish-builder').appendChild(card);
   finishPhotos[id]=photos.slice();
   renderFinPhotos(id);
-  if(fabrics&&fabrics.length){fabrics.forEach(function(fab){addFabricToFinish(id,fab.name||'',fab.outOfStock||false,fab.photos||[],fab.swatch||'',fab.sku||'',fab.link||'');});}
+  if(fabrics&&fabrics.length){fabrics.forEach(function(fab){addFabricToFinish(id,fab.name||'',fab.outOfStock||false,fab.photos||[],fab.swatch||'',fab.sku||'',fab.link||'',fab.type||'');});}
   var oosDiv=document.createElement('div');oosDiv.style.cssText='margin:8px 0;padding:8px 10px;background:var(--sand);border-radius:2px;display:flex;align-items:center;gap:8px;';
   var oosChk=document.createElement('input');oosChk.type='checkbox';oosChk.id='oos'+id;oosChk.checked=outOfStock||false;oosChk.style.cssText='width:15px;height:15px;cursor:pointer;';oosChk.onchange=function(){updateOOS(id,this.checked);};
   var oosLbl=document.createElement('label');oosLbl.htmlFor='oos'+id;oosLbl.style.cssText='font-size:12px;color:var(--slate);cursor:pointer;';oosLbl.innerHTML='Mark as <b>Out of Stock</b> — hides this finish from customers';
@@ -686,7 +686,8 @@ function getFinishes(){
         var fswatch=fabricSwatches[fid]||'';
         var fsku=document.getElementById('fabsku'+fid)?document.getElementById('fabsku'+fid).value.trim():'';
         var flink=document.getElementById('fablink'+fid)?document.getElementById('fablink'+fid).value.trim():'';
-        if(fname)fabrics.push({name:fname,outOfStock:foos,photos:fphotos,swatch:fswatch,sku:fsku,link:flink});
+        var ftype=document.getElementById('fabtype'+fid)?document.getElementById('fabtype'+fid).value.trim():'';
+        if(fname)fabrics.push({name:fname,outOfStock:foos,photos:fphotos,swatch:fswatch,sku:fsku,link:flink,type:ftype});
       });
     }
     if(name||color)result.push({color:color,name:name,photos:photos,sku:sku,outOfStock:outOfStock,link:finLink,fabrics:fabrics});
@@ -840,7 +841,7 @@ function addFinishToSize(sizeId,color,name,photos,outOfStock,sku,link,fabrics){
   body.appendChild(fabDivider);
 
   card.appendChild(body);builder.appendChild(card);renderFinPhotos(id);
-  if(fabrics&&fabrics.length){fabrics.forEach(function(fab){addFabricToFinish(id,fab.name||'',fab.outOfStock||false,fab.photos||[],fab.swatch||'',fab.sku||'',fab.link||'');});}
+  if(fabrics&&fabrics.length){fabrics.forEach(function(fab){addFabricToFinish(id,fab.name||'',fab.outOfStock||false,fab.photos||[],fab.swatch||'',fab.sku||'',fab.link||'',fab.type||'');});}
 }
 
 function getTopSizes(){
@@ -874,7 +875,8 @@ function getTopSizes(){
             var fabswatch=fabricSwatches[fabid]||'';
             var fabsku=document.getElementById('fabsku'+fabid)?document.getElementById('fabsku'+fabid).value.trim():'';
             var fablink=document.getElementById('fablink'+fabid)?document.getElementById('fablink'+fabid).value.trim():'';
-            if(fabname)ffabrics.push({name:fabname,outOfStock:faboos,photos:fabphotos,swatch:fabswatch,sku:fabsku,link:fablink});
+            var fabtype=document.getElementById('fabtype'+fabid)?document.getElementById('fabtype'+fabid).value.trim():'';
+            if(fabname)ffabrics.push({name:fabname,outOfStock:faboos,photos:fabphotos,swatch:fabswatch,sku:fabsku,link:fablink,type:fabtype});
           });
         }
         if(fname||fcolor)finishes.push({color:fcolor,name:fname,photos:fphotos,outOfStock:foos,sku:fsku,link:flink,fabrics:ffabrics});
@@ -895,8 +897,8 @@ function getTopSizes(){
 }
 function selBadge(el,val){document.querySelectorAll('.badge-opt').forEach(function(b){b.classList.remove('sel');});el.classList.add('sel');selectedBadge=val;}
 
-function addFabricToFinish(finId,name,outOfStock,photos,swatch,sku,link){
-  name=name||'';outOfStock=outOfStock||false;photos=photos||[];swatch=swatch||'';sku=sku||'';link=link||'';
+function addFabricToFinish(finId,name,outOfStock,photos,swatch,sku,link,fabType){
+  name=name||'';outOfStock=outOfStock||false;photos=photos||[];swatch=swatch||'';sku=sku||'';link=link||'';fabType=fabType||'';
   var id='fab'+Date.now()+Math.floor(Math.random()*9999);
   if(!finishPhotos[id])finishPhotos[id]=(Array.isArray(photos)?photos:[]).slice();
   if(swatch)fabricSwatches[id]=swatch;
@@ -909,8 +911,11 @@ function addFabricToFinish(finId,name,outOfStock,photos,swatch,sku,link){
   var rmBtn=document.createElement('button');rmBtn.className='fin-rm';rmBtn.textContent='×';rmBtn.onclick=function(e){e.stopPropagation();card.remove();delete finishPhotos[id];};
   head.appendChild(icon);head.appendChild(title);head.appendChild(photoCount);head.appendChild(rmBtn);card.appendChild(head);
   var body=document.createElement('div');body.className='fin-body';body.id='fb'+id;
-  var nameLbl=document.createElement('span');nameLbl.style.cssText='font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--mist);font-weight:500;display:block;margin-bottom:4px;';nameLbl.textContent='Fabric Name';
-  var nameInp=document.createElement('input');nameInp.type='text';nameInp.className='fin-name-input';nameInp.id='fn'+id;nameInp.placeholder='e.g. Off-white Basketweave';nameInp.value=name;nameInp.style.cssText='width:100%;margin-bottom:10px;';nameInp.oninput=function(){
+  var fabTypeLbl=document.createElement('span');fabTypeLbl.style.cssText='font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--walnut);font-weight:600;display:block;margin-bottom:4px;';fabTypeLbl.innerHTML='Fabric Type <span style="text-transform:none;letter-spacing:0;color:var(--mist);font-weight:400;">— groups this fabric under a heading with its other colors, e.g. "Performance Velvet"</span>';
+  var fabTypeInp=document.createElement('input');fabTypeInp.type='text';fabTypeInp.id='fabtype'+id;fabTypeInp.value=fabType;fabTypeInp.placeholder='e.g. Performance Velvet, Boucle';fabTypeInp.style.cssText='width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:2px;font-family:Outfit,sans-serif;font-size:12px;outline:none;margin-bottom:10px;';
+  body.appendChild(fabTypeLbl);body.appendChild(fabTypeInp);
+  var nameLbl=document.createElement('span');nameLbl.style.cssText='font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--mist);font-weight:500;display:block;margin-bottom:4px;';nameLbl.textContent='Fabric Name / Color';
+  var nameInp=document.createElement('input');nameInp.type='text';nameInp.className='fin-name-input';nameInp.id='fn'+id;nameInp.placeholder='e.g. Navy, Off-white Basketweave';nameInp.value=name;nameInp.style.cssText='width:100%;margin-bottom:10px;';nameInp.oninput=function(){
     var ft=document.getElementById('ft'+id);if(ft)ft.textContent=this.value||'New Fabric';
     var key=this.value.trim().toLowerCase();
     if(key&&!fabricSwatches[id]&&(!finishPhotos[id]||!finishPhotos[id].length)){
