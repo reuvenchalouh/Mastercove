@@ -613,7 +613,7 @@ function addFinish(color,name,photos,sku,outOfStock,finLink,fabrics){
   document.getElementById('finish-builder').appendChild(card);
   finishPhotos[id]=photos.slice();
   renderFinPhotos(id);
-  if(fabrics&&fabrics.length){fabrics.forEach(function(fab){addFabricToFinish(id,fab.name||'',fab.outOfStock||false,fab.photos||[],fab.swatch||'',fab.sku||'',fab.link||'',fab.material||'');});}
+  if(fabrics&&fabrics.length){fabrics.forEach(function(fab){addFabricToFinish(id,fab.name||'',fab.outOfStock||false,fab.photos||[],fab.swatch||'',fab.sku||'',fab.link||'');});}
   var oosDiv=document.createElement('div');oosDiv.style.cssText='margin:8px 0;padding:8px 10px;background:var(--sand);border-radius:2px;display:flex;align-items:center;gap:8px;';
   var oosChk=document.createElement('input');oosChk.type='checkbox';oosChk.id='oos'+id;oosChk.checked=outOfStock||false;oosChk.style.cssText='width:15px;height:15px;cursor:pointer;';oosChk.onchange=function(){updateOOS(id,this.checked);};
   var oosLbl=document.createElement('label');oosLbl.htmlFor='oos'+id;oosLbl.style.cssText='font-size:12px;color:var(--slate);cursor:pointer;';oosLbl.innerHTML='Mark as <b>Out of Stock</b> — hides this finish from customers';
@@ -686,8 +686,7 @@ function getFinishes(){
         var fswatch=fabricSwatches[fid]||'';
         var fsku=document.getElementById('fabsku'+fid)?document.getElementById('fabsku'+fid).value.trim():'';
         var flink=document.getElementById('fablink'+fid)?document.getElementById('fablink'+fid).value.trim():'';
-        var fmaterial=document.getElementById('fabmat'+fid)?document.getElementById('fabmat'+fid).value.trim():'';
-        if(fname)fabrics.push({name:fname,outOfStock:foos,photos:fphotos,swatch:fswatch,sku:fsku,link:flink,material:fmaterial});
+        if(fname)fabrics.push({name:fname,outOfStock:foos,photos:fphotos,swatch:fswatch,sku:fsku,link:flink});
       });
     }
     if(name||color)result.push({color:color,name:name,photos:photos,sku:sku,outOfStock:outOfStock,link:finLink,fabrics:fabrics});
@@ -841,7 +840,7 @@ function addFinishToSize(sizeId,color,name,photos,outOfStock,sku,link,fabrics){
   body.appendChild(fabDivider);
 
   card.appendChild(body);builder.appendChild(card);renderFinPhotos(id);
-  if(fabrics&&fabrics.length){fabrics.forEach(function(fab){addFabricToFinish(id,fab.name||'',fab.outOfStock||false,fab.photos||[],fab.swatch||'',fab.sku||'',fab.link||'',fab.material||'');});}
+  if(fabrics&&fabrics.length){fabrics.forEach(function(fab){addFabricToFinish(id,fab.name||'',fab.outOfStock||false,fab.photos||[],fab.swatch||'',fab.sku||'',fab.link||'');});}
 }
 
 function getTopSizes(){
@@ -875,8 +874,7 @@ function getTopSizes(){
             var fabswatch=fabricSwatches[fabid]||'';
             var fabsku=document.getElementById('fabsku'+fabid)?document.getElementById('fabsku'+fabid).value.trim():'';
             var fablink=document.getElementById('fablink'+fabid)?document.getElementById('fablink'+fabid).value.trim():'';
-            var fabmaterial=document.getElementById('fabmat'+fabid)?document.getElementById('fabmat'+fabid).value.trim():'';
-            if(fabname)ffabrics.push({name:fabname,outOfStock:faboos,photos:fabphotos,swatch:fabswatch,sku:fabsku,link:fablink,material:fabmaterial});
+            if(fabname)ffabrics.push({name:fabname,outOfStock:faboos,photos:fabphotos,swatch:fabswatch,sku:fabsku,link:fablink});
           });
         }
         if(fname||fcolor)finishes.push({color:fcolor,name:fname,photos:fphotos,outOfStock:foos,sku:fsku,link:flink,fabrics:ffabrics});
@@ -897,8 +895,8 @@ function getTopSizes(){
 }
 function selBadge(el,val){document.querySelectorAll('.badge-opt').forEach(function(b){b.classList.remove('sel');});el.classList.add('sel');selectedBadge=val;}
 
-function addFabricToFinish(finId,name,outOfStock,photos,swatch,sku,link,material){
-  name=name||'';outOfStock=outOfStock||false;photos=photos||[];swatch=swatch||'';sku=sku||'';link=link||'';material=material||'';
+function addFabricToFinish(finId,name,outOfStock,photos,swatch,sku,link){
+  name=name||'';outOfStock=outOfStock||false;photos=photos||[];swatch=swatch||'';sku=sku||'';link=link||'';
   var id='fab'+Date.now()+Math.floor(Math.random()*9999);
   if(!finishPhotos[id])finishPhotos[id]=(Array.isArray(photos)?photos:[]).slice();
   if(swatch)fabricSwatches[id]=swatch;
@@ -920,16 +918,11 @@ function addFabricToFinish(finId,name,outOfStock,photos,swatch,sku,link,material
       if(lib[key]){
         if(lib[key].swatch){fabricSwatches[id]=lib[key].swatch;renderFabricSwatchPreview(id);}
         if(lib[key].photos&&lib[key].photos.length){finishPhotos[id]=lib[key].photos.slice();renderFinPhotos(id);}
-        if(lib[key].material){var matEl=document.getElementById('fabmat'+id);if(matEl&&!matEl.value)matEl.value=lib[key].material;}
         showToast('Matched existing fabric "'+this.value.trim()+'" — photo auto-filled','success');
       }
     }
   };
   body.appendChild(nameLbl);body.appendChild(nameInp);
-
-  var fabMatLbl=document.createElement('span');fabMatLbl.style.cssText='font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--walnut);font-weight:600;display:block;margin-bottom:4px;';fabMatLbl.innerHTML='Fabric / Material Type <span style="text-transform:none;letter-spacing:0;color:var(--mist);font-weight:400;">— shown under the swatch on the product page, e.g. "Performance Yarn Dyed Linen"</span>';
-  var fabMatInp=document.createElement('input');fabMatInp.type='text';fabMatInp.id='fabmat'+id;fabMatInp.value=material;fabMatInp.placeholder='e.g. Performance Distressed Velvet';fabMatInp.style.cssText='width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:2px;font-family:Outfit,sans-serif;font-size:12px;outline:none;margin-bottom:10px;';
-  body.appendChild(fabMatLbl);body.appendChild(fabMatInp);
 
   var fabSkuLbl=document.createElement('span');fabSkuLbl.style.cssText='font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--mist);font-weight:500;display:block;margin-bottom:4px;';fabSkuLbl.textContent='SKU (optional)';
   var fabSkuInp=document.createElement('input');fabSkuInp.type='text';fabSkuInp.id='fabsku'+id;fabSkuInp.value=sku;fabSkuInp.placeholder='e.g. SOFA-MOCHA-VEL';fabSkuInp.style.cssText='width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:2px;font-family:monospace;font-size:12px;outline:none;margin-bottom:10px;';
@@ -994,8 +987,8 @@ function getFabricLibrary(){
       (f.fabrics||[]).forEach(function(fab){
         var key=(fab.name||'').trim().toLowerCase();
         if(!key)return;
-        if(!lib[key]&&(fab.swatch||(fab.photos&&fab.photos.length)||fab.material)){
-          lib[key]={swatch:fab.swatch||'',photos:(fab.photos||[]).slice(),material:fab.material||''};
+        if(!lib[key]&&(fab.swatch||(fab.photos&&fab.photos.length))){
+          lib[key]={swatch:fab.swatch||'',photos:(fab.photos||[]).slice()};
         }
       });
     });
@@ -1008,8 +1001,8 @@ function propagateFabricLibrary(newFinishes){
   (newFinishes||[]).forEach(function(f){
     (f.fabrics||[]).forEach(function(fab){
       var key=(fab.name||'').trim().toLowerCase();
-      if(key&&(fab.swatch||(fab.photos&&fab.photos.length)||fab.material)){
-        updates[key]={swatch:fab.swatch||'',photos:(fab.photos||[]).slice(),material:fab.material||''};
+      if(key&&(fab.swatch||(fab.photos&&fab.photos.length))){
+        updates[key]={swatch:fab.swatch||'',photos:(fab.photos||[]).slice()};
       }
     });
   });
@@ -1020,7 +1013,7 @@ function propagateFabricLibrary(newFinishes){
       (f.fabrics||[]).forEach(function(fab){
         var key=(fab.name||'').trim().toLowerCase();
         if(updates[key]&&!fab.swatch&&!(fab.photos&&fab.photos.length)){
-          fab.swatch=updates[key].swatch;fab.photos=updates[key].photos.slice();if(!fab.material)fab.material=updates[key].material;changed=true;
+          fab.swatch=updates[key].swatch;fab.photos=updates[key].photos.slice();changed=true;
         }
       });
     });
@@ -1318,7 +1311,7 @@ async function save(){
         var cleanPhotos=(f.photos||[]).filter(function(ph){return ph&&!ph.startsWith('data:');});
         var cleanFabrics=(f.fabrics||[]).map(function(fab){
           var cleanFabPhotos=(fab.photos||[]).filter(function(ph){return ph&&!ph.startsWith('data:');});
-          return Object.assign({},fab,{photos:cleanFabPhotos,swatch:fab.swatch||'',material:fab.material||''});
+          return Object.assign({},fab,{photos:cleanFabPhotos,swatch:fab.swatch||''});
         });
         return Object.assign({},f,{photos:cleanPhotos,fabrics:cleanFabrics});
       });
