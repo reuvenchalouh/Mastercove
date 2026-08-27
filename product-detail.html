@@ -91,6 +91,8 @@ header{background:var(--white);border-bottom:1px solid var(--border);position:st
 .fab-opt.active .fab-name{color:var(--walnut);}
 .fab-opt.oos{opacity:0.35;cursor:not-allowed;pointer-events:none;}
 .fabric-toggle-wrap{margin-top:10px;}
+.fabric-type-heading{font-size:12px;font-weight:600;color:var(--walnut);text-transform:uppercase;letter-spacing:0.05em;margin:16px 0 8px;}
+.fabric-type-heading:first-child{margin-top:0;}
 .fabric-toggle-btn{background:none;border:1px solid var(--border);color:var(--walnut);font-size:12.5px;padding:8px 14px;border-radius:3px;cursor:pointer;font-family:'Outfit',sans-serif;font-weight:500;transition:all .15s;display:flex;align-items:center;gap:6px;}
 .fabric-toggle-btn:hover{background:var(--sand);border-color:var(--maple);}
 .fabric-grid-collapsed{max-height:250px;overflow:hidden;position:relative;}
@@ -273,9 +275,7 @@ src="https://www.facebook.com/tr?id=2156219968568427&ev=PageView&noscript=1"
     <!-- FABRIC SELECTOR -->
     <div class="fabric-row" id="fabric-row">
       <div class="opt-label" style="margin-bottom:8px;">Fabric — <b id="fabric-name" style="font-size:13px;color:var(--walnut);font-weight:600;"></b></div>
-      <div id="fabric-grid-wrap">
-        <div id="fabric-grid" class="fabric-grid"></div>
-      </div>
+      <div id="fabric-grid-wrap"></div>
       <div class="fabric-toggle-wrap" id="fabric-toggle-wrap" style="display:none;">
         <button class="fabric-toggle-btn" id="fabric-toggle-btn" onclick="toggleFabricGrid()">Show all fabrics</button>
       </div>
@@ -296,9 +296,7 @@ src="https://www.facebook.com/tr?id=2156219968568427&ev=PageView&noscript=1"
       </div>
       <div class="fabric-row" id="top-size-fabric-row" style="display:none;">
         <div class="opt-label" style="margin-bottom:8px;">Fabric — <b id="top-size-fabric-name" style="font-size:13px;color:var(--walnut);font-weight:600;"></b></div>
-        <div id="top-size-fabric-grid-wrap">
-          <div class="fabric-grid" id="top-size-fabric-grid"></div>
-        </div>
+        <div id="top-size-fabric-grid-wrap"></div>
         <div class="fabric-toggle-wrap" id="top-size-fabric-toggle-wrap" style="display:none;">
           <button class="fabric-toggle-btn" id="top-size-fabric-toggle-btn" onclick="toggleTopSizeFabricGrid()">Show all fabrics</button>
         </div>
@@ -441,14 +439,14 @@ function toggleFabricGrid(){
   fabricGridExpanded=!fabricGridExpanded;
   var wrap=document.getElementById('fabric-grid-wrap');
   var btn=document.getElementById('fabric-toggle-btn');
-  if(wrap)wrap.querySelector('.fabric-grid').classList.toggle('fabric-grid-collapsed',!fabricGridExpanded);
+  if(wrap)wrap.classList.toggle('fabric-grid-collapsed',!fabricGridExpanded);
   if(btn)btn.textContent=fabricGridExpanded?'Show fewer fabrics':'Show all fabrics';
 }
 function toggleTopSizeFabricGrid(){
   topSizeFabricGridExpanded=!topSizeFabricGridExpanded;
   var wrap=document.getElementById('top-size-fabric-grid-wrap');
   var btn=document.getElementById('top-size-fabric-toggle-btn');
-  if(wrap)wrap.querySelector('.fabric-grid').classList.toggle('fabric-grid-collapsed',!topSizeFabricGridExpanded);
+  if(wrap)wrap.classList.toggle('fabric-grid-collapsed',!topSizeFabricGridExpanded);
   if(btn)btn.textContent=topSizeFabricGridExpanded?'Show fewer fabrics':'Show all fabrics';
 }
 
@@ -664,35 +662,59 @@ function hideFabPreview(){
   var pop=document.getElementById('fab-preview');if(pop)pop.classList.remove('show');
 }
 
+function buildFabricSwatchEl(fab,isActive){
+  var thumb=fab.swatch?fab.swatch:((fab.photos&&fab.photos[0])?fab.photos[0]:'');
+  var div=document.createElement('div');
+  div.className='fab-opt'+(isActive&&!fab.outOfStock?' active':'')+(fab.outOfStock?' oos':'');
+  var sw=document.createElement('div');sw.className='fab-swatch';
+  if(thumb)sw.style.backgroundImage='url(\''+thumb+'\')';
+  var lb=document.createElement('span');lb.className='fab-name';lb.textContent=fab.name+(fab.outOfStock?' — Out of Stock':'');
+  div.appendChild(sw);div.appendChild(lb);
+  div.addEventListener('click',function(){selectFabric(div,fab.name||'',fab.photos||[]);});
+  if(thumb){
+    div.addEventListener('mouseenter',function(){showFabPreview(div,thumb,fab.name||'');});
+    div.addEventListener('mouseleave',hideFabPreview);
+  }
+  return div;
+}
+function groupFabricsByType(fabrics){
+  var order=[];var groups={};
+  fabrics.forEach(function(fab){
+    var key=(fab.type||'').trim();
+    if(!groups[key]){groups[key]=[];order.push(key);}
+    groups[key].push(fab);
+  });
+  return order.map(function(key){return{type:key,items:groups[key]};});
+}
 function renderFabrics(fabrics){
-  var row=document.getElementById('fabric-row');var grid=document.getElementById('fabric-grid');var toggleWrap=document.getElementById('fabric-toggle-wrap');var toggleBtn=document.getElementById('fabric-toggle-btn');
+  var row=document.getElementById('fabric-row');var wrap=document.getElementById('fabric-grid-wrap');var toggleWrap=document.getElementById('fabric-toggle-wrap');var toggleBtn=document.getElementById('fabric-toggle-btn');
   if(!fabrics||!fabrics.length){if(row)row.style.display='none';currentFabric='';document.getElementById('fabric-name').textContent='';return;}
-  grid.innerHTML='';
+  wrap.innerHTML='';
   fabricGridExpanded=false;
-  grid.classList.remove('fabric-grid-collapsed');
-  fabrics.forEach(function(fab,j){
-    var thumb=fab.swatch?fab.swatch:((fab.photos&&fab.photos[0])?fab.photos[0]:'');
-    var div=document.createElement('div');
-    div.className='fab-opt'+(j===0&&!fab.outOfStock?' active':'')+(fab.outOfStock?' oos':'');
-    var sw=document.createElement('div');sw.className='fab-swatch';
-    if(thumb)sw.style.backgroundImage='url(\''+thumb+'\')';
-    var lb=document.createElement('span');lb.className='fab-name';lb.textContent=fab.name+(fab.outOfStock?' — Out of Stock':'');
-    div.appendChild(sw);div.appendChild(lb);
-    div.addEventListener('click',function(){selectFabric(this,fab.name||'',fab.photos||[]);});
-    if(thumb){
-      div.addEventListener('mouseenter',function(){showFabPreview(div,thumb,fab.name||'');});
-      div.addEventListener('mouseleave',hideFabPreview);
+  wrap.classList.remove('fabric-grid-collapsed');
+  var groups=groupFabricsByType(fabrics);
+  var firstFab=fabrics.find(function(f){return!f.outOfStock;})||fabrics[0];
+  var firstAssigned=false;
+  groups.forEach(function(g){
+    if(g.type){
+      var heading=document.createElement('div');heading.className='fabric-type-heading';heading.textContent=g.type;
+      wrap.appendChild(heading);
     }
-    grid.appendChild(div);
+    var grid=document.createElement('div');grid.className='fabric-grid';
+    g.items.forEach(function(fab){
+      var isActive=!firstAssigned&&fab===firstFab;
+      if(isActive)firstAssigned=true;
+      grid.appendChild(buildFabricSwatchEl(fab,isActive));
+    });
+    wrap.appendChild(grid);
   });
   if(fabrics.length>FABRIC_GRID_COLLAPSE_THRESHOLD){
-    grid.classList.add('fabric-grid-collapsed');
+    wrap.classList.add('fabric-grid-collapsed');
     if(toggleWrap)toggleWrap.style.display='block';
     if(toggleBtn)toggleBtn.textContent='Show all fabrics';
   } else {
     if(toggleWrap)toggleWrap.style.display='none';
   }
-  var firstFab=fabrics.find(function(f){return!f.outOfStock;})||fabrics[0];
   if(firstFab){
     currentFabric=firstFab.name||'';
     document.getElementById('fabric-name').textContent=currentFabric;
@@ -799,40 +821,49 @@ function selectTopSizeFinish(el,f){
 }
 
 function renderTopSizeFabrics(fabrics){
-  var row=document.getElementById('top-size-fabric-row');var grid=document.getElementById('top-size-fabric-grid');var toggleWrap=document.getElementById('top-size-fabric-toggle-wrap');var toggleBtn=document.getElementById('top-size-fabric-toggle-btn');
+  var row=document.getElementById('top-size-fabric-row');var wrap=document.getElementById('top-size-fabric-grid-wrap');var toggleWrap=document.getElementById('top-size-fabric-toggle-wrap');var toggleBtn=document.getElementById('top-size-fabric-toggle-btn');
   if(!fabrics||!fabrics.length){row.style.display='none';return;}
-  grid.innerHTML='';
+  wrap.innerHTML='';
   topSizeFabricGridExpanded=false;
-  grid.classList.remove('fabric-grid-collapsed');
-  fabrics.forEach(function(fab,j){
-    var thumb=fab.swatch?fab.swatch:((fab.photos&&fab.photos[0])?fab.photos[0]:'');
-    var div=document.createElement('div');
-    div.className='fab-opt'+(j===0&&!fab.outOfStock?' active':'')+(fab.outOfStock?' oos':'');
-    var sw=document.createElement('div');sw.className='fab-swatch';
-    if(thumb)sw.style.backgroundImage='url(\''+thumb+'\')';
-    var lb=document.createElement('span');lb.className='fab-name';lb.textContent=fab.name+(fab.outOfStock?' — Out of Stock':'');
-    div.appendChild(sw);div.appendChild(lb);
-    div.addEventListener('click',function(){selectTopSizeFabric(div,fab.name||'',fab.photos||[]);});
-    if(thumb){
-      div.addEventListener('mouseenter',function(){showFabPreview(div,thumb,fab.name||'');});
-      div.addEventListener('mouseleave',hideFabPreview);
+  wrap.classList.remove('fabric-grid-collapsed');
+  var groups=groupFabricsByType(fabrics);
+  groups.forEach(function(g){
+    if(g.type){
+      var heading=document.createElement('div');heading.className='fabric-type-heading';heading.textContent=g.type;
+      wrap.appendChild(heading);
     }
-    grid.appendChild(div);
+    var grid=document.createElement('div');grid.className='fabric-grid';
+    g.items.forEach(function(fab){
+      var thumb=fab.swatch?fab.swatch:((fab.photos&&fab.photos[0])?fab.photos[0]:'');
+      var div=document.createElement('div');
+      div.className='fab-opt'+(fab.outOfStock?' oos':'');
+      var sw=document.createElement('div');sw.className='fab-swatch';
+      if(thumb)sw.style.backgroundImage='url(\''+thumb+'\')';
+      var lb=document.createElement('span');lb.className='fab-name';lb.textContent=fab.name+(fab.outOfStock?' — Out of Stock':'');
+      div.appendChild(sw);div.appendChild(lb);
+      div.addEventListener('click',function(){selectTopSizeFabric(div,fab.name||'',fab.photos||[]);});
+      if(thumb){
+        div.addEventListener('mouseenter',function(){showFabPreview(div,thumb,fab.name||'');});
+        div.addEventListener('mouseleave',hideFabPreview);
+      }
+      grid.appendChild(div);
+    });
+    wrap.appendChild(grid);
   });
   if(fabrics.length>FABRIC_GRID_COLLAPSE_THRESHOLD){
-    grid.classList.add('fabric-grid-collapsed');
+    wrap.classList.add('fabric-grid-collapsed');
     if(toggleWrap)toggleWrap.style.display='block';
     if(toggleBtn)toggleBtn.textContent='Show all fabrics';
   } else {
     if(toggleWrap)toggleWrap.style.display='none';
   }
   var firstFab=fabrics.find(function(f){return!f.outOfStock;})||fabrics[0];
-  if(firstFab)selectTopSizeFabric(grid.querySelector('.fab-opt'),firstFab.name||'',firstFab.photos||[]);
+  if(firstFab){var firstEl=wrap.querySelector('.fab-opt');selectTopSizeFabric(firstEl,firstFab.name||'',firstFab.photos||[]);}
   row.style.display='block';
 }
 
 function selectTopSizeFabric(el,name,photos){
-  document.querySelectorAll('#top-size-fabric-grid .fab-opt').forEach(function(o){o.classList.remove('active');});
+  document.querySelectorAll('#top-size-fabric-grid-wrap .fab-opt').forEach(function(o){o.classList.remove('active');});
   if(el)el.classList.add('active');
   document.getElementById('top-size-fabric-name').textContent=name;
   currentFabric=name;currentSize=currentTopSize;
