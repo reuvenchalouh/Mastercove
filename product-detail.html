@@ -82,14 +82,21 @@ header{background:var(--white);border-bottom:1px solid var(--border);position:st
 .fin-opt.oos .fin-swatch{position:relative;}
 .fin-opt.oos .fin-swatch::after{content:'✕';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--red);font-weight:700;}
 .fabric-row{margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:none;}
-.fabric-grid{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;}
-.fab-opt{display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;}
-.fab-swatch{width:64px;height:64px;border-radius:50%;border:2px solid var(--white);outline:1.5px solid var(--border);transition:outline-color .15s,transform .15s;background-color:var(--sand);background-size:cover;background-position:center;overflow:hidden;}
-.fab-opt:hover .fab-swatch{transform:scale(1.08);outline-color:var(--oak);}
-.fab-opt.active .fab-swatch{outline-color:var(--walnut);outline-width:2px;}
-.fab-name{font-size:12px;color:var(--mist);white-space:nowrap;text-align:center;max-width:80px;overflow:hidden;text-overflow:ellipsis;}
-.fab-opt.active .fab-name{color:var(--walnut);font-weight:600;}
+.fabric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:10px;}
+.fab-opt{display:flex;flex-direction:column;align-items:flex-start;gap:5px;cursor:pointer;}
+.fab-swatch{width:100%;aspect-ratio:1;border-radius:4px;border:2px solid var(--white);outline:1.5px solid var(--border);transition:outline-color .15s,transform .15s;background-color:var(--sand);background-size:cover;background-position:center;overflow:hidden;}
+.fab-opt:hover .fab-swatch{transform:scale(1.03);outline-color:var(--oak);}
+.fab-opt.active .fab-swatch{outline-color:var(--walnut);outline-width:2.5px;}
+.fab-name{font-size:12.5px;color:var(--ink);font-weight:500;line-height:1.3;margin-top:2px;}
+.fab-opt.active .fab-name{color:var(--walnut);}
 .fab-opt.oos{opacity:0.35;cursor:not-allowed;pointer-events:none;}
+.fabric-toggle-wrap{margin-top:10px;}
+.fabric-type-heading{font-size:12px;font-weight:600;color:var(--walnut);text-transform:uppercase;letter-spacing:0.05em;margin:16px 0 8px;}
+.fabric-type-heading:first-child{margin-top:0;}
+.fabric-toggle-btn{background:none;border:1px solid var(--border);color:var(--walnut);font-size:12.5px;padding:8px 14px;border-radius:3px;cursor:pointer;font-family:'Outfit',sans-serif;font-weight:500;transition:all .15s;display:flex;align-items:center;gap:6px;}
+.fabric-toggle-btn:hover{background:var(--sand);border-color:var(--maple);}
+.fabric-grid-collapsed{max-height:250px;overflow:hidden;position:relative;}
+.fabric-grid-collapsed::after{content:'';position:absolute;bottom:0;left:0;right:0;height:60px;background:linear-gradient(to bottom,rgba(253,251,248,0),rgba(253,251,248,1));pointer-events:none;}
 .fab-preview{position:fixed;z-index:500;width:220px;background:var(--white);border:1px solid var(--border);border-radius:6px;box-shadow:0 14px 36px rgba(0,0,0,0.2);overflow:hidden;display:none;pointer-events:none;}
 .fab-preview.show{display:block;}
 .fab-preview-img{width:100%;height:190px;background-color:var(--sand);background-size:cover;background-position:center;}
@@ -156,7 +163,7 @@ footer{background:var(--ink);color:rgba(255,255,255,.5);padding:52px 40px 28px;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 @keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
 .fade-up{animation:fadeUp .45s ease both;}
-@media(max-width:900px){
+@media(max-width:768px){
   .header-inner{padding:0 12px;}
   .main-nav{display:none;}
   .cart-pill{padding:7px 12px!important;font-size:12px!important;}
@@ -165,10 +172,10 @@ footer{background:var(--ink);color:rgba(255,255,255,.5);padding:52px 40px 28px;}
   .pdp-info{grid-column:1;grid-row:2;}
   .pdp-details-left{grid-column:1;grid-row:3;}
   .gallery{flex-direction:column;}
-  .thumbs{flex-direction:row!important;width:100%!important;overflow-x:auto;gap:6px;margin-bottom:8px;order:2;}
-  .thumb{width:56px!important;height:56px!important;flex-shrink:0;}
+  .thumbs{flex-direction:row!important;flex-wrap:wrap!important;width:100%!important;overflow-x:visible!important;gap:6px;margin-bottom:8px;order:2;justify-content:flex-start;}
+  .thumb{width:15%!important;aspect-ratio:1/1;flex-shrink:0;}
   .main-img-wrap{width:100%;height:320px;aspect-ratio:unset;order:1;min-height:320px;}
-  #active-main-img{width:100%!important;height:100%!important;object-fit:contain!important;position:absolute!important;inset:0!important;}
+  #active-main-img{width:100%!important;height:100%!important;object-fit:contain!important;position:absolute!important;inset:0!important;transform:translateZ(0)!important;-webkit-transform:translateZ(0)!important;-webkit-backface-visibility:hidden!important;backface-visibility:hidden!important;}
   .pdp-info{position:static;}
   .breadcrumb{padding:8px 16px;}
   .tabs-section{padding:0 16px 40px;}
@@ -183,6 +190,9 @@ footer{background:var(--ink);color:rgba(255,255,255,.5);padding:52px 40px 28px;}
   .size-grid{gap:8px;}
   .sz-opt{padding:8px 12px;font-size:12px;}
   .drawer{width:92vw;right:-92vw;}
+  .fabric-grid{grid-template-columns:repeat(3,1fr)!important;gap:8px!important;}
+  .fab-name{font-size:11.5px!important;}
+  body{overflow-x:hidden;}
   img{max-width:100%;}
 }
 #pdp-features-list li,#pdp-features-list-left li{display:flex;align-items:flex-start;gap:8px;font-size:15px;color:var(--slate);margin-bottom:10px;font-weight:300;line-height:1.7;font-family:'Outfit',sans-serif;}
@@ -265,7 +275,10 @@ src="https://www.facebook.com/tr?id=2156219968568427&ev=PageView&noscript=1"
     <!-- FABRIC SELECTOR -->
     <div class="fabric-row" id="fabric-row">
       <div class="opt-label" style="margin-bottom:8px;">Fabric — <b id="fabric-name" style="font-size:13px;color:var(--walnut);font-weight:600;"></b></div>
-      <div id="fabric-grid"></div>
+      <div id="fabric-grid-wrap"></div>
+      <div class="fabric-toggle-wrap" id="fabric-toggle-wrap" style="display:none;">
+        <button class="fabric-toggle-btn" id="fabric-toggle-btn" onclick="toggleFabricGrid()">Show all fabrics</button>
+      </div>
     </div>
     <!-- SIZE SELECTOR -->
     <div class="size-row" id="size-row">
@@ -283,7 +296,10 @@ src="https://www.facebook.com/tr?id=2156219968568427&ev=PageView&noscript=1"
       </div>
       <div class="fabric-row" id="top-size-fabric-row" style="display:none;">
         <div class="opt-label" style="margin-bottom:8px;">Fabric — <b id="top-size-fabric-name" style="font-size:13px;color:var(--walnut);font-weight:600;"></b></div>
-        <div class="fabric-grid" id="top-size-fabric-grid"></div>
+        <div id="top-size-fabric-grid-wrap"></div>
+        <div class="fabric-toggle-wrap" id="top-size-fabric-toggle-wrap" style="display:none;">
+          <button class="fabric-toggle-btn" id="top-size-fabric-toggle-btn" onclick="toggleTopSizeFabricGrid()">Show all fabrics</button>
+        </div>
       </div>
     </div>
     <div class="divider"></div>
@@ -398,10 +414,6 @@ src="https://www.facebook.com/tr?id=2156219968568427&ev=PageView&noscript=1"
 <div class="toast" id="toast"></div>
 
 <script>
-if('scrollRestoration' in history){ history.scrollRestoration = 'manual'; }
-window.scrollTo(0,0);
-</script>
-<script>
 var currentProduct=null;
 var qty=1;
 var cart=[];
@@ -411,6 +423,32 @@ var CARDS_PER_VIEW=4;
 var currentFabric='';
 var currentSize='';
 var basePrice=0;
+var fabricGridExpanded=false;
+var topSizeFabricGridExpanded=false;
+var FABRIC_GRID_COLLAPSE_THRESHOLD=8;
+
+function forceReflow(){
+  var wrap=document.querySelector('.main-img-wrap');
+  if(!wrap)return;
+  wrap.style.display='none';
+  void wrap.offsetHeight;
+  wrap.style.display='';
+}
+
+function toggleFabricGrid(){
+  fabricGridExpanded=!fabricGridExpanded;
+  var wrap=document.getElementById('fabric-grid-wrap');
+  var btn=document.getElementById('fabric-toggle-btn');
+  if(wrap)wrap.classList.toggle('fabric-grid-collapsed',!fabricGridExpanded);
+  if(btn)btn.textContent=fabricGridExpanded?'Show fewer fabrics':'Show all fabrics';
+}
+function toggleTopSizeFabricGrid(){
+  topSizeFabricGridExpanded=!topSizeFabricGridExpanded;
+  var wrap=document.getElementById('top-size-fabric-grid-wrap');
+  var btn=document.getElementById('top-size-fabric-toggle-btn');
+  if(wrap)wrap.classList.toggle('fabric-grid-collapsed',!topSizeFabricGridExpanded);
+  if(btn)btn.textContent=topSizeFabricGridExpanded?'Show fewer fabrics':'Show all fabrics';
+}
 
 function buildCarousel(products){
   carouselItems=products;
@@ -517,7 +555,7 @@ function renderProduct(p){
       return typeof f==='string'
         ?{color:f,name:'Default',photos:[],outOfStock:false,fabrics:[],sizes:[]}
         :{color:f.color||'#C4976A',name:(f.name&&String(f.name).trim())?String(f.name).trim():'Default',photos:f.photos||[],outOfStock:f.outOfStock||false,
-          fabrics:(f.fabrics||[]).map(function(fab){return{name:fab.name||'',outOfStock:fab.outOfStock||false,photos:fab.photos||[],swatch:fab.swatch||''};}).sort(function(a,b){return a.name.localeCompare(b.name);}),
+          fabrics:(f.fabrics||[]).map(function(fab){return{name:fab.name||'',outOfStock:fab.outOfStock||false,photos:fab.photos||[],swatch:fab.swatch||'',type:fab.type||''};}),
           sizes:(f.sizes||[]).map(function(sz){return{name:sz.name||'',price:sz.price||0,outOfStock:sz.outOfStock||false,photos:sz.photos||[],dims:sz.dims||{}};})};
     }).sort(function(a,b){return a.name.localeCompare(b.name);});
 
@@ -548,8 +586,11 @@ function renderProduct(p){
       if(!initPhotos.length&&p.img)initPhotos=[p.img];
       if(initPhotos.length){
         var mainImgEl=document.createElement('img');mainImgEl.id='active-main-img';
-        mainImgEl.style.cssText='width:100%;height:100%;object-fit:contain;position:absolute;inset:0;border-radius:6px;z-index:1;';
+        mainImgEl.style.cssText='width:100%;height:100%;object-fit:contain;position:absolute;inset:0;border-radius:6px;z-index:1;transform:translateZ(0);-webkit-transform:translateZ(0);-webkit-backface-visibility:hidden;backface-visibility:hidden;';
         mainImgEl.src=initPhotos[0];document.getElementById('main-img').appendChild(mainImgEl);
+        mainImgEl.onload=forceReflow;
+        setTimeout(forceReflow,60);
+        setTimeout(forceReflow,300);
         var thumbsEl=document.getElementById('thumbs');thumbsEl.innerHTML='';
         initPhotos.forEach(function(src,i){
           var div=document.createElement('div');div.className='thumb'+(i===0?' active':'');
@@ -583,8 +624,10 @@ function switchMainImg(thumb,src){document.querySelectorAll('.thumb').forEach(fu
 function loadFinishImages(photos){
   if(!photos||!photos.length)return;
   var m=document.getElementById('active-main-img');
-  if(!m){m=document.createElement('img');m.id='active-main-img';m.style.cssText='width:100%;height:100%;object-fit:contain;position:absolute;inset:0;border-radius:6px;z-index:1;';document.getElementById('main-img').appendChild(m);}
+  if(!m){m=document.createElement('img');m.id='active-main-img';m.style.cssText='width:100%;height:100%;object-fit:contain;position:absolute;inset:0;border-radius:6px;z-index:1;transform:translateZ(0);-webkit-transform:translateZ(0);-webkit-backface-visibility:hidden;backface-visibility:hidden;';document.getElementById('main-img').appendChild(m);}
   m.src=photos[0];
+  m.onload=forceReflow;
+  setTimeout(forceReflow,60);
   var thumbsEl=document.getElementById('thumbs');thumbsEl.innerHTML='';
   photos.forEach(function(src,i){var div=document.createElement('div');div.className='thumb'+(i===0?' active':'');var img=document.createElement('img');img.src=src;img.style.cssText='width:100%;height:100%;object-fit:cover;';div.appendChild(img);div.addEventListener('click',(function(s){return function(){switchMainImg(this,s);};})(src));thumbsEl.appendChild(div);});
 }
@@ -619,27 +662,59 @@ function hideFabPreview(){
   var pop=document.getElementById('fab-preview');if(pop)pop.classList.remove('show');
 }
 
-function renderFabrics(fabrics){
-  var row=document.getElementById('fabric-row');var grid=document.getElementById('fabric-grid');
-  if(!fabrics||!fabrics.length){if(row)row.style.display='none';currentFabric='';document.getElementById('fabric-name').textContent='';return;}
-  grid.className='fabric-grid';
-  grid.innerHTML='';
-  fabrics.forEach(function(fab,j){
-    var thumb=fab.swatch?fab.swatch:((fab.photos&&fab.photos[0])?fab.photos[0]:'');
-    var div=document.createElement('div');
-    div.className='fab-opt'+(j===0&&!fab.outOfStock?' active':'')+(fab.outOfStock?' oos':'');
-    var sw=document.createElement('div');sw.className='fab-swatch';
-    if(thumb)sw.style.backgroundImage='url(\''+thumb+'\')';
-    var lb=document.createElement('span');lb.className='fab-name';lb.textContent=fab.name+(fab.outOfStock?' — Out of Stock':'');
-    div.appendChild(sw);div.appendChild(lb);
-    div.addEventListener('click',function(){selectFabric(this,fab.name||'',fab.photos||[]);});
-    if(thumb){
-      div.addEventListener('mouseenter',function(){showFabPreview(div,thumb,fab.name||'');});
-      div.addEventListener('mouseleave',hideFabPreview);
-    }
-    grid.appendChild(div);
+function buildFabricSwatchEl(fab,isActive){
+  var thumb=fab.swatch?fab.swatch:((fab.photos&&fab.photos[0])?fab.photos[0]:'');
+  var div=document.createElement('div');
+  div.className='fab-opt'+(isActive&&!fab.outOfStock?' active':'')+(fab.outOfStock?' oos':'');
+  var sw=document.createElement('div');sw.className='fab-swatch';
+  if(thumb)sw.style.backgroundImage='url(\''+thumb+'\')';
+  var lb=document.createElement('span');lb.className='fab-name';lb.textContent=fab.name+(fab.outOfStock?' — Out of Stock':'');
+  div.appendChild(sw);div.appendChild(lb);
+  div.addEventListener('click',function(){selectFabric(div,fab.name||'',fab.photos||[]);});
+  if(thumb){
+    div.addEventListener('mouseenter',function(){showFabPreview(div,thumb,fab.name||'');});
+    div.addEventListener('mouseleave',hideFabPreview);
+  }
+  return div;
+}
+function groupFabricsByType(fabrics){
+  var order=[];var groups={};
+  fabrics.forEach(function(fab){
+    var key=(fab.type||'').trim();
+    if(!groups[key]){groups[key]=[];order.push(key);}
+    groups[key].push(fab);
   });
+  return order.map(function(key){return{type:key,items:groups[key]};});
+}
+function renderFabrics(fabrics){
+  var row=document.getElementById('fabric-row');var wrap=document.getElementById('fabric-grid-wrap');var toggleWrap=document.getElementById('fabric-toggle-wrap');var toggleBtn=document.getElementById('fabric-toggle-btn');
+  if(!fabrics||!fabrics.length){if(row)row.style.display='none';currentFabric='';document.getElementById('fabric-name').textContent='';return;}
+  wrap.innerHTML='';
+  fabricGridExpanded=false;
+  wrap.classList.remove('fabric-grid-collapsed');
+  var groups=groupFabricsByType(fabrics);
   var firstFab=fabrics.find(function(f){return!f.outOfStock;})||fabrics[0];
+  var firstAssigned=false;
+  groups.forEach(function(g){
+    if(g.type){
+      var heading=document.createElement('div');heading.className='fabric-type-heading';heading.textContent=g.type;
+      wrap.appendChild(heading);
+    }
+    var grid=document.createElement('div');grid.className='fabric-grid';
+    g.items.forEach(function(fab){
+      var isActive=!firstAssigned&&fab===firstFab;
+      if(isActive)firstAssigned=true;
+      grid.appendChild(buildFabricSwatchEl(fab,isActive));
+    });
+    wrap.appendChild(grid);
+  });
+  if(fabrics.length>FABRIC_GRID_COLLAPSE_THRESHOLD){
+    wrap.classList.add('fabric-grid-collapsed');
+    if(toggleWrap)toggleWrap.style.display='block';
+    if(toggleBtn)toggleBtn.textContent='Show all fabrics';
+  } else {
+    if(toggleWrap)toggleWrap.style.display='none';
+  }
   if(firstFab){
     currentFabric=firstFab.name||'';
     document.getElementById('fabric-name').textContent=currentFabric;
@@ -654,7 +729,7 @@ var currentTopSize=null;
 function renderTopSizeMode(topSizes,fallbackImg){
   var sizes=(topSizes||[]).map(function(s){
     return{name:s.name||'',price:s.price||0,outOfStock:s.outOfStock||false,dims:s.dims||{},sku:s.sku||'',componentDims:s.componentDims||[],desc:s.desc||'',features:s.features||'',
-      finishes:(s.finishes||[]).map(function(f){return{color:f.color||'#C4976A',name:f.name||'',outOfStock:f.outOfStock||false,photos:f.photos||[],sku:f.sku||'',fabrics:(f.fabrics||[]).map(function(fab){return{name:fab.name||'',outOfStock:fab.outOfStock||false,photos:fab.photos||[],swatch:fab.swatch||''};}).sort(function(a,b){return a.name.localeCompare(b.name);})};}).sort(function(a,b){return a.name.localeCompare(b.name);})};
+      finishes:(s.finishes||[]).map(function(f){return{color:f.color||'#C4976A',name:f.name||'',outOfStock:f.outOfStock||false,photos:f.photos||[],sku:f.sku||'',fabrics:(f.fabrics||[]).map(function(fab){return{name:fab.name||'',outOfStock:fab.outOfStock||false,photos:fab.photos||[],swatch:fab.swatch||'',type:fab.type||''};})};}).sort(function(a,b){return a.name.localeCompare(b.name);})};
   });
   var grid=document.getElementById('top-size-grid');grid.innerHTML='';
   sizes.forEach(function(sz,j){
@@ -746,32 +821,49 @@ function selectTopSizeFinish(el,f){
 }
 
 function renderTopSizeFabrics(fabrics){
-  var row=document.getElementById('top-size-fabric-row');var grid=document.getElementById('top-size-fabric-grid');
+  var row=document.getElementById('top-size-fabric-row');var wrap=document.getElementById('top-size-fabric-grid-wrap');var toggleWrap=document.getElementById('top-size-fabric-toggle-wrap');var toggleBtn=document.getElementById('top-size-fabric-toggle-btn');
   if(!fabrics||!fabrics.length){row.style.display='none';return;}
-  grid.className='fabric-grid';
-  grid.innerHTML='';
-  fabrics.forEach(function(fab,j){
-    var thumb=fab.swatch?fab.swatch:((fab.photos&&fab.photos[0])?fab.photos[0]:'');
-    var div=document.createElement('div');
-    div.className='fab-opt'+(j===0&&!fab.outOfStock?' active':'')+(fab.outOfStock?' oos':'');
-    var sw=document.createElement('div');sw.className='fab-swatch';
-    if(thumb)sw.style.backgroundImage='url(\''+thumb+'\')';
-    var lb=document.createElement('span');lb.className='fab-name';lb.textContent=fab.name+(fab.outOfStock?' — Out of Stock':'');
-    div.appendChild(sw);div.appendChild(lb);
-    div.addEventListener('click',function(){selectTopSizeFabric(div,fab.name||'',fab.photos||[]);});
-    if(thumb){
-      div.addEventListener('mouseenter',function(){showFabPreview(div,thumb,fab.name||'');});
-      div.addEventListener('mouseleave',hideFabPreview);
+  wrap.innerHTML='';
+  topSizeFabricGridExpanded=false;
+  wrap.classList.remove('fabric-grid-collapsed');
+  var groups=groupFabricsByType(fabrics);
+  groups.forEach(function(g){
+    if(g.type){
+      var heading=document.createElement('div');heading.className='fabric-type-heading';heading.textContent=g.type;
+      wrap.appendChild(heading);
     }
-    grid.appendChild(div);
+    var grid=document.createElement('div');grid.className='fabric-grid';
+    g.items.forEach(function(fab){
+      var thumb=fab.swatch?fab.swatch:((fab.photos&&fab.photos[0])?fab.photos[0]:'');
+      var div=document.createElement('div');
+      div.className='fab-opt'+(fab.outOfStock?' oos':'');
+      var sw=document.createElement('div');sw.className='fab-swatch';
+      if(thumb)sw.style.backgroundImage='url(\''+thumb+'\')';
+      var lb=document.createElement('span');lb.className='fab-name';lb.textContent=fab.name+(fab.outOfStock?' — Out of Stock':'');
+      div.appendChild(sw);div.appendChild(lb);
+      div.addEventListener('click',function(){selectTopSizeFabric(div,fab.name||'',fab.photos||[]);});
+      if(thumb){
+        div.addEventListener('mouseenter',function(){showFabPreview(div,thumb,fab.name||'');});
+        div.addEventListener('mouseleave',hideFabPreview);
+      }
+      grid.appendChild(div);
+    });
+    wrap.appendChild(grid);
   });
+  if(fabrics.length>FABRIC_GRID_COLLAPSE_THRESHOLD){
+    wrap.classList.add('fabric-grid-collapsed');
+    if(toggleWrap)toggleWrap.style.display='block';
+    if(toggleBtn)toggleBtn.textContent='Show all fabrics';
+  } else {
+    if(toggleWrap)toggleWrap.style.display='none';
+  }
   var firstFab=fabrics.find(function(f){return!f.outOfStock;})||fabrics[0];
-  if(firstFab)selectTopSizeFabric(grid.querySelector('.fab-opt'),firstFab.name||'',firstFab.photos||[]);
+  if(firstFab){var firstEl=wrap.querySelector('.fab-opt');selectTopSizeFabric(firstEl,firstFab.name||'',firstFab.photos||[]);}
   row.style.display='block';
 }
 
 function selectTopSizeFabric(el,name,photos){
-  document.querySelectorAll('#top-size-fabric-grid .fab-opt').forEach(function(o){o.classList.remove('active');});
+  document.querySelectorAll('#top-size-fabric-grid-wrap .fab-opt').forEach(function(o){o.classList.remove('active');});
   if(el)el.classList.add('active');
   document.getElementById('top-size-fabric-name').textContent=name;
   currentFabric=name;currentSize=currentTopSize;
@@ -894,7 +986,6 @@ function toggleCart(){document.getElementById('drawer').classList.toggle('open')
 function showToast(msg){var t=document.getElementById('toast');t.textContent='✓  '+msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2400);}
 
 document.addEventListener('DOMContentLoaded',function(){
-  window.scrollTo(0,0);
   cart=loadMcCart();
   updateCart();
   var params=new URLSearchParams(window.location.search);var id=params.get('id');
