@@ -562,9 +562,12 @@ function updateStats(){
     document.getElementById('ss-avg').textContent=Math.round(prices.reduce(function(a,b){return a+b;},0)/prices.length).toLocaleString();
     document.getElementById('ss-range').textContent='$'+Math.min.apply(null,prices).toLocaleString()+' – $'+Math.max.apply(null,prices).toLocaleString();
   }
+  var FAIRE_BRANDS=['Olliix','Sagebrook Home','Union Home LLC','HomeRoots','Karat Home','ReForm Creative Home','HOMYCASA DESIGN INC','Greenwestons','Furnitureland','GJ Styles','Intro Foris','Better Wood & Home','Greener Valley Trading','Flash Furniture','Heynemo'];
+  var FAIRE_BRANDS_LOWER=FAIRE_BRANDS.map(function(b){return b.toLowerCase();});
   var vendorCounts={};
   products.forEach(function(p){
     var v=(p.brand||'').trim()||'Unlisted';
+    if(FAIRE_BRANDS_LOWER.indexOf(v.toLowerCase())>=0)v='Faire';
     vendorCounts[v]=(vendorCounts[v]||0)+1;
   });
   var vendorNames=Object.keys(vendorCounts).sort(function(a,b){return vendorCounts[b]-vendorCounts[a];});
