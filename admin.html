@@ -1212,6 +1212,19 @@ function editProduct(id){
 }
 function cancelEdit(){editingId=null;clearForm();}
 
+function duplicateProduct(id){
+  editProduct(id);
+  editingId=null;
+  var nameEl=document.getElementById('f-name');
+  if(nameEl&&nameEl.value&&nameEl.value.toLowerCase().indexOf('copy of ')!==0){nameEl.value='Copy of '+nameEl.value;}
+  document.getElementById('form-title').textContent='Duplicate Product';
+  document.getElementById('form-sub').textContent='Same layout — update the details and save as a new listing';
+  document.getElementById('submit-btn').textContent='+ Add as New Product';
+  document.getElementById('edit-cancel-wrap').style.display='none';
+  document.getElementById('form-panel').scrollIntoView({behavior:'smooth',block:'start'});
+  showToast('Duplicated — edit details and save','success');
+}
+
 function deleteProduct(id){var p=products.find(function(x){return x.id===id;});if(!p)return;deleteId=id;document.getElementById('del-name').textContent=p.name;document.getElementById('del-modal').classList.add('open');}
 async function confirmDelete(){products=products.filter(function(p){return p.id!==deleteId;});await deleteProductFromSupabase(deleteId);await save();renderTable();updateStats();closeModal();if(editingId===deleteId)cancelEdit();showToast('Product deleted','error');}
 function closeModal(){document.getElementById('del-modal').classList.remove('open');deleteId=null;}
@@ -1309,7 +1322,7 @@ function renderTable(){
       +'<td>'+((p.shippingCost||0)>0?'<span style="color:var(--red);font-weight:500;">$'+Number(p.shippingCost).toLocaleString()+'</span>':'<span style="color:var(--green);">Free</span>')+'</td>'
       +'<td>'+(p.supplierLink?'<a href="'+p.supplierLink+'" target="_blank" style="background:var(--walnut);color:#fff;padding:3px 9px;border-radius:2px;font-size:11px;text-decoration:none;">Buy</a>':'<span style="font-size:11px;color:var(--mist);">—</span>')+'</td>'
       +'<td><div class="status-dot" onclick="toggleStatus('+p.id+')" title="Click to toggle"><div class="dot '+(p.status==='active'?'dot-active':'dot-draft')+'"></div><span style="color:'+(p.status==='active'?'var(--green)':'var(--mist)')+';">'+(p.status==='active'?'Active':'Draft')+'</span></div></td>'
-      +'<td><div class="act-btns"><button class="act-btn edit" onclick="editProduct('+p.id+')">Edit</button><button class="act-btn del" onclick="deleteProduct('+p.id+')">Delete</button></div></td>'
+      +'<td><div class="act-btns"><button class="act-btn edit" onclick="editProduct('+p.id+')">Edit</button><button class="act-btn" onclick="duplicateProduct('+p.id+')">Duplicate</button><button class="act-btn del" onclick="deleteProduct('+p.id+')">Delete</button></div></td>'
       +'</tr>';
   }).join('');
 }
