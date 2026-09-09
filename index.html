@@ -388,7 +388,7 @@ var PAGE_SIZE = 24;
 var visibleCount = PAGE_SIZE;
 
 var ROOM_MAP = {
-  bedroom:  ['dresser','nightstand','bookcase','bed'],
+  bedroom:  ['dresser','chest','nightstand','bookcase','bed'],
   living:   ['tv','sideboard','chair','accentchair','bench','sofa','sectional','armchair'],
   entryway: ['shoe','sidetable','bench'],
   storage:  ['shoe','sideboard'],
@@ -400,7 +400,7 @@ var ROOM_MAP = {
 };
 
 var NAV_ROOMS = [
-  {key:'bedroom',  label:'Bedroom',     cats:['dresser','nightstand','bookcase','bed']},
+  {key:'bedroom',  label:'Bedroom',     cats:['dresser','chest','nightstand','bookcase','bed']},
   {key:'living',   label:'Living Room', cats:['sofa','sectional','armchair','sideboard','tv','chair','accentchair','bench','sidetable']},
   {key:'entryway', label:'Entryway',    cats:['shoe','sidetable','bench']},
   {key:'dining',   label:'Dining',      cats:['sideboard','bar','sidetable','chair']},
@@ -940,7 +940,7 @@ function onSearch(){
   }
 }
 function scrollToProducts(){ setTimeout(function(){ var el=document.getElementById('products'); if(el)el.scrollIntoView({behavior:'smooth'}); },50); }
-function getCatLabel(cat){ var map={dresser:'Dresser',sideboard:'Sideboard',tv:'TV Console',sidetable:'Table',nightstand:'Nightstand',shoe:'Shoe Storage',bookcase:'Bookcase',desk:'Desk',chair:'Chair',accentchair:'Accent Chair',sofa:'Sofa',sectional:'Sectional',armchair:'Lounge & Armchairs',bar:'Bar',bed:'Bed',bench:'Bench',vanity:'Vanity',outdoor:'Outdoor Furniture'}; return map[cat]||cat; }
+function getCatLabel(cat){ var map={dresser:'Dresser',chest:'Chest',sideboard:'Sideboard',tv:'TV Console',sidetable:'Table',nightstand:'Nightstand',shoe:'Shoe Storage',bookcase:'Bookcase',desk:'Desk',chair:'Chair',accentchair:'Accent Chair',sofa:'Sofa',sectional:'Sectional',armchair:'Lounge & Armchairs',bar:'Bar',bed:'Bed',bench:'Bench',vanity:'Vanity',outdoor:'Outdoor Furniture'}; return map[cat]||cat; }
 function openProduct(id){ window.location.href='product-detail.html?id='+id; }
 
 function swapFinish(pid, ci) {
@@ -994,6 +994,20 @@ function addToCart(pid) {
       content_type: 'product',
       value: p.price,
       currency: 'USD'
+    });
+  }
+  if(typeof gtag === 'function'){
+    gtag('event', 'add_to_cart', {
+      currency: 'USD',
+      value: p.price,
+      items: [{
+        item_id: String(p.id),
+        item_name: p.name,
+        item_category: p.cat||'',
+        item_variant: finish||fabric||'',
+        price: p.price,
+        quantity: 1
+      }]
     });
   }
 }
