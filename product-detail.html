@@ -503,6 +503,7 @@ function quickAddToCart(pid){
   }).then(function(r){return r.json();}).then(function(data){
     if(data&&data.length){var p=data[0];cart=loadMcCart();var key='p'+p.id+'default';var ex=cart.find(function(x){return x.key===key;});if(ex)ex.qty++;else cart.push({key:key,id:p.id,name:p.name,sub:'',finish:'',price:p.price,qty:1,img:p.img||'',shipping:p.shipping_cost||0});updateCart();saveMcCart();showToast(p.name+' added to cart ✓');
       if(typeof fbq==='function'){fbq('track','AddToCart',{content_ids:[String(p.id)],content_name:p.name,content_type:'product',value:p.price,currency:'USD'});}
+      if(typeof gtag==='function'){gtag('event','add_to_cart',{currency:'USD',value:p.price,items:[{item_id:String(p.id),item_name:p.name,price:p.price,quantity:1}]});}
     }
   });
 }
@@ -510,7 +511,7 @@ function quickAddToCart(pid){
 function renderProduct(p){
   currentProduct=p;basePrice=p.price||0;
   document.title=p.name+' — Master Cove';
-  var catLabels={dresser:'Dressers',sideboard:'Sideboards',tv:'TV Consoles',sidetable:'Tables',nightstand:'Nightstands',shoe:'Shoe Storage',bookcase:'Bookcases',desk:'Desks',chair:'Chairs',accentchair:'Accent Chairs',sofa:'Sofas',sectional:'Sectionals',armchair:'Lounge & Armchairs',bar:'Bars',bed:'Beds',bench:'Benches',vanity:'Vanities',outdoor:'Outdoor Furniture',other:'Shop'};
+  var catLabels={dresser:'Dressers',chest:'Chests',sideboard:'Sideboards',tv:'TV Consoles',sidetable:'Tables',nightstand:'Nightstands',shoe:'Shoe Storage',bookcase:'Bookcases',desk:'Desks',chair:'Chairs',accentchair:'Accent Chairs',sofa:'Sofas',sectional:'Sectionals',armchair:'Lounge & Armchairs',bar:'Bars',bed:'Beds',bench:'Benches',vanity:'Vanities',outdoor:'Outdoor Furniture',other:'Shop'};
   var catLabel=catLabels[p.cat]||'Shop';
   document.getElementById('bc-cat').textContent=catLabel;document.getElementById('bc-cat').href='index.html?cat='+encodeURIComponent(p.cat);
   document.getElementById('bc-name').textContent=p.name;document.getElementById('pdp-title').textContent=p.name;
@@ -536,6 +537,13 @@ function renderProduct(p){
       content_category:p.cat||'',
       value:p.price||0,
       currency:'USD'
+    });
+  }
+  if(typeof gtag==='function'){
+    gtag('event','view_item',{
+      currency:'USD',
+      value:p.price||0,
+      items:[{item_id:String(p.id),item_name:p.name,item_category:p.cat||'',price:p.price||0,quantity:1}]
     });
   }
 
@@ -962,6 +970,20 @@ function addToCart(){
       content_type:'product',
       value:cartPrice,
       currency:'USD'
+    });
+  }
+  if(typeof gtag==='function'){
+    gtag('event','add_to_cart',{
+      currency:'USD',
+      value:cartPrice*qty,
+      items:[{
+        item_id:String(currentProduct.id),
+        item_name:currentProduct.name,
+        item_category:currentProduct.cat||'',
+        item_variant:(fn||fab||sz||''),
+        price:cartPrice,
+        quantity:qty
+      }]
     });
   }
 }
