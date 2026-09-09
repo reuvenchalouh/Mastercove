@@ -6,6 +6,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Order Confirmed — Master Cove</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-D8LM0CQB38"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-D8LM0CQB38');</script>
 <style>
 :root{--ink:#1C1A17;--sand:#F5EFE6;--linen:#EDE5D8;--walnut:#6B4C35;--maple:#D4AA7D;--slate:#5C5750;--mist:#A8A09A;--border:#DDD5C8;--white:#FDFBF8;--green:#4A7A5A;}
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -116,6 +118,8 @@ var name    = params.get('name');
 var address = params.get('address');
 var product = params.get('product');
 var total   = params.get('total');
+var value   = params.get('value');
+var itemsRaw = params.get('items');
 
 if(order) document.getElementById('order-num').textContent = order;
 
@@ -129,6 +133,27 @@ if(name)    document.getElementById('detail-name').textContent = name;
 if(product) document.getElementById('detail-product').textContent = product;
 if(total)   document.getElementById('detail-total').textContent = '$' + total;
 if(address) document.getElementById('detail-address').textContent = address;
+
+// Fire GA4 purchase event once, using the real order number as the transaction ID.
+// Guards against double-firing if this page is reloaded or revisited via back/forward.
+if(order && typeof gtag === 'function'){
+  var firedKey = 'mc_ga_purchase_fired_' + order;
+  var alreadyFired = false;
+  try { alreadyFired = sessionStorage.getItem(firedKey) === '1'; } catch(e){}
+  if(!alreadyFired){
+    var items = [];
+    if(itemsRaw){
+      try { items = JSON.parse(itemsRaw); } catch(e){ items = []; }
+    }
+    gtag('event', 'purchase', {
+      transaction_id: order,
+      currency: 'USD',
+      value: value ? parseFloat(value) : (total ? parseFloat(total.replace(/,/g,'')) : 0),
+      items: items
+    });
+    try { sessionStorage.setItem(firedKey, '1'); } catch(e){}
+  }
+}
 </script>
 </body>
 </html>
