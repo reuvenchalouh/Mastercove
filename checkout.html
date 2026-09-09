@@ -6,6 +6,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Checkout — Master Cove</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-D8LM0CQB38"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-D8LM0CQB38');</script>
 <!-- Meta Pixel Code -->
 <script>
 !function(f,b,e,v,n,t,s)
@@ -162,6 +164,18 @@ card.on('blur',  function(){ document.getElementById('card-element').classList.r
 var cart = JSON.parse(localStorage.getItem('mc_cart') || '[]');
 var orderTotal = 0;
 
+function gaItemsFromCart(){
+  return cart.map(function(item){
+    return {
+      item_id: String(item.id),
+      item_name: item.name,
+      item_variant: (item.finish||item.fabric||item.size||''),
+      price: item.price,
+      quantity: item.qty
+    };
+  });
+}
+
 function loadSummary() {
   var itemsEl = document.getElementById('order-items');
   if (!cart.length) {
@@ -211,6 +225,13 @@ function loadSummary() {
       num_items: cart.reduce(function(s,i){ return s + i.qty; }, 0),
       value: orderTotal,
       currency: 'USD'
+    });
+  }
+  if (typeof gtag === 'function' && cart.length) {
+    gtag('event', 'begin_checkout', {
+      currency: 'USD',
+      value: orderTotal,
+      items: gaItemsFromCart()
     });
   }
 }
@@ -324,6 +345,7 @@ function onSuccess(orderNumber, name, email, address, city, state, zip) {
   }
 
   var itemNames = cart.map(function(i){ return i.name + (i.finish ? ' (' + i.finish + ')' : '') + (i.fabric ? ' - ' + i.fabric : '') + ' x' + i.qty; }).join(', ');
+  var gaItemsJSON = JSON.stringify(gaItemsFromCart());
   localStorage.removeItem('mc_cart');
 
   var fullAddress = address + ', ' + city + ', ' + state + ' ' + zip;
@@ -332,7 +354,9 @@ function onSuccess(orderNumber, name, email, address, city, state, zip) {
     + '&name=' + encodeURIComponent(name)
     + '&address=' + encodeURIComponent(fullAddress)
     + '&product=' + encodeURIComponent(itemNames)
-    + '&total=' + encodeURIComponent(orderTotal.toLocaleString());
+    + '&total=' + encodeURIComponent(orderTotal.toLocaleString())
+    + '&value=' + encodeURIComponent(orderTotal)
+    + '&items=' + encodeURIComponent(gaItemsJSON);
 }
 
 function showErr(msg) {
