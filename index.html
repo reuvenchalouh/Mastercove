@@ -389,10 +389,10 @@ var visibleCount = PAGE_SIZE;
 
 var ROOM_MAP = {
   bedroom:  ['dresser','chest','nightstand','bookcase','bed'],
-  living:   ['tv','sideboard','chair','accentchair','bench','sofa','sectional','armchair'],
+  living:   ['tv','sideboard','chair','accentchair','bench','sofa','sectional','armchair','coffeetable'],
   entryway: ['shoe','sidetable','bench'],
   storage:  ['shoe','sideboard'],
-  dining:   ['sideboard','bar'],
+  dining:   ['sideboard','bar','diningtable'],
   kitchen:  ['bar','sideboard','chair'],
   bathroom: ['vanity'],
   office:   ['sideboard','other','desk'],
@@ -401,9 +401,9 @@ var ROOM_MAP = {
 
 var NAV_ROOMS = [
   {key:'bedroom',  label:'Bedroom',     cats:['dresser','chest','nightstand','bookcase','bed']},
-  {key:'living',   label:'Living Room', cats:['sofa','sectional','armchair','sideboard','tv','chair','accentchair','bench','sidetable']},
+  {key:'living',   label:'Living Room', cats:['sofa','sectional','armchair','sideboard','tv','chair','accentchair','bench','coffeetable']},
   {key:'entryway', label:'Entryway',    cats:['shoe','sidetable','bench']},
-  {key:'dining',   label:'Dining',      cats:['sideboard','bar','sidetable','chair']},
+  {key:'dining',   label:'Dining',      cats:['sideboard','bar','diningtable','chair']},
   {key:'kitchen',  label:'Kitchen',     cats:['bar','sideboard','chair']},
   {key:'bathroom', label:'Bathroom',    cats:['vanity']},
   {key:'office',   label:'Office',      cats:['desk','bookcase','chair','sideboard']},
@@ -940,7 +940,7 @@ function onSearch(){
   }
 }
 function scrollToProducts(){ setTimeout(function(){ var el=document.getElementById('products'); if(el)el.scrollIntoView({behavior:'smooth'}); },50); }
-function getCatLabel(cat){ var map={dresser:'Dresser',chest:'Chest',sideboard:'Sideboard',tv:'TV Console',sidetable:'Table',nightstand:'Nightstand',shoe:'Shoe Storage',bookcase:'Bookcase',desk:'Desk',chair:'Chair',accentchair:'Accent Chair',sofa:'Sofa',sectional:'Sectional',armchair:'Lounge & Armchairs',bar:'Bar',bed:'Bed',bench:'Bench',vanity:'Vanity',outdoor:'Outdoor Furniture'}; return map[cat]||cat; }
+function getCatLabel(cat){ var map={dresser:'Dresser',chest:'Chest',sideboard:'Sideboard',tv:'TV Console',coffeetable:'Coffee Table',diningtable:'Dining Table',sidetable:'Side Table',nightstand:'Nightstand',shoe:'Shoe Storage',bookcase:'Bookcase',desk:'Desk',chair:'Chair',accentchair:'Accent Chair',sofa:'Sofa',sectional:'Sectional',armchair:'Lounge & Armchairs',bar:'Bar',bed:'Bed',bench:'Bench',vanity:'Vanity',outdoor:'Outdoor Furniture'}; return map[cat]||cat; }
 function openProduct(id){ window.location.href='product-detail.html?id='+id; }
 
 function swapFinish(pid, ci) {
