@@ -172,6 +172,7 @@ footer{background:var(--ink);color:rgba(255,255,255,.5);padding:52px 40px 28px;}
   .gallery-wrap{grid-column:1;grid-row:2;}
   .pdp-info{grid-column:1;grid-row:3;}
   .pdp-details-left{grid-column:1;grid-row:4;}
+  .pdp-details-left[style]{grid-template-columns:1fr!important;gap:0!important;}
   .gallery{flex-direction:column;}
   .thumbs{flex-direction:row!important;flex-wrap:wrap!important;width:100%!important;overflow-x:visible!important;gap:6px;margin-bottom:8px;order:2;justify-content:flex-start;}
   .thumb{width:15%!important;aspect-ratio:1/1;flex-shrink:0;}
@@ -348,12 +349,12 @@ src="https://www.facebook.com/tr?id=2156219968568427&ev=PageView&noscript=1"
   </div>
   </div>
 
-  <div class="pdp-details-left">
+  <div class="pdp-details-left" style="display:grid;grid-template-columns:280px 1fr;gap:48px;align-items:start;">
     <div id="pdp-left-features" style="margin-top:28px;display:none;">
       <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:10px;">Key Features</div>
-      <ul id="pdp-features-list-left" style="list-style:none;padding:0;margin:0 0 24px;"></ul>
+      <ul id="pdp-features-list-left" style="list-style:none;padding:0;margin:0;"></ul>
     </div>
-    <div id="pdp-left-description" style="display:none;">
+    <div id="pdp-left-description" style="margin-top:28px;display:none;">
       <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:8px;">Description</div>
       <div id="pdp-description-left" style="font-size:16px;color:var(--slate);line-height:1.9;font-weight:300;"></div>
     </div>
