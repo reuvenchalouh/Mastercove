@@ -9,6 +9,7 @@
 <meta property="og:title" id="og-title" content="Product — Master Cove"/>
 <meta property="og:description" id="og-desc" content="Shop quality furniture at Master Cove, built to last."/>
 <meta property="og:type" content="product"/>
+<script type="application/ld+json" id="ld-json"></script>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet"/>
 <style>
 :root{--ink:#1C1A17;--sand:#F5EFE6;--linen:#EDE5D8;--walnut:#6B4C35;--oak:#B8895A;--maple:#D4AA7D;--slate:#5C5750;--mist:#A8A09A;--border:#DDD5C8;--white:#FDFBF8;--green:#5C7A5E;--red:#B5432A;}
@@ -498,6 +499,55 @@ function quickAddToCart(pid){
   });
 }
 
+function getSchemaImage(p){
+  if(p.img)return p.img;
+  var lists=(p.variantMode==='size'&&p.topSizes&&p.topSizes.length)?p.topSizes:[{finishes:p.finishes||[]}];
+  for(var i=0;i<lists.length;i++){
+    var fins=lists[i].finishes||[];
+    for(var j=0;j<fins.length;j++){
+      if(fins[j].photos&&fins[j].photos.length)return fins[j].photos[0];
+      var fabs=fins[j].fabrics||[];
+      for(var k=0;k<fabs.length;k++){if(fabs[k].photos&&fabs[k].photos.length)return fabs[k].photos[0];}
+    }
+  }
+  return '';
+}
+function isProductInStock(p){
+  var lists=(p.variantMode==='size'&&p.topSizes&&p.topSizes.length)?p.topSizes:[{outOfStock:false,finishes:p.finishes||[]}];
+  for(var i=0;i<lists.length;i++){
+    if(lists[i].outOfStock===false||lists[i].outOfStock===undefined){
+      var fins=lists[i].finishes||[];
+      if(!fins.length)return true;
+      for(var j=0;j<fins.length;j++){
+        if(!fins[j].outOfStock)return true;
+      }
+    }
+  }
+  return false;
+}
+function injectProductSchema(p,metaDesc){
+  var el=document.getElementById('ld-json');if(!el)return;
+  var img=getSchemaImage(p);
+  var schema={
+    "@context":"https://schema.org/",
+    "@type":"Product",
+    "name":p.name,
+    "description":metaDesc,
+    "sku":String(p.id),
+    "brand":{"@type":"Brand","name":"Master Cove"},
+    "offers":{
+      "@type":"Offer",
+      "url":"https://mastercove.com/product-detail.html?id="+encodeURIComponent(p.id),
+      "priceCurrency":"USD",
+      "price":p.price,
+      "availability":isProductInStock(p)?"https://schema.org/InStock":"https://schema.org/OutOfStock",
+      "itemCondition":"https://schema.org/NewCondition"
+    }
+  };
+  if(img)schema.image=img;
+  el.textContent=JSON.stringify(schema);
+}
+
 function renderProduct(p){
   currentProduct=p;basePrice=p.price||0;
   document.title=p.name+' — Master Cove';
@@ -509,6 +559,7 @@ function renderProduct(p){
   var descEl=document.getElementById('meta-desc');if(descEl)descEl.setAttribute('content',metaDesc);
   var ogTitle=document.getElementById('og-title');if(ogTitle)ogTitle.setAttribute('content',p.name+' — Master Cove');
   var ogDesc=document.getElementById('og-desc');if(ogDesc)ogDesc.setAttribute('content',metaDesc);
+  injectProductSchema(p,metaDesc);
   var tagEl=document.getElementById('pdp-tagline');if(p.tagline){tagEl.textContent=p.tagline;tagEl.style.display='block';}
   var shipEl=document.getElementById('shipping-cost-text');
   if(shipEl){
