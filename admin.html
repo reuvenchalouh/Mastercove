@@ -1488,20 +1488,22 @@ var orders=[];
 async function loadOrdersFromSupabase(){
   try{
     document.getElementById('orders-list').innerHTML='<div class="empty-state"><div class="ei">⏳</div><p>Loading orders…</p></div>';
-    var result=await _sb.from('orders').select('*').order('id',{ascending:false});
-    if(result.error)throw result.error;
-    orders=(result.data||[]).map(function(o){return{id:o.id,orderNumber:o.order_number,customer:o.customer,email:o.email||'',address:o.address||'',product:o.product||'',variant:o.variant||'',revenue:o.revenue||0,cost:o.cost||0,link:o.link||'',notes:o.notes||'',status:o.status||'new',timestamps:o.timestamps||{},stripeId:o.stripe_id||'',supplierOrderNum:o.supplier_order_num||'',trackingNumber:o.tracking_number||'',proofPhotos:o.proof_photos||[],createdAt:o.created_at||''};});
+    var res=await fetch('/.netlify/functions/admin-orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'list'})});
+    var result=await res.json();
+    if(!res.ok)throw new Error(result.error||'Load failed');
+    orders=(result.orders||[]).map(function(o){return{id:o.id,orderNumber:o.order_number,customer:o.customer,email:o.email||'',address:o.address||'',product:o.product||'',variant:o.variant||'',revenue:o.revenue||0,cost:o.cost||0,link:o.link||'',notes:o.notes||'',status:o.status||'new',timestamps:o.timestamps||{},stripeId:o.stripe_id||'',supplierOrderNum:o.supplier_order_num||'',trackingNumber:o.tracking_number||'',proofPhotos:o.proof_photos||[],createdAt:o.created_at||''};});
     renderOrders();
   }catch(e){document.getElementById('orders-list').innerHTML='<div class="empty-state"><div class="ei">⚠️</div><p>Could not load orders.</p></div>';}
 }
 
-async function syncOrderToSupabase(o){try{await _sb.from('orders').upsert({id:o.id,order_number:o.orderNumber,customer:o.customer,email:o.email||'',address:o.address||'',product:o.product||'',variant:o.variant||'',revenue:o.revenue||0,cost:o.cost||0,link:o.link||'',notes:o.notes||'',status:o.status||'new',timestamps:o.timestamps||{},stripe_id:o.stripeId||'',supplier_order_num:o.supplierOrderNum||'',tracking_number:o.trackingNumber||'',proof_photos:o.proofPhotos||[],created_at:o.createdAt});}catch(e){console.error('Order sync error:',e);}}
+async function syncOrderToSupabase(o){try{await fetch('/.netlify/functions/admin-orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'upsert',order:{id:o.id,order_number:o.orderNumber,customer:o.customer,email:o.email||'',address:o.address||'',product:o.product||'',variant:o.variant||'',revenue:o.revenue||0,cost:o.cost||0,link:o.link||'',notes:o.notes||'',status:o.status||'new',timestamps:o.timestamps||{},stripe_id:o.stripeId||'',supplier_order_num:o.supplierOrderNum||'',tracking_number:o.trackingNumber||'',proof_photos:o.proofPhotos||[],created_at:o.createdAt}})});}catch(e){console.error('Order sync error:',e);}}
 function toggleAddOrder(){var b=document.getElementById('add-order-body');var a=document.getElementById('add-order-arrow');b.classList.toggle('open');a.textContent=b.classList.contains('open')?'▴':'▾';}
 
 async function saveOrder(){
   var customer=document.getElementById('o-customer').value.trim();var email=document.getElementById('o-email').value.trim();var address=document.getElementById('o-address').value.trim();var product=document.getElementById('o-product').value.trim();var variant=document.getElementById('o-variant').value.trim();var revenue=parseFloat(document.getElementById('o-revenue').value)||0;var cost=parseFloat(document.getElementById('o-cost').value)||0;var link=document.getElementById('o-link').value.trim();var notes=document.getElementById('o-notes').value.trim();
   if(!customer){showToast('Customer name required','error');return;}if(!address){showToast('Address required','error');return;}if(!product){showToast('Product name required','error');return;}
-  var result=await _sb.from('orders').select('*',{count:'exact',head:true});var count=result.count||0;var num='MC-'+String(count+1).padStart(4,'0');
+  var numRes=await fetch('/.netlify/functions/admin-orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'nextOrderNumber'})});
+  var numData=await numRes.json();var num=numData.orderNumber||'MC-????';
   var now=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'});
   var o={id:Date.now(),orderNumber:num,customer:customer,email:email,address:address,product:product,variant:variant,revenue:revenue,cost:cost,link:link,notes:notes,status:'new',timestamps:{},stripeId:'',supplierOrderNum:'',trackingNumber:'',proofPhotos:[],createdAt:now};
   orders.unshift(o);await syncOrderToSupabase(o);
@@ -1524,7 +1526,7 @@ async function saveSupplierOrderNum(id){var o=orders.find(function(x){return x.i
 async function goBackStatus(id){var o=orders.find(function(x){return x.id===id;});if(!o)return;var i=SF.indexOf(o.status);if(i>0){if(o.timestamps)delete o.timestamps[o.status];o.status=SF[i-1];}await syncOrderToSupabase(o);renderOrders();showToast('Back to: '+SL[o.status],'success');}
 async function saveOrderLink(id){var o=orders.find(function(x){return x.id===id;});if(!o)return;var inp=document.getElementById('link'+id);if(inp)o.link=inp.value.trim();await syncOrderToSupabase(o);renderOrders();showToast('Link saved','success');}
 async function saveOrderNotes(id){var o=orders.find(function(x){return x.id===id;});if(!o)return;var inp=document.getElementById('notes'+id);if(inp)o.notes=inp.value.trim();await syncOrderToSupabase(o);renderOrders();showToast('Notes saved','success');}
-async function deleteOrder(id){try{await _sb.from('orders').delete().eq('id',id);orders=orders.filter(function(x){return x.id!==id;});renderOrders();showToast('Order deleted','error');}catch(e){showToast('Delete failed','error');}}
+async function deleteOrder(id){try{var res=await fetch('/.netlify/functions/admin-orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',id:id})});if(!res.ok)throw new Error('Delete failed');orders=orders.filter(function(x){return x.id!==id;});renderOrders();showToast('Order deleted','error');}catch(e){showToast('Delete failed','error');}}
 
 function renderOrders(){
   var list=document.getElementById('orders-list');if(!list)return;
