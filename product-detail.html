@@ -541,7 +541,25 @@ function injectProductSchema(p,metaDesc){
       "priceCurrency":"USD",
       "price":p.price,
       "availability":isProductInStock(p)?"https://schema.org/InStock":"https://schema.org/OutOfStock",
-      "itemCondition":"https://schema.org/NewCondition"
+      "itemCondition":"https://schema.org/NewCondition",
+      "hasMerchantReturnPolicy":{
+        "@type":"MerchantReturnPolicy",
+        "applicableCountry":"US",
+        "returnPolicyCategory":"https://schema.org/MerchantReturnFiniteReturnWindow",
+        "merchantReturnDays":30,
+        "returnMethod":"https://schema.org/ReturnByMail",
+        "returnFees":"https://schema.org/ReturnFeesCustomerResponsibility",
+        "restockingFeePercentage":20
+      },
+      "shippingDetails":{
+        "@type":"OfferShippingDetails",
+        "shippingRate":{"@type":"MonetaryAmount","value":p.shippingCost||0,"currency":"USD"},
+        "shippingDestination":{"@type":"DefinedRegion","addressCountry":"US"},
+        "deliveryTime":{
+          "@type":"ShippingDeliveryTime",
+          "handlingTime":{"@type":"QuantitativeValue","minValue":7,"maxValue":12,"unitCode":"DAY"}
+        }
+      }
     }
   };
   if(img)schema.image=img;
