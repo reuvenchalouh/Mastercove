@@ -6,7 +6,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Track Your Order — Master Cove</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
-<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <style>
 :root{--ink:#1C1A17;--sand:#F5EFE6;--linen:#EDE5D8;--walnut:#6B4C35;--maple:#D4AA7D;--slate:#5C5750;--mist:#A8A09A;--border:#DDD5C8;--white:#FDFBF8;--green:#4A7A5A;}
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -116,14 +115,6 @@ footer a{color:var(--maple);text-decoration:none;}
 </footer>
 
 <script>
-var _sb = null;
-try {
-  _sb = supabase.createClient(
-    "https://slaffkwfwmudvernzjua.supabase.co",
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsYWZma3dmd211ZHZlcm56anVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMzU4MDksImV4cCI6MjA5MTYxMTgwOX0.BEz8_GNKPTQB90LJBJTZFyJYFF-9ypdfbEsLAfEESqY"
-  );
-} catch(e) { console.log('Supabase error:', e); }
-
 var SF = ['new','ordered','shipped','delivered'];
 var SL = {new:'Order Received',ordered:'Ordered from Supplier',shipped:'Shipped',delivered:'Delivered'};
 var SD = {
@@ -143,18 +134,20 @@ function clearError(){ document.getElementById('error-msg').style.display='none'
 function showError(msg){ var el=document.getElementById('error-msg'); el.textContent=msg; el.style.display='block'; }
 
 async function trackOrder(){
-  var orderNum = document.getElementById('input-order').value.trim().toUpperCase();
-  var email = document.getElementById('input-email').value.trim().toLowerCase();
+  var orderNum = document.getElementById('input-order').value.trim();
+  var email = document.getElementById('input-email').value.trim();
   if(!orderNum || !email){ showError('Please enter both your order number and email address.'); return; }
   var btn = document.getElementById('track-btn');
   btn.disabled = true; btn.textContent = 'Searching...';
   try {
-    var query = _sb.from('orders').select('*').ilike('order_number', orderNum).ilike('email', email);
-    var { data, error } = await query;
-    if(error) throw error;
-    if(!data || !data.length){ showError('No order found. Please check your order number and email and try again.'); btn.disabled=false; btn.textContent='Track My Order'; return; }
-    var o = data.sort(function(a,b){ return b.id - a.id; })[0];
-    showResult(o);
+    var res = await fetch('/.netlify/functions/track-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderNumber: orderNum, email: email })
+    });
+    var data = await res.json();
+    if(!res.ok || !data.order){ showError(data.error || 'No order found. Please check your order number and email and try again.'); btn.disabled=false; btn.textContent='Track My Order'; return; }
+    showResult(data.order);
   } catch(e) { showError('Something went wrong. Please try again.'); console.log(e); }
   btn.disabled=false; btn.textContent='Track My Order';
 }
