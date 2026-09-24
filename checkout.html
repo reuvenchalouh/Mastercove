@@ -96,7 +96,7 @@ header{background:var(--white);border-bottom:1px solid var(--border);padding:0 3
     <div class="order-totals" id="order-totals" style="display:none;">
       <div class="total-row"><span>Subtotal</span><span id="t-sub">$0</span></div>
       <div class="total-row"><span>Shipping</span><span id="t-ship">Free</span></div>
-      <div class="total-row"><span>Tax (NY 8.875%)</span><span id="t-tax">$0</span></div>
+      <div class="total-row"><span id="t-tax-label">Tax</span><span id="t-tax">$0</span></div>
       <div class="total-row final"><span>Total</span><span id="t-total">$0</span></div>
     </div>
   </div>
@@ -127,7 +127,7 @@ header{background:var(--white);border-bottom:1px solid var(--border);padding:0 3
         </div>
         <div>
           <label>State *</label>
-          <input class="finput" id="f-state" type="text" placeholder="NY"/>
+          <input class="finput" id="f-state" type="text" placeholder="NY" oninput="recalcTotals()"/>
         </div>
       </div>
       <div class="frow" style="margin-top:16px;">
@@ -164,6 +164,16 @@ card.on('blur',  function(){ document.getElementById('card-element').classList.r
 var cart = JSON.parse(localStorage.getItem('mc_cart') || '[]');
 var orderTotal = 0;
 
+// Master Cove only collects sales tax in New York, where the business is
+// based. Every other state ships tax-free unless/until nexus is
+// established elsewhere.
+var NY_TAX_RATE = 0.08875;
+var NY_STATE_NAMES = ['NY', 'NEW YORK'];
+function calcTax(sub, stateInput) {
+  var s = (stateInput || '').trim().toUpperCase();
+  return NY_STATE_NAMES.indexOf(s) >= 0 ? Math.round(sub * NY_TAX_RATE * 100) / 100 : 0;
+}
+
 function gaItemsFromCart(){
   return cart.map(function(item){
     return {
@@ -176,6 +186,30 @@ function gaItemsFromCart(){
   });
 }
 
+function getSubtotal(){
+  return cart.reduce(function(s,item){ return s + item.price * item.qty; }, 0);
+}
+function getShipping(){
+  return cart.reduce(function(m,item){ return Math.max(m, item.shipping||0); }, 0);
+}
+
+function recalcTotals(){
+  if (!cart.length) return;
+  var sub = getSubtotal();
+  var ship = getShipping();
+  var stateVal = document.getElementById('f-state') ? document.getElementById('f-state').value : '';
+  var tax = calcTax(sub, stateVal);
+  orderTotal = sub + ship + tax;
+
+  var isNY = NY_STATE_NAMES.indexOf((stateVal||'').trim().toUpperCase()) >= 0;
+  document.getElementById('t-tax-label').textContent = isNY ? 'Tax (NY 8.875%)' : 'Tax';
+  document.getElementById('t-sub').textContent   = '$' + sub.toLocaleString();
+  document.getElementById('t-ship').textContent  = ship > 0 ? ('$' + ship.toFixed(2)) : 'Free';
+  document.getElementById('t-tax').textContent   = '$' + tax.toFixed(2);
+  document.getElementById('t-total').textContent = '$' + orderTotal.toLocaleString();
+  document.getElementById('pay-amount').textContent = '$' + orderTotal.toLocaleString();
+}
+
 function loadSummary() {
   var itemsEl = document.getElementById('order-items');
   if (!cart.length) {
@@ -183,9 +217,7 @@ function loadSummary() {
     return;
   }
   itemsEl.innerHTML = '';
-  var sub = 0;
   cart.forEach(function(item) {
-    sub += item.price * item.qty;
     var row = document.createElement('div');
     row.className = 'order-item';
     var imgDiv = document.createElement('div');
@@ -207,16 +239,9 @@ function loadSummary() {
     row.appendChild(price);
     itemsEl.appendChild(row);
   });
-  var ship = cart.reduce(function(m,item){ return Math.max(m, item.shipping||0); }, 0);
-  var tax  = Math.round(sub * 0.08875 * 100) / 100;
-  orderTotal = sub + ship + tax;
-  document.getElementById('t-sub').textContent   = '$' + sub.toLocaleString();
-  document.getElementById('t-ship').textContent  = ship > 0 ? ('$' + ship.toFixed(2)) : 'Free';
-  document.getElementById('t-tax').textContent   = '$' + tax.toFixed(2);
-  document.getElementById('t-total').textContent = '$' + orderTotal.toLocaleString();
-  document.getElementById('pay-amount').textContent = '$' + orderTotal.toLocaleString();
   document.getElementById('item-count').textContent = cart.length + ' item' + (cart.length > 1 ? 's' : '');
   document.getElementById('order-totals').style.display = 'block';
+  recalcTotals();
 
   if (typeof fbq === 'function' && cart.length) {
     fbq('track', 'InitiateCheckout', {
@@ -254,6 +279,9 @@ function submitPayment() {
   if (!city)    { showErr('Please enter your city.'); return; }
   if (!zip)     { showErr('Please enter your ZIP code.'); return; }
   if (!cart.length) { showErr('Your cart is empty.'); return; }
+
+  // Make sure the total being charged reflects the final state entered.
+  recalcTotals();
 
   if (!checkoutIdempotencyKey) {
     checkoutIdempotencyKey = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ('idem-' + Date.now() + '-' + Math.random().toString(36).slice(2));
