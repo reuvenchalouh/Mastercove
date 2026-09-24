@@ -8,12 +8,138 @@ const supabase = createClient(
 );
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+// ---------------------------------------------------------------------------
+// SERVER-SIDE PRICING
+// Never trust prices sent from the browser. Look every item up in Supabase
+// and work out the real subtotal, shipping, tax and total here.
+// Mirrors the rules used on the site:
+//   - size-mode products: price of the chosen top size (or base price)
+//   - finish-mode products: price of the chosen size inside the finish (or base price)
+//   - shipping: the highest shipping_cost of any item in the cart
+//   - tax: 8.875% of subtotal for New York orders only
+// ---------------------------------------------------------------------------
+const NY_TAX_RATE = 0.08875;
+const NY_STATE_NAMES = ['NY', 'NEW YORK'];
+
+function norm(s) { return String(s || '').trim().toLowerCase(); }
+function toCents(n) { return Math.round((Number(n) || 0) * 100); }
+
+function findUnitPrice(p, item) {
+  const base = Number(p.price) || 0;
+  const wantSize = norm(item.size);
+  const topSizes = Array.isArray(p.top_sizes) ? p.top_sizes : [];
+
+  if (p.variant_mode === 'size' && topSizes.length) {
+    const sz = topSizes.find(s => String(s.name || '') === String(item.size || ''))
+            || topSizes.find(s => norm(s.name) === wantSize);
+    if (!sz) return null; // size-mode product must have a real size chosen
+    return Number(sz.price) > 0 ? Number(sz.price) : base;
+  }
+
+  const finishes = (Array.isArray(p.finishes) ? p.finishes : []).filter(f => f && typeof f === 'object');
+  if (!wantSize) return base;
+  const anySizes = finishes.some(f => Array.isArray(f.sizes) && f.sizes.length);
+  if (!anySizes) return base;
+
+  const wantFinish = norm(item.finish);
+  const finishName = f => norm(f.name) || 'default';
+  const ordered = finishes.filter(f => finishName(f) === (wantFinish || 'default'))
+    .concat(finishes.filter(f => finishName(f) !== (wantFinish || 'default')));
+  for (const f of ordered) {
+    const sz = (f.sizes || []).find(s => String(s.name || '') === String(item.size || ''))
+            || (f.sizes || []).find(s => norm(s.name) === wantSize);
+    if (sz) return Number(sz.price) > 0 ? Number(sz.price) : base;
+  }
+  return null; // size doesn't exist on this product
+}
+
+async function priceCart(supabase, items, state) {
+  if (!Array.isArray(items) || !items.length) return { error: 'Your cart is empty.' };
+  if (items.length > 50) return { error: 'Too many items in cart.' };
+
+  const ids = [...new Set(items.map(i => i && i.id).filter(id => id !== undefined && id !== null))];
+  const { data: products, error } = await supabase
+    .from('products')
+    .select('id,name,price,shipping_cost,status,finishes,top_sizes,variant_mode,supplier_link')
+    .in('id', ids);
+  if (error) return { error: 'Could not verify prices. Please try again.' };
+
+  const byId = {};
+  (products || []).forEach(p => { byId[String(p.id)] = p; });
+
+  let subCents = 0, shipCents = 0;
+  const verifiedItems = [];
+  const updatedItems = [];
+
+  for (let idx = 0; idx < items.length; idx++) {
+    const item = items[idx] || {};
+    const p = byId[String(item.id)];
+    const label = (p && p.name) || item.name || 'An item';
+    if (!p || p.status !== 'active') {
+      return { error: label + ' is no longer available. Please remove it from your cart.' };
+    }
+    const qty = parseInt(item.qty || item.quantity || 1, 10);
+    if (!(qty >= 1 && qty <= 50)) return { error: 'Invalid quantity for ' + label + '.' };
+
+    const unit = findUnitPrice(p, item);
+    if (unit === null || unit <= 0) {
+      return { error: label + ' — that option is no longer available. Please remove it and add it again.' };
+    }
+    const shipping = Number(p.shipping_cost) || 0;
+
+    subCents += toCents(unit) * qty;
+    shipCents = Math.max(shipCents, toCents(shipping));
+
+    if (toCents(item.price) !== toCents(unit) || toCents(item.shipping) !== toCents(shipping)) {
+      updatedItems.push({ index: idx, price: unit, shipping: shipping });
+    }
+
+    verifiedItems.push({
+      id: p.id,
+      name: p.name,
+      finish: String(item.finish || ''),
+      fabric: String(item.fabric || ''),
+      size: String(item.size || ''),
+      qty: qty,
+      price: unit,
+      supplierLink: p.supplier_link || ''
+    });
+  }
+
+  const isNY = NY_STATE_NAMES.indexOf(String(state || '').trim().toUpperCase()) >= 0;
+  const taxCents = isNY ? Math.round(subCents * NY_TAX_RATE) : 0;
+  const totalCents = subCents + shipCents + taxCents;
+
+  return { totalCents, subCents, shipCents, taxCents, verifiedItems, updatedItems };
+}
+// ---------------------------------------------------------------------------
+
+
 exports.handler = async function(event) {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
 
   try {
-    const { paymentMethodId, amount, currency, email, name, address, city, state, zip, items, idempotencyKey } = JSON.parse(event.body);
-    if (!paymentMethodId || !amount || amount < 50) return { statusCode: 400, body: JSON.stringify({ error: 'Invalid payment details.' }) };
+    const body = JSON.parse(event.body);
+    const { paymentMethodId, currency, email, name, address, city, state, zip, idempotencyKey } = body;
+    if (!paymentMethodId) return { statusCode: 400, body: JSON.stringify({ error: 'Invalid payment details.' }) };
+
+    // Work out the real total from Supabase — ignore any price the browser sent.
+    const priced = await priceCart(supabase, body.items, state);
+    if (priced.error) return { statusCode: 400, body: JSON.stringify({ error: priced.error }) };
+
+    const clientAmount = Math.round(Number(body.amount) || 0);
+    if (priced.updatedItems.length || Math.abs(clientAmount - priced.totalCents) > 1) {
+      // Cart shows a different price than the real one (price changed, or the page was tampered with).
+      // Don't charge — send back the correct prices so the customer sees the real total first.
+      return { statusCode: 400, body: JSON.stringify({
+        error: 'Some prices in your cart were out of date. Your total has been updated — please review it and press Pay again.',
+        updatedItems: priced.updatedItems
+      }) };
+    }
+
+    const amount = priced.totalCents;
+    const items = priced.verifiedItems;
+    if (amount < 50) return { statusCode: 400, body: JSON.stringify({ error: 'Invalid payment details.' }) };
 
     const paymentIntent = await stripe.paymentIntents.create({
       amount, currency: currency || 'usd',
@@ -23,7 +149,7 @@ exports.handler = async function(event) {
       receipt_email: email,
       description: 'Master Cove Order',
       shipping: { name, address: { line1: address, city, state, postal_code: zip, country: 'US' } },
-      metadata: { customer_name: name, customer_email: email },
+      metadata: { customer_name: name, customer_email: email, verified_subtotal_cents: String(priced.subCents), verified_shipping_cents: String(priced.shipCents), verified_tax_cents: String(priced.taxCents) },
       return_url: 'https://mastercove.com/order-confirmed.html'
     }, idempotencyKey ? { idempotencyKey: idempotencyKey } : undefined);
 
