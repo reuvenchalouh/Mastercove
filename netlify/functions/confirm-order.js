@@ -8,6 +8,113 @@ const supabase = createClient(
 );
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+// ---------------------------------------------------------------------------
+// SERVER-SIDE PRICING
+// Never trust prices sent from the browser. Look every item up in Supabase
+// and work out the real subtotal, shipping, tax and total here.
+// Mirrors the rules used on the site:
+//   - size-mode products: price of the chosen top size (or base price)
+//   - finish-mode products: price of the chosen size inside the finish (or base price)
+//   - shipping: the highest shipping_cost of any item in the cart
+//   - tax: 8.875% of subtotal for New York orders only
+// ---------------------------------------------------------------------------
+const NY_TAX_RATE = 0.08875;
+const NY_STATE_NAMES = ['NY', 'NEW YORK'];
+
+function norm(s) { return String(s || '').trim().toLowerCase(); }
+function toCents(n) { return Math.round((Number(n) || 0) * 100); }
+
+function findUnitPrice(p, item) {
+  const base = Number(p.price) || 0;
+  const wantSize = norm(item.size);
+  const topSizes = Array.isArray(p.top_sizes) ? p.top_sizes : [];
+
+  if (p.variant_mode === 'size' && topSizes.length) {
+    const sz = topSizes.find(s => String(s.name || '') === String(item.size || ''))
+            || topSizes.find(s => norm(s.name) === wantSize);
+    if (!sz) return null; // size-mode product must have a real size chosen
+    return Number(sz.price) > 0 ? Number(sz.price) : base;
+  }
+
+  const finishes = (Array.isArray(p.finishes) ? p.finishes : []).filter(f => f && typeof f === 'object');
+  if (!wantSize) return base;
+  const anySizes = finishes.some(f => Array.isArray(f.sizes) && f.sizes.length);
+  if (!anySizes) return base;
+
+  const wantFinish = norm(item.finish);
+  const finishName = f => norm(f.name) || 'default';
+  const ordered = finishes.filter(f => finishName(f) === (wantFinish || 'default'))
+    .concat(finishes.filter(f => finishName(f) !== (wantFinish || 'default')));
+  for (const f of ordered) {
+    const sz = (f.sizes || []).find(s => String(s.name || '') === String(item.size || ''))
+            || (f.sizes || []).find(s => norm(s.name) === wantSize);
+    if (sz) return Number(sz.price) > 0 ? Number(sz.price) : base;
+  }
+  return null; // size doesn't exist on this product
+}
+
+async function priceCart(supabase, items, state) {
+  if (!Array.isArray(items) || !items.length) return { error: 'Your cart is empty.' };
+  if (items.length > 50) return { error: 'Too many items in cart.' };
+
+  const ids = [...new Set(items.map(i => i && i.id).filter(id => id !== undefined && id !== null))];
+  const { data: products, error } = await supabase
+    .from('products')
+    .select('id,name,price,shipping_cost,status,finishes,top_sizes,variant_mode,supplier_link')
+    .in('id', ids);
+  if (error) return { error: 'Could not verify prices. Please try again.' };
+
+  const byId = {};
+  (products || []).forEach(p => { byId[String(p.id)] = p; });
+
+  let subCents = 0, shipCents = 0;
+  const verifiedItems = [];
+  const updatedItems = [];
+
+  for (let idx = 0; idx < items.length; idx++) {
+    const item = items[idx] || {};
+    const p = byId[String(item.id)];
+    const label = (p && p.name) || item.name || 'An item';
+    if (!p || p.status !== 'active') {
+      return { error: label + ' is no longer available. Please remove it from your cart.' };
+    }
+    const qty = parseInt(item.qty || item.quantity || 1, 10);
+    if (!(qty >= 1 && qty <= 50)) return { error: 'Invalid quantity for ' + label + '.' };
+
+    const unit = findUnitPrice(p, item);
+    if (unit === null || unit <= 0) {
+      return { error: label + ' — that option is no longer available. Please remove it and add it again.' };
+    }
+    const shipping = Number(p.shipping_cost) || 0;
+
+    subCents += toCents(unit) * qty;
+    shipCents = Math.max(shipCents, toCents(shipping));
+
+    if (toCents(item.price) !== toCents(unit) || toCents(item.shipping) !== toCents(shipping)) {
+      updatedItems.push({ index: idx, price: unit, shipping: shipping });
+    }
+
+    verifiedItems.push({
+      id: p.id,
+      name: p.name,
+      finish: String(item.finish || ''),
+      fabric: String(item.fabric || ''),
+      size: String(item.size || ''),
+      qty: qty,
+      price: unit,
+      supplierLink: p.supplier_link || ''
+    });
+  }
+
+  const isNY = NY_STATE_NAMES.indexOf(String(state || '').trim().toUpperCase()) >= 0;
+  const taxCents = isNY ? Math.round(subCents * NY_TAX_RATE) : 0;
+  const totalCents = subCents + shipCents + taxCents;
+
+  return { totalCents, subCents, shipCents, taxCents, verifiedItems, updatedItems };
+}
+// ---------------------------------------------------------------------------
+
+
 // Called by checkout.html ONLY after a card required 3D Secure verification
 // (stripe.confirmCardPayment succeeded client-side). create-payment.js already
 // handles the normal, no-verification path — this function exists to finish
@@ -16,7 +123,8 @@ exports.handler = async function(event) {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
 
   try {
-    const { paymentIntentId, email, name, address, city, state, zip, items, amount } = JSON.parse(event.body);
+    const body = JSON.parse(event.body);
+    const { paymentIntentId, email, name, address, city, state, zip } = body;
     if (!paymentIntentId) return { statusCode: 400, body: JSON.stringify({ error: 'Missing payment reference.' }) };
 
     // Never trust the client's word that payment succeeded — verify with Stripe directly.
@@ -36,7 +144,16 @@ exports.handler = async function(event) {
       return { statusCode: 200, body: JSON.stringify({ success: true, orderNumber: existing[0].order_number }) };
     }
 
-    const effectiveAmount = amount || intent.amount;
+    // Always record what Stripe actually charged — never the number the browser sent.
+    const effectiveAmount = intent.amount;
+    let items = body.items;
+    const priced = await priceCart(supabase, body.items, state);
+    if (!priced.error) {
+      items = priced.verifiedItems; // real product names + supplier links from Supabase
+      if (Math.abs(priced.totalCents - intent.amount) > 1) {
+        console.warn('Amount mismatch on ' + paymentIntentId + ': charged ' + intent.amount + ', expected ' + priced.totalCents);
+      }
+    }
     const revenue = (Math.round(effectiveAmount) / 100).toFixed(2);
     const orderNumber = await saveOrder({ email, name, address, city, state, zip, items, amount: effectiveAmount, stripeId: paymentIntentId });
     const fullAddress = address + ', ' + city + ', ' + state + ' ' + zip;
