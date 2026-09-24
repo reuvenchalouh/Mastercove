@@ -207,7 +207,15 @@ function recalcTotals(){
   document.getElementById('t-ship').textContent  = ship > 0 ? ('$' + ship.toFixed(2)) : 'Free';
   document.getElementById('t-tax').textContent   = '$' + tax.toFixed(2);
   document.getElementById('t-total').textContent = '$' + orderTotal.toLocaleString();
-  document.getElementById('pay-amount').textContent = '$' + orderTotal.toLocaleString();
+  var payAmt = document.getElementById('pay-amount');
+  if (payAmt) payAmt.textContent = '$' + orderTotal.toLocaleString();
+}
+
+// Put the Pay button back the way it started (keeps the amount span so totals can update it).
+function resetPayBtn() {
+  var btn = document.getElementById('pay-btn');
+  btn.disabled = false;
+  btn.innerHTML = '🔒 Pay <span id="pay-amount">$' + orderTotal.toLocaleString() + '</span>';
 }
 
 function loadSummary(skipTracking) {
@@ -301,7 +309,7 @@ function submitPayment() {
     if (result.error) {
       showErr(result.error.message);
       btn.disabled = false;
-      btn.innerHTML = '🔒 Pay $' + orderTotal.toLocaleString();
+      resetPayBtn();
       return;
     }
     fetch('/.netlify/functions/create-payment', {
@@ -336,10 +344,10 @@ function submitPayment() {
         }
         showErr(data.error);
         btn.disabled = false;
-        btn.innerHTML = '🔒 Pay $' + orderTotal.toLocaleString();
+        resetPayBtn();
       } else if (data.requiresAction) {
         stripe.confirmCardPayment(data.clientSecret).then(function(res){
-          if (res.error) { showErr(res.error.message); btn.disabled=false; btn.innerHTML='🔒 Pay $'+orderTotal.toLocaleString(); return; }
+          if (res.error) { showErr(res.error.message); resetPayBtn(); return; }
           // 3D Secure succeeded — create-payment.js never got to save the order
           // for this path, so finalize it now that Stripe confirms it went through.
           fetch('/.netlify/functions/confirm-order', {
@@ -368,7 +376,7 @@ function submitPayment() {
     .catch(function(){
       showErr('Something went wrong. Please try again.');
       btn.disabled = false;
-      btn.innerHTML = '🔒 Pay $' + orderTotal.toLocaleString();
+      resetPayBtn();
     });
   });
 }
