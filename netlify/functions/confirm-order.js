@@ -8,6 +8,14 @@ const supabase = createClient(
 );
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+// Clean a phone number into (347) 206-0372 format. Returns '' if it isn't a valid US number.
+function formatPhone(raw) {
+  let d = String(raw || '').replace(/\D/g, '');
+  if (d.length === 11 && d[0] === '1') d = d.slice(1);
+  if (d.length !== 10) return '';
+  return '(' + d.slice(0, 3) + ') ' + d.slice(3, 6) + '-' + d.slice(6);
+}
+
 // ---------------------------------------------------------------------------
 // SERVER-SIDE PRICING
 // Never trust prices sent from the browser. Look every item up in Supabase
@@ -125,6 +133,7 @@ exports.handler = async function(event) {
   try {
     const body = JSON.parse(event.body);
     const { paymentIntentId, email, name, address, city, state, zip } = body;
+    const phone = formatPhone(body.phone);
     if (!paymentIntentId) return { statusCode: 400, body: JSON.stringify({ error: 'Missing payment reference.' }) };
 
     // Never trust the client's word that payment succeeded — verify with Stripe directly.
@@ -155,9 +164,9 @@ exports.handler = async function(event) {
       }
     }
     const revenue = (Math.round(effectiveAmount) / 100).toFixed(2);
-    const orderNumber = await saveOrder({ email, name, address, city, state, zip, items, amount: effectiveAmount, stripeId: paymentIntentId });
+    const orderNumber = await saveOrder({ email, name, phone, address, city, state, zip, items, amount: effectiveAmount, stripeId: paymentIntentId });
     const fullAddress = address + ', ' + city + ', ' + state + ' ' + zip;
-    await sendOwnerNotification({ orderNumber, customerName: name, customerEmail: email, items, address: fullAddress, revenue });
+    await sendOwnerNotification({ orderNumber, customerName: name, customerEmail: email, customerPhone: phone, items, address: fullAddress, revenue });
 
     return { statusCode: 200, body: JSON.stringify({ success: true, orderNumber }) };
   } catch (err) {
@@ -166,7 +175,7 @@ exports.handler = async function(event) {
   }
 };
 
-async function sendOwnerNotification({ orderNumber, customerName, customerEmail, items, address, revenue }) {
+async function sendOwnerNotification({ orderNumber, customerName, customerEmail, customerPhone, items, address, revenue }) {
   try {
     const itemRows = (items || []).map(function(i) {
       var variantParts = []; if (i.finish) variantParts.push(i.finish); if (i.fabric) variantParts.push(i.fabric); var label = i.name + (variantParts.length ? ' (' + variantParts.join(' / ') + ')' : '');
@@ -192,6 +201,7 @@ async function sendOwnerNotification({ orderNumber, customerName, customerEmail,
           <table style="width:100%;border-collapse:collapse;margin-top:16px;">
             <tr><td style="padding:8px 0;color:#888;font-size:13px;border-bottom:1px solid #eee;width:30%;">Order #</td><td colspan="2" style="padding:8px 0;font-weight:600;font-size:13px;border-bottom:1px solid #eee;">${orderNumber}</td></tr>
             <tr><td style="padding:8px 0;color:#888;font-size:13px;border-bottom:1px solid #eee;">Customer</td><td colspan="2" style="padding:8px 0;font-size:13px;border-bottom:1px solid #eee;">${customerName} (${customerEmail})</td></tr>
+            <tr><td style="padding:8px 0;color:#888;font-size:13px;border-bottom:1px solid #eee;">Phone</td><td colspan="2" style="padding:8px 0;font-size:13px;border-bottom:1px solid #eee;">${customerPhone || 'Not provided'}</td></tr>
             <tr><td style="padding:8px 0;color:#888;font-size:13px;border-bottom:1px solid #eee;">Ship To</td><td colspan="2" style="padding:8px 0;font-size:13px;border-bottom:1px solid #eee;">${address}</td></tr>
             <tr><td style="padding:8px 0;color:#888;font-size:13px;border-bottom:1px solid #eee;">Total</td><td colspan="2" style="padding:8px 0;font-weight:700;font-size:15px;color:#6B4C35;border-bottom:1px solid #eee;">$${revenue}</td></tr>
           </table>
@@ -220,7 +230,7 @@ async function sendOwnerNotification({ orderNumber, customerName, customerEmail,
   }
 }
 
-async function saveOrder({ email, name, address, city, state, zip, items, amount, stripeId }) {
+async function saveOrder({ email, name, phone, address, city, state, zip, items, amount, stripeId }) {
   try {
     const { count } = await supabase.from('orders').select('*', { count: 'exact', head: true });
     const orderNumber = 'MC-' + String((count || 0) + 1).padStart(4, '0');
@@ -242,7 +252,7 @@ async function saveOrder({ email, name, address, city, state, zip, items, amount
       revenue: revenue,
       cost: 0,
       link: (items && items[0] && items[0].supplierLink) ? items[0].supplierLink : '',
-      notes: '',
+      notes: phone ? ('Phone: ' + phone) : '',
       status: 'new',
       timestamps: {},
       stripe_id: stripeId,
