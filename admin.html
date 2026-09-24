@@ -233,14 +233,51 @@ textarea.o-input{resize:vertical;min-height:56px;line-height:1.6;}
 </head>
 <body>
 <script>
-(function(){
-  var stored=sessionStorage.getItem('mc_admin_auth');
-  if(stored!=='granted'){
-    var pw=prompt('Enter admin password:');
-    if(pw!=='Tefilin1234'){document.body.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;font-size:16px;color:#B5432A;">Access denied. Please refresh to try again.</div>';return;}
-    sessionStorage.setItem('mc_admin_auth','granted');
+// Admin login — the password is checked by the server (never stored in this file).
+var ADMIN_PW = sessionStorage.getItem('mc_admin_pw') || '';
+try { sessionStorage.removeItem('mc_admin_auth'); } catch(e) {}
+document.documentElement.style.visibility = 'hidden';
+window.adminReady = (async function(){
+  for (var attempt = 0; attempt < 5; attempt++) {
+    if (!ADMIN_PW) {
+      var pw = prompt('Enter admin password:');
+      if (pw === null) break;
+      ADMIN_PW = pw;
+    }
+    try {
+      var r = await fetch('/.netlify/functions/admin-api', { method:'POST', headers:{'Content-Type':'application/json','x-admin-password':ADMIN_PW}, body: JSON.stringify({ action:'login' }) });
+      if (r.ok) {
+        sessionStorage.setItem('mc_admin_pw', ADMIN_PW);
+        document.documentElement.style.visibility = '';
+        return true;
+      }
+    } catch(e) {}
+    ADMIN_PW = '';
+    sessionStorage.removeItem('mc_admin_pw');
+    alert('Wrong password — try again.');
   }
+  document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;font-size:16px;color:#B5432A;">Access denied. Please refresh to try again.</div>';
+  document.documentElement.style.visibility = '';
+  return new Promise(function(){}); // never continue loading admin data
 })();
+
+// Send a request to the secure admin function. Returns {data, error} like Supabase does.
+async function adminDb(payload){
+  try {
+    var r = await fetch('/.netlify/functions/admin-api', { method:'POST', headers:{'Content-Type':'application/json','x-admin-password':ADMIN_PW}, body: JSON.stringify(payload) });
+    if (r.status === 401) { sessionStorage.removeItem('mc_admin_pw'); alert('Please log in again.'); location.reload(); return { data:null, error:{ message:'Not authorized' } }; }
+    var j = await r.json();
+    if (!r.ok) return { data:null, error:{ message: j.error || 'Request failed' } };
+    return { data: j.data !== undefined ? j.data : j, error:null };
+  } catch(e) { return { data:null, error:{ message: e.message } }; }
+}
+
+// Upload a photo using a one-time permission slip from the server.
+async function adminUpload(path, file){
+  var slip = await adminDb({ action:'upload_url', path: path });
+  if (slip.error) return { data:null, error: slip.error };
+  return await _sb.storage.from('product-images').uploadToSignedUrl(slip.data.path, slip.data.token, file, { contentType: file.type });
+}
 </script>
 
 <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
@@ -675,7 +712,7 @@ async function uploadFinPhotos(id,input){
     if((finishPhotos[id]||[]).length>=10){showToast('Max 10 photos','error');break;}
     try{
       var fileName='product-'+Date.now()+'-'+Math.floor(Math.random()*9999)+'.'+f.name.split('.').pop();
-      var res=await _sb.storage.from('product-images').upload(fileName,f,{contentType:f.type,upsert:false});
+      var res=await adminUpload(fileName,f);
       if(res.error){showToast('Upload failed: '+res.error.message,'error');continue;}
       var urlRes=_sb.storage.from('product-images').getPublicUrl(fileName);
       var publicUrl=urlRes.data.publicUrl;
@@ -1060,7 +1097,7 @@ async function uploadFabricSwatchPhoto(id,input){
   showToast('Uploading swatch photo...','success');
   try{
     var fileName='swatch-'+Date.now()+'-'+Math.floor(Math.random()*9999)+'.'+file.name.split('.').pop();
-    var res=await _sb.storage.from('product-images').upload(fileName,file,{contentType:file.type,upsert:false});
+    var res=await adminUpload(fileName,file);
     if(res.error){showToast('Upload failed: '+res.error.message,'error');input.value='';return;}
     var urlRes=_sb.storage.from('product-images').getPublicUrl(fileName);
     fabricSwatches[id]=urlRes.data.publicUrl;
@@ -1426,7 +1463,7 @@ async function save(){
       var cleanImg=(p.img&&!p.img.startsWith('data:'))?p.img:'';
       return{id:p.id,name:p.name,brand:p.brand,cat:p.cat,price:p.price,was:p.was||null,shipping_cost:p.shippingCost||0,description:p.desc||'',tagline:p.tagline||'',features:p.features||'',wood:p.wood||'',status:p.status,img:cleanImg,finishes:cleanFinishes,top_sizes:cleanTopSizes,variant_mode:p.variantMode||'finish',dims:p.dims||'',badge:p.badge||'',supplier_link:p.supplierLink||'',collection:p.collection||'',collection_cover:p.collectionCover||'',created_at:p.createdAt||Date.now()};
     });
-    var upsertRes=await _sb.from('products').upsert(rows);
+    var upsertRes=await adminDb({action:'products_upsert',rows:rows});
     if(upsertRes.error){showToast('DB error: '+upsertRes.error.message,'error');console.error('Upsert error:',upsertRes.error);return;}
     try{localStorage.setItem('gw_products',JSON.stringify(rows.map(function(p){return{id:p.id,name:p.name,brand:p.brand,cat:p.cat,price:p.price,was:p.was,desc:p.description,wood:p.wood,status:p.status,img:p.img,finishes:p.finishes,dims:p.dims,badge:p.badge,supplierLink:p.supplier_link,collection:p.collection||'',createdAt:p.created_at};})));}catch(le){localStorage.removeItem('gw_products');}
   }catch(e){showToast('Save error: '+e.message,'error');}
@@ -1434,7 +1471,7 @@ async function save(){
 
 async function loadProductsFromSupabase(){
   try{
-    var res=await _sb.from('products').select('*').order('created_at',{ascending:false});
+    var res=await adminDb({action:'products_list'});
     if(res.error)throw res.error;
     if(res.data&&res.data.length){
       products=res.data.map(function(p){return{id:p.id,name:p.name,brand:p.brand,cat:p.cat,price:p.price,was:p.was,shippingCost:p.shipping_cost||0,desc:p.description||'',tagline:p.tagline||'',features:p.features||'',wood:p.wood||'',status:p.status,img:p.img||'',finishes:p.finishes||[],topSizes:p.top_sizes||[],variantMode:p.variant_mode||'finish',dims:p.dims||'',badge:p.badge||'',supplierLink:p.supplier_link||'',collection:p.collection||'',collectionCover:p.collection_cover||'',createdAt:p.created_at};});
@@ -1443,7 +1480,7 @@ async function loadProductsFromSupabase(){
   }catch(e){console.log('Supabase load error:',e);}
 }
 
-async function deleteProductFromSupabase(id){try{await _sb.from('products').delete().eq('id',id);}catch(e){console.log('Delete error:',e);}}
+async function deleteProductFromSupabase(id){try{var r=await adminDb({action:'products_delete',id:id});if(r.error)showToast('Delete failed: '+r.error.message,'error');}catch(e){console.log('Delete error:',e);}}
 
 document.getElementById('f-collection').addEventListener('input',function(){var wrap=document.getElementById('collection-cover-wrap');if(wrap)wrap.style.display=this.value.trim()?'block':'none';});
 
@@ -1454,10 +1491,10 @@ async function uploadCollectionCover(input){
   try{
     var ext=file.name.split('.').pop();
     var fileName='collection-cover-'+Date.now()+'.'+ext;
-    var res=await _sb.storage.from('product-images').upload(fileName,file,{contentType:file.type,upsert:false});
+    var res=await adminUpload(fileName,file);
     if(res.error){
       // Try with upsert if file exists
-      var res2=await _sb.storage.from('product-images').upload(fileName+'-'+Math.floor(Math.random()*9999)+'.'+ext,file,{contentType:file.type,upsert:true});
+      var res2=await adminUpload(fileName+'-'+Math.floor(Math.random()*9999)+'.'+ext,file);
       if(res2.error){showToast('Upload failed: '+res2.error.message,'error');input.value='';return;}
       var urlRes2=_sb.storage.from('product-images').getPublicUrl(res2.data.path);
       var url2=urlRes2.data.publicUrl;
@@ -1488,7 +1525,7 @@ var orders=[];
 async function loadOrdersFromSupabase(){
   try{
     document.getElementById('orders-list').innerHTML='<div class="empty-state"><div class="ei">⏳</div><p>Loading orders…</p></div>';
-    var res=await fetch('/.netlify/functions/admin-orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'list'})});
+    var res=await fetch('/.netlify/functions/admin-orders',{method:'POST',headers:{'Content-Type':'application/json','x-admin-password':ADMIN_PW},body:JSON.stringify({action:'list'})});
     var result=await res.json();
     if(!res.ok)throw new Error(result.error||'Load failed');
     orders=(result.orders||[]).map(function(o){return{id:o.id,orderNumber:o.order_number,customer:o.customer,email:o.email||'',address:o.address||'',product:o.product||'',variant:o.variant||'',revenue:o.revenue||0,cost:o.cost||0,link:o.link||'',notes:o.notes||'',status:o.status||'new',timestamps:o.timestamps||{},stripeId:o.stripe_id||'',supplierOrderNum:o.supplier_order_num||'',trackingNumber:o.tracking_number||'',proofPhotos:o.proof_photos||[],createdAt:o.created_at||''};});
@@ -1496,13 +1533,13 @@ async function loadOrdersFromSupabase(){
   }catch(e){document.getElementById('orders-list').innerHTML='<div class="empty-state"><div class="ei">⚠️</div><p>Could not load orders.</p></div>';}
 }
 
-async function syncOrderToSupabase(o){try{await fetch('/.netlify/functions/admin-orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'upsert',order:{id:o.id,order_number:o.orderNumber,customer:o.customer,email:o.email||'',address:o.address||'',product:o.product||'',variant:o.variant||'',revenue:o.revenue||0,cost:o.cost||0,link:o.link||'',notes:o.notes||'',status:o.status||'new',timestamps:o.timestamps||{},stripe_id:o.stripeId||'',supplier_order_num:o.supplierOrderNum||'',tracking_number:o.trackingNumber||'',proof_photos:o.proofPhotos||[],created_at:o.createdAt}})});}catch(e){console.error('Order sync error:',e);}}
+async function syncOrderToSupabase(o){try{await fetch('/.netlify/functions/admin-orders',{method:'POST',headers:{'Content-Type':'application/json','x-admin-password':ADMIN_PW},body:JSON.stringify({action:'upsert',order:{id:o.id,order_number:o.orderNumber,customer:o.customer,email:o.email||'',address:o.address||'',product:o.product||'',variant:o.variant||'',revenue:o.revenue||0,cost:o.cost||0,link:o.link||'',notes:o.notes||'',status:o.status||'new',timestamps:o.timestamps||{},stripe_id:o.stripeId||'',supplier_order_num:o.supplierOrderNum||'',tracking_number:o.trackingNumber||'',proof_photos:o.proofPhotos||[],created_at:o.createdAt}})});}catch(e){console.error('Order sync error:',e);}}
 function toggleAddOrder(){var b=document.getElementById('add-order-body');var a=document.getElementById('add-order-arrow');b.classList.toggle('open');a.textContent=b.classList.contains('open')?'▴':'▾';}
 
 async function saveOrder(){
   var customer=document.getElementById('o-customer').value.trim();var email=document.getElementById('o-email').value.trim();var address=document.getElementById('o-address').value.trim();var product=document.getElementById('o-product').value.trim();var variant=document.getElementById('o-variant').value.trim();var revenue=parseFloat(document.getElementById('o-revenue').value)||0;var cost=parseFloat(document.getElementById('o-cost').value)||0;var link=document.getElementById('o-link').value.trim();var notes=document.getElementById('o-notes').value.trim();
   if(!customer){showToast('Customer name required','error');return;}if(!address){showToast('Address required','error');return;}if(!product){showToast('Product name required','error');return;}
-  var numRes=await fetch('/.netlify/functions/admin-orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'nextOrderNumber'})});
+  var numRes=await fetch('/.netlify/functions/admin-orders',{method:'POST',headers:{'Content-Type':'application/json','x-admin-password':ADMIN_PW},body:JSON.stringify({action:'nextOrderNumber'})});
   var numData=await numRes.json();var num=numData.orderNumber||'MC-????';
   var now=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'});
   var o={id:Date.now(),orderNumber:num,customer:customer,email:email,address:address,product:product,variant:variant,revenue:revenue,cost:cost,link:link,notes:notes,status:'new',timestamps:{},stripeId:'',supplierOrderNum:'',trackingNumber:'',proofPhotos:[],createdAt:now};
@@ -1518,7 +1555,7 @@ async function advanceStatus(id){
   if(nextStatus==='shipped'){var t=prompt('Enter the tracking number:',o.trackingNumber||'');if(t!==null)o.trackingNumber=t.trim();}
   o.status=nextStatus;if(!o.timestamps)o.timestamps={};o.timestamps[o.status]=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'});
   await syncOrderToSupabase(o);renderOrders();showToast('Updated: '+SL[o.status],'success');
-  if(o.email&&(nextStatus==='ordered'||nextStatus==='shipped'||nextStatus==='delivered')){try{await fetch('/.netlify/functions/send-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:o.email,customerName:o.customer,orderNumber:o.orderNumber,status:nextStatus,product:o.product,address:o.address,trackingNumber:o.trackingNumber||''})});showToast('Email sent to '+o.email,'success');}catch(e){console.log('Email error:',e);}}
+  if(o.email&&(nextStatus==='ordered'||nextStatus==='shipped'||nextStatus==='delivered')){try{await fetch('/.netlify/functions/send-email',{method:'POST',headers:{'Content-Type':'application/json','x-admin-password':ADMIN_PW},body:JSON.stringify({to:o.email,customerName:o.customer,orderNumber:o.orderNumber,status:nextStatus,product:o.product,address:o.address,trackingNumber:o.trackingNumber||''})});showToast('Email sent to '+o.email,'success');}catch(e){console.log('Email error:',e);}}
 }
 
 async function saveTrackingNumber(id){var o=orders.find(function(x){return x.id===id;});if(!o)return;var inp=document.getElementById('tracking'+id);if(inp)o.trackingNumber=inp.value.trim();await syncOrderToSupabase(o);showToast('Tracking number saved','success');}
@@ -1526,7 +1563,7 @@ async function saveSupplierOrderNum(id){var o=orders.find(function(x){return x.i
 async function goBackStatus(id){var o=orders.find(function(x){return x.id===id;});if(!o)return;var i=SF.indexOf(o.status);if(i>0){if(o.timestamps)delete o.timestamps[o.status];o.status=SF[i-1];}await syncOrderToSupabase(o);renderOrders();showToast('Back to: '+SL[o.status],'success');}
 async function saveOrderLink(id){var o=orders.find(function(x){return x.id===id;});if(!o)return;var inp=document.getElementById('link'+id);if(inp)o.link=inp.value.trim();await syncOrderToSupabase(o);renderOrders();showToast('Link saved','success');}
 async function saveOrderNotes(id){var o=orders.find(function(x){return x.id===id;});if(!o)return;var inp=document.getElementById('notes'+id);if(inp)o.notes=inp.value.trim();await syncOrderToSupabase(o);renderOrders();showToast('Notes saved','success');}
-async function deleteOrder(id){try{var res=await fetch('/.netlify/functions/admin-orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',id:id})});if(!res.ok)throw new Error('Delete failed');orders=orders.filter(function(x){return x.id!==id;});renderOrders();showToast('Order deleted','error');}catch(e){showToast('Delete failed','error');}}
+async function deleteOrder(id){try{var res=await fetch('/.netlify/functions/admin-orders',{method:'POST',headers:{'Content-Type':'application/json','x-admin-password':ADMIN_PW},body:JSON.stringify({action:'delete',id:id})});if(!res.ok)throw new Error('Delete failed');orders=orders.filter(function(x){return x.id!==id;});renderOrders();showToast('Order deleted','error');}catch(e){showToast('Delete failed','error');}}
 
 function renderOrders(){
   var list=document.getElementById('orders-list');if(!list)return;
@@ -1578,7 +1615,7 @@ try{
     "https://slaffkwfwmudvernzjua.supabase.co",
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsYWZma3dmd211ZHZlcm56anVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMzU4MDksImV4cCI6MjA5MTYxMTgwOX0.BEz8_GNKPTQB90LJBJTZFyJYFF-9ypdfbEsLAfEESqY"
   );
-  loadProductsFromSupabase();
+  window.adminReady.then(loadProductsFromSupabase);
 }catch(e){console.log('Supabase init error:',e);}
 </script>
 </body>
