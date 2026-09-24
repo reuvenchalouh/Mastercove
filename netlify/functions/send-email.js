@@ -1,5 +1,17 @@
 const { Resend } = require('resend');
 const resend = new Resend(process.env.RESEND_API_KEY);
+const { createClient } = require('@supabase/supabase-js');
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+
+// Checks the admin password (sent by admin.html in the x-admin-password header)
+// against the scrambled copy stored in Supabase. The real password is never in the code.
+async function isAdmin(event) {
+  const h = event.headers || {};
+  const pw = h['x-admin-password'] || h['X-Admin-Password'] || '';
+  if (!pw || pw.length > 200) return false;
+  const { data, error } = await supabase.rpc('verify_admin_password', { pw });
+  return !error && data === true;
+}
 
 function escapeHtml(str) {
   if (str === null || str === undefined) return '';
@@ -13,6 +25,7 @@ function escapeHtml(str) {
 
 exports.handler = async function(event) {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
+  if (!(await isAdmin(event))) return { statusCode: 401, body: JSON.stringify({ error: 'Not authorized.' }) };
 
   try {
     const { to, customerName, orderNumber, status, product, address, trackingNumber } = JSON.parse(event.body);
