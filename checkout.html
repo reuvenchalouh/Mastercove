@@ -210,7 +210,7 @@ function recalcTotals(){
   document.getElementById('pay-amount').textContent = '$' + orderTotal.toLocaleString();
 }
 
-function loadSummary() {
+function loadSummary(skipTracking) {
   var itemsEl = document.getElementById('order-items');
   if (!cart.length) {
     itemsEl.innerHTML = '<div class="empty-cart"><div class="ei">🪵</div><p>Your cart is empty.<br/><a href="index.html" style="color:var(--walnut);">Go back to shop</a></p></div>';
@@ -242,6 +242,8 @@ function loadSummary() {
   document.getElementById('item-count').textContent = cart.length + ' item' + (cart.length > 1 ? 's' : '');
   document.getElementById('order-totals').style.display = 'block';
   recalcTotals();
+
+  if (skipTracking) return;
 
   if (typeof fbq === 'function' && cart.length) {
     fbq('track', 'InitiateCheckout', {
@@ -322,6 +324,16 @@ function submitPayment() {
     .then(function(r){ return r.json(); })
     .then(function(data) {
       if (data.error) {
+        if (data.updatedItems && data.updatedItems.length) {
+          // Server found out-of-date prices — update the cart with the real ones
+          // so the customer sees the correct total before paying.
+          data.updatedItems.forEach(function(u){
+            if (cart[u.index]) { cart[u.index].price = u.price; cart[u.index].shipping = u.shipping; }
+          });
+          localStorage.setItem('mc_cart', JSON.stringify(cart));
+          checkoutIdempotencyKey = null;
+          loadSummary(true);
+        }
         showErr(data.error);
         btn.disabled = false;
         btn.innerHTML = '🔒 Pay $' + orderTotal.toLocaleString();
