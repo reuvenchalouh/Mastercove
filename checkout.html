@@ -117,6 +117,11 @@ header{background:var(--white);border-bottom:1px solid var(--border);padding:0 3
         <input class="finput" id="f-name" type="text" placeholder="Sarah Johnson"/>
       </div>
       <div class="frow">
+        <label>Phone Number *</label>
+        <input class="finput" id="f-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(555) 123-4567" onblur="this.value=formatPhone(this.value)||this.value"/>
+        <div style="font-size:11px;color:var(--mist);margin-top:5px;">The delivery team will call to schedule your white-glove delivery.</div>
+      </div>
+      <div class="frow">
         <label>Shipping Address *</label>
         <input class="finput" id="f-address" type="text" placeholder="123 Main Street"/>
       </div>
@@ -211,6 +216,14 @@ function recalcTotals(){
   if (payAmt) payAmt.textContent = '$' + orderTotal.toLocaleString();
 }
 
+// Clean a phone number into (347) 206-0372 format. Returns '' if not a valid US number.
+function formatPhone(raw) {
+  var d = String(raw || '').replace(/\D/g, '');
+  if (d.length === 11 && d.charAt(0) === '1') d = d.slice(1);
+  if (d.length !== 10) return '';
+  return '(' + d.slice(0,3) + ') ' + d.slice(3,6) + '-' + d.slice(6);
+}
+
 // Put the Pay button back the way it started (keeps the amount span so totals can update it).
 function resetPayBtn() {
   var btn = document.getElementById('pay-btn');
@@ -276,6 +289,8 @@ var checkoutIdempotencyKey = null;
 function submitPayment() {
   var email   = document.getElementById('f-email').value.trim();
   var name    = document.getElementById('f-name').value.trim();
+  var phoneRaw = document.getElementById('f-phone').value.trim();
+  var phone   = formatPhone(phoneRaw);
   var address = document.getElementById('f-address').value.trim();
   var city    = document.getElementById('f-city').value.trim();
   var state   = document.getElementById('f-state').value.trim();
@@ -285,6 +300,7 @@ function submitPayment() {
 
   if (!email)   { showErr('Please enter your email address.'); return; }
   if (!name)    { showErr('Please enter your full name.'); return; }
+  if (!phone)   { showErr('Please enter a valid 10-digit phone number so the delivery team can reach you.'); return; }
   if (!address) { showErr('Please enter your shipping address.'); return; }
   if (!city)    { showErr('Please enter your city.'); return; }
   if (!zip)     { showErr('Please enter your ZIP code.'); return; }
@@ -304,7 +320,7 @@ function submitPayment() {
   stripe.createPaymentMethod({
     type: 'card',
     card: card,
-    billing_details: { name: name, email: email, address: { line1: address, city: city, state: state, postal_code: zip, country: 'US' } }
+    billing_details: { name: name, email: email, phone: phone, address: { line1: address, city: city, state: state, postal_code: zip, country: 'US' } }
   }).then(function(result) {
     if (result.error) {
       showErr(result.error.message);
@@ -321,6 +337,7 @@ function submitPayment() {
         currency: 'usd',
         email: email,
         name: name,
+        phone: phone,
         address: address,
         city: city,
         state: state,
@@ -356,7 +373,7 @@ function submitPayment() {
             body: JSON.stringify({
               paymentIntentId: data.orderId,
               amount: Math.round(orderTotal * 100),
-              email: email, name: name, address: address, city: city, state: state, zip: zip, items: cart
+              email: email, name: name, phone: phone, address: address, city: city, state: state, zip: zip, items: cart
             })
           })
           .then(function(r){ return r.json(); })
