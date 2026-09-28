@@ -21,9 +21,101 @@ const CATEGORY_MAP = {
   armchair:   { google: 'Furniture > Chairs', type: 'Living Room Furniture > Lounge Chairs & Armchairs' },
   accentchair:{ google: 'Furniture > Chairs', type: 'Living Room Furniture > Accent Chairs' },
   bar:        { google: 'Furniture > Bar Furniture', type: 'Living Room Furniture > Bar Cabinets' },
-  bed:        { google: 'Furniture > Bedroom Furniture > Beds & Bed Frames', type: 'Bedroom Furniture > Beds' },
+  bed:        { google: 'Furniture > Beds & Accessories > Beds & Bed Frames', type: 'Bedroom Furniture > Beds' },
+  chest:      { google: 'Furniture > Cabinets & Storage > Dressers', type: 'Bedroom Furniture > Chests of Drawers' },
+  coffeetable:{ google: 'Furniture > Tables > Accent Tables > Coffee Tables', type: 'Living Room Furniture > Coffee Tables' },
+  diningtable:{ google: 'Furniture > Tables > Kitchen & Dining Room Tables', type: 'Dining Room Furniture > Dining Tables' },
+  vanity:     { google: 'Furniture > Cabinets & Storage > Bathroom Cabinets', type: 'Bathroom Furniture > Bathroom Vanities' },
+  bench:      { google: 'Furniture > Benches', type: 'Entryway Furniture > Benches' },
+  outdoor:    { google: 'Furniture > Outdoor Furniture', type: 'Outdoor Furniture' },
   other:      { google: 'Furniture', type: 'Furniture' }
 };
+
+// Words that should appear in a title so Google knows what the product is.
+// If the product name doesn't already contain one of the words, the noun is added.
+const CATEGORY_NOUN = {
+  dresser:['Dresser',['dresser']], chest:['Chest of Drawers',['chest']], nightstand:['Nightstand',['nightstand','bedside']],
+  sideboard:['Sideboard',['sideboard','buffet','credenza','cabinet']], tv:['TV Stand',['tv','media','entertainment']],
+  bookcase:['Bookcase',['bookcase','bookshelf','shelf','etagere']], desk:['Desk',['desk']],
+  chair:['Chair',['chair','stool']], accentchair:['Accent Chair',['chair']], armchair:['Armchair',['chair','lounge']],
+  sofa:['Sofa',['sofa','loveseat','couch']], sectional:['Sectional Sofa',['sectional']], bed:['Bed',['bed']],
+  coffeetable:['Coffee Table',['coffee table','cocktail table']], diningtable:['Dining Table',['dining table','kitchen table']],
+  sidetable:['Side Table',['table']], bar:['Bar Cabinet',['bar','wine']], vanity:['Bathroom Vanity',['vanity']],
+  shoe:['Shoe Cabinet',['shoe']], bench:['Bench',['bench']], outdoor:['Outdoor Patio Furniture',['outdoor','patio']]
+};
+
+// Materials people search for — picked up only from the product's own name and tagline (so titles stay accurate).
+const MATERIALS = ['Solid Oak','White Oak','Walnut','Teak','Acacia','Mango Wood','Burl','Travertine','Marble','Sintered Stone',
+  'Linen','Velvet','Boucle','Leather','Performance Fabric','Rattan','Cane','Fluted','Reeded','Oak'];
+
+const SKIP_COLORS = ['', 'default', 'fabric only'];
+
+function cleanText(str) {
+  return String(str || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function firstSize(p) {
+  return (p.variant_mode === 'size' && Array.isArray(p.top_sizes) && p.top_sizes.length) ? p.top_sizes[0] : null;
+}
+
+// Price the customer sees first on the product page (for size-based items, the first size).
+function landingPrice(p) {
+  const sz = firstSize(p);
+  if (sz && Number(sz.price) > 0) return Number(sz.price);
+  return Number(p.price || 0);
+}
+
+function getColors(p) {
+  const names = [];
+  const add = n => { n = String(n || '').trim(); if (SKIP_COLORS.indexOf(n.toLowerCase()) === -1 && names.indexOf(n) === -1) names.push(n); };
+  const sz = firstSize(p);
+  if (sz) (sz.finishes || []).forEach(f => add(f.name));
+  else (p.finishes || []).forEach(f => add(f && f.name));
+  return names;
+}
+
+function getMaterials(p, already) {
+  const text = [p.name, p.tagline].map(cleanText).join(' ').toLowerCase();
+  const found = [];
+  MATERIALS.forEach(m => {
+    const low = m.toLowerCase();
+    if (found.length >= 2) return;
+    if (text.indexOf(low) === -1) return;
+    if (already.indexOf(low) !== -1) return;
+    if (found.some(f => f.toLowerCase().indexOf(low) !== -1)) return; // skip "Oak" if "Solid Oak" found
+    found.push(m);
+  });
+  return found;
+}
+
+// e.g. "The Orson Nightstand" -> "Orson Fluted Oak Nightstand – Espresso"
+function buildTitle(p) {
+  let base = String(p.name || '').replace(/^the\s+/i, '').trim();
+  const lower = base.toLowerCase();
+  const noun = CATEGORY_NOUN[p.cat];
+  if (noun && !noun[1].some(w => lower.indexOf(w) !== -1)) base += ' ' + noun[0];
+  const mats = getMaterials(p, lower);
+  if (mats.length) base += ' – ' + mats.join(' ');
+  const used = (lower + ' ' + mats.join(' ')).toLowerCase();
+  const colors = getColors(p).filter(c => used.indexOf(c.toLowerCase()) === -1).slice(0, 2);
+  if (colors.length) base += (mats.length ? ', ' : ' – ') + colors.join(' / ');
+  return base.slice(0, 150);
+}
+
+function buildDescription(p) {
+  const sz = firstSize(p);
+  let d = cleanText(p.description) || cleanText(sz && sz.desc);
+  const feats = cleanText(p.features || (sz && sz.features) || '');
+  const tag = cleanText(p.tagline);
+  if (d.length < 80) d = [tag, d, feats].filter(Boolean).join(' ');
+  return (d || p.name || '').slice(0, 5000);
+}
+
+function getHighlights(p) {
+  const sz = firstSize(p);
+  const raw = String(p.features || (sz && sz.features) || '');
+  return raw.split(/\n|•/).map(s => cleanText(s).replace(/^[-*•\s]+/, '')).filter(s => s.length > 3).slice(0, 6).map(s => s.slice(0, 150));
+}
 
 function escapeXml(str) {
   if (!str) return '';
@@ -97,15 +189,18 @@ exports.handler = async function(event, context) {
       if (!mainImg) return; // skip products with no usable image
       const extraImages = getExtraImages(p, mainImg);
       const inStock = isInStock(p);
-      const price = Number(p.price || 0).toFixed(2);
+      const shownPrice = landingPrice(p);
+      const wasPrice = Number(p.was || 0);
+      const onSale = !firstSize(p) && wasPrice > shownPrice;
+      const price = (onSale ? wasPrice : shownPrice).toFixed(2);
+      const colors = getColors(p);
+      const highlights = getHighlights(p);
       const link = 'https://mastercove.com/product-detail.html?id=' + p.id;
-      const description = escapeXml(
-        (p.description || p.tagline || p.name || '').toString().slice(0, 5000)
-      );
+      const description = escapeXml(buildDescription(p));
 
       items += '  <item>\n';
       items += '    <g:id>' + escapeXml(p.id) + '</g:id>\n';
-      items += '    <title>' + escapeXml(p.name) + '</title>\n';
+      items += '    <title>' + escapeXml(buildTitle(p)) + '</title>\n';
       items += '    <description>' + description + '</description>\n';
       items += '    <link>' + escapeXml(link) + '</link>\n';
       items += '    <g:image_link>' + escapeXml(mainImg) + '</g:image_link>\n';
@@ -114,6 +209,9 @@ exports.handler = async function(event, context) {
       });
       items += '    <g:availability>' + (inStock ? 'in stock' : 'out of stock') + '</g:availability>\n';
       items += '    <g:price>' + price + ' USD</g:price>\n';
+      if (onSale) items += '    <g:sale_price>' + shownPrice.toFixed(2) + ' USD</g:sale_price>\n';
+      if (colors.length) items += '    <g:color>' + escapeXml(colors[0]) + '</g:color>\n';
+      highlights.forEach(function(h){ items += '    <g:product_highlight>' + escapeXml(h) + '</g:product_highlight>\n'; });
       items += '    <g:condition>new</g:condition>\n';
       items += '    <g:brand>' + escapeXml(getBrand(p)) + '</g:brand>\n';
       items += '    <g:google_product_category>' + escapeXml(catInfo.google) + '</g:google_product_category>\n';
@@ -122,7 +220,7 @@ exports.handler = async function(event, context) {
       items += '    <g:shipping>\n';
       items += '      <g:country>US</g:country>\n';
       items += '      <g:service>Standard</g:service>\n';
-      items += '      <g:price>0.00 USD</g:price>\n';
+      items += '      <g:price>' + Number(p.shipping_cost || 0).toFixed(2) + ' USD</g:price>\n';
       items += '    </g:shipping>\n';
       if (p.dims) {
         items += '    <g:product_detail>\n';
