@@ -4,467 +4,433 @@
 <meta charset="UTF-8"/>
 <link rel="icon" type="image/png" href="https://slaffkwfwmudvernzjua.supabase.co/storage/v1/object/public/product-images/New%20wallpaper.jpeg"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Collections — Master Cove</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
-<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<title>Checkout — Master Cove</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-D8LM0CQB38"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-D8LM0CQB38');</script>
+<!-- Meta Pixel Code -->
 <script>
-var _sb = null;
-(function(){
-  try {
-    _sb = supabase.createClient(
-      "https://slaffkwfwmudvernzjua.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsYWZma3dmd211ZHZlcm56anVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMzU4MDksImV4cCI6MjA5MTYxMTgwOX0.BEz8_GNKPTQB90LJBJTZFyJYFF-9ypdfbEsLAfEESqY"
-    );
-  } catch(e) { console.log('Supabase error:', e); }
-})();
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '2156219968568427');
+fbq('track', 'PageView');
 </script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=2156219968568427&ev=PageView&noscript=1"
+/></noscript>
+<!-- End Meta Pixel Code -->
 <style>
 :root{
   --ink:#1C1A17;--sand:#F5EFE6;--linen:#EDE5D8;
-  --walnut:#6B4C35;--oak:#B8895A;--maple:#D4AA7D;
-  --slate:#5C5750;--mist:#A8A09A;--border:#DDD5C8;
-  --white:#FDFBF8;--green:#4A7A5A;--red:#B5432A;
+  --walnut:#6B4C35;--maple:#D4AA7D;--slate:#5C5750;
+  --mist:#A8A09A;--border:#DDD5C8;--white:#FDFBF8;
+  --green:#4A7A5A;--red:#B5432A;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
-html{scroll-behavior:smooth;}
-body{font-family:'Outfit',sans-serif;background:var(--white);color:var(--ink);font-size:14px;}
+body{font-family:'Outfit',sans-serif;background:#F0EBE3;color:var(--ink);font-size:14px;min-height:100vh;}
 a{text-decoration:none;color:inherit;}
-button{cursor:pointer;font-family:'Outfit',sans-serif;}
-
-/* HEADER */
-.ann-bar{background:var(--ink);color:var(--maple);text-align:center;padding:9px;font-size:12px;letter-spacing:0.06em;}
-.ann-bar b{font-weight:600;}
-header{background:var(--white);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;}
-.cat-strip{background:var(--white);border-bottom:1px solid var(--border);position:sticky;top:68px;z-index:90;}
-.cat-strip-inner{max-width:1380px;margin:0 auto;padding:0 32px;display:flex;gap:0;overflow-x:auto;}
-.cat-strip-inner::-webkit-scrollbar{display:none;}
-.cat-btn{background:none;border:none;border-bottom:2px solid transparent;padding:14px 20px;font-size:14.5px;letter-spacing:0.03em;color:var(--slate);white-space:nowrap;transition:all .15s;font-weight:500;text-decoration:none;display:inline-flex;align-items:center;}
-.cat-btn:hover{color:var(--ink);}
-.cat-btn.active{color:var(--ink);border-bottom-color:var(--walnut);font-weight:500;}
-.header-inner{max-width:1380px;margin:0 auto;padding:0 32px;height:68px;display:flex;align-items:center;gap:20px;}
-.logo{text-decoration:none;flex-shrink:0;display:flex;align-items:center;}
-.logo img{height:44px;object-fit:contain;}
-.header-right{display:flex;align-items:center;gap:16px;margin-left:auto;}
-.nav-link{font-size:13px;color:var(--slate);transition:color .15s;}
-.nav-link:hover{color:var(--ink);}
-.cart-btn{background:var(--ink);color:#fff;border:none;padding:9px 16px;border-radius:2px;font-size:12.5px;display:flex;align-items:center;gap:7px;transition:background .15s;}
-.cart-btn:hover{background:#2E2A26;}
-
-/* HERO */
-.hero{background:linear-gradient(160deg,#1C1A17,#2E2A26);padding:64px 32px;text-align:center;}
-.hero-inner{max-width:600px;margin:0 auto;}
-.hero-label{font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:var(--maple);margin-bottom:16px;font-weight:500;}
-.hero h1{font-family:'Playfair Display',serif;font-size:42px;font-weight:400;color:#fff;line-height:1.2;margin-bottom:14px;}
-.hero h1 em{color:var(--maple);font-style:italic;}
-.hero p{font-size:15px;color:rgba(255,255,255,0.5);font-weight:300;line-height:1.8;}
-
-/* MAIN */
-.main{max-width:1380px;margin:0 auto;padding:56px 32px;}
-
-/* COLLECTIONS GRID - when showing all collections */
-.collections-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:24px;}
-.collection-card{background:var(--white);border:1px solid var(--border);border-radius:6px;overflow:hidden;cursor:pointer;transition:transform .2s,box-shadow .2s;}
-.collection-card:hover{transform:translateY(-3px);box-shadow:0 12px 36px rgba(0,0,0,0.1);}
-.collection-card-imgs{height:460px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:2px;background:var(--border);overflow:hidden;}
-.collection-card-imgs.one{grid-template-columns:1fr;grid-template-rows:1fr;}
-.collection-card-imgs.two{grid-template-columns:1fr 1fr;grid-template-rows:1fr;}
-.collection-card-imgs.three .ci:first-child{grid-row:1/-1;}
-.ci{background:var(--sand);overflow:hidden;display:flex;align-items:center;justify-content:center;}
-.ci img{width:100%;height:100%;object-fit:cover;object-position:center top;}
-.collection-card-info{padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
-.collection-name{font-family:'Playfair Display',serif;font-size:18px;font-weight:400;margin:0;white-space:nowrap;}
-.collection-name em{color:var(--walnut);font-style:italic;}
-.collection-meta{font-size:11px;color:var(--mist);display:flex;align-items:center;gap:8px;flex-shrink:0;}
-.collection-count{background:var(--linen);padding:2px 8px;border-radius:20px;font-size:11px;color:var(--walnut);font-weight:500;white-space:nowrap;}
-.view-collection-btn{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--walnut);font-weight:500;border-bottom:1px solid var(--maple);padding-bottom:1px;transition:opacity .15s;white-space:nowrap;flex-shrink:0;}
-.view-collection-btn:hover{opacity:.7;}
-
-/* SINGLE COLLECTION VIEW */
-.collection-view{display:none;}
-.collection-view.active{display:block;}
-.collections-list.hidden{display:none;}
-
-.back-btn{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--mist);margin-bottom:28px;cursor:pointer;transition:color .15s;background:none;border:none;}
-.back-btn:hover{color:var(--walnut);}
-.collection-header{margin-bottom:36px;padding-bottom:24px;border-bottom:1px solid var(--border);}
-.collection-header h2{font-family:'Playfair Display',serif;font-size:36px;font-weight:400;margin-bottom:8px;}
-.collection-header h2 em{color:var(--walnut);font-style:italic;}
-.collection-header p{font-size:14px;color:var(--mist);font-weight:300;}
-
-/* PRODUCT GRID */
-.prod-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px;}
-.prod-card{border:1px solid var(--border);border-radius:4px;overflow:hidden;background:var(--white);cursor:pointer;transition:transform .2s,box-shadow .2s;}
-.prod-card:hover{transform:translateY(-3px);box-shadow:0 8px 28px rgba(0,0,0,0.08);}
-.prod-img{aspect-ratio:4/3;background:var(--sand);position:relative;overflow:hidden;}
-.prod-img img{width:100%;height:100%;object-fit:cover;display:block;}
-.badge{position:absolute;top:10px;left:10px;padding:3px 9px;border-radius:2px;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;}
-.badge-new{background:#EEF5F0;color:var(--green);}
-.badge-sale{background:#FBF0EE;color:var(--red);}
-.badge-best{background:#FBF4E8;color:var(--walnut);}
-.prod-info{padding:14px 16px;}
-.prod-name{font-size:14px;font-weight:500;line-height:1.35;margin-bottom:4px;}
-.prod-cat{font-size:11px;color:var(--mist);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.06em;}
-.prod-stars{font-size:11px;color:#B8895A;margin-bottom:8px;}
-.prod-stars span{color:#A8A09A;}
-.prod-dims{font-size:12px;color:var(--slate);margin-bottom:10px;font-weight:500;}
-.finishes{display:flex;gap:5px;margin-bottom:12px;flex-wrap:wrap;}
-.finish{width:16px;height:16px;border-radius:50%;border:2px solid white;outline:1px solid var(--border);background-size:cover;background-position:center;}
-.prod-footer{display:flex;align-items:center;justify-content:space-between;}
-.price{font-size:15px;font-weight:600;}
-.was{font-size:12px;color:var(--mist);text-decoration:line-through;margin-left:6px;}
-.unit-tag{font-size:10px;color:var(--green);margin-top:2px;}
-.add-btn{background:var(--ink);color:#fff;border:none;padding:8px 14px;border-radius:2px;font-size:11.5px;transition:background .15s;}
-.add-btn:hover{background:#2E2A26;}
-
-/* EMPTY STATE */
-.empty-state{text-align:center;padding:80px 20px;color:var(--mist);}
-.empty-state .ei{font-size:48px;margin-bottom:14px;}
-.empty-state h3{font-family:'Playfair Display',serif;font-size:22px;color:var(--ink);margin-bottom:8px;font-weight:400;}
-.empty-state p{font-size:13px;font-weight:300;line-height:1.7;}
-
-/* LOADING */
-.loading{text-align:center;padding:60px;color:var(--mist);font-size:13px;}
-
-/* FOOTER */
-footer{background:var(--ink);color:rgba(255,255,255,0.6);padding:48px 0 24px;margin-top:80px;}
-.foot-inner{max-width:1380px;margin:0 auto;padding:0 32px;}
-.foot-bottom{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:rgba(255,255,255,0.25);padding-top:20px;border-top:1px solid rgba(255,255,255,0.08);}
-
-@keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
-.fade-up{animation:fadeUp .3s ease both;}
-
-@media(max-width:600px){
-  .header-inner{padding:0 16px;}
-  .main{padding:32px 16px;}
-  .hero{padding:48px 16px;}
-  .hero h1{font-size:30px;}
-  .collections-grid{grid-template-columns:1fr;}
-  .collection-card-imgs{height:280px;}
-  .prod-grid{grid-template-columns:repeat(2,1fr);gap:12px;}
-  .logo img{height:36px;}
-}
+header{background:var(--white);border-bottom:1px solid var(--border);padding:0 32px;height:64px;display:flex;align-items:center;justify-content:space-between;}
+.logo{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;}
+.logo span{color:var(--walnut);}
+.back-link{font-size:12.5px;color:var(--mist);transition:color .15s;}
+.back-link:hover{color:var(--walnut);}
+.checkout-wrap{max-width:1000px;margin:40px auto;padding:0 24px;display:grid;grid-template-columns:1fr 400px;gap:28px;align-items:start;}
+.panel{background:var(--white);border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+.panel-head{padding:18px 22px;border-bottom:1px solid var(--border);background:var(--sand);}
+.panel-head h2{font-family:'Playfair Display',serif;font-size:18px;font-weight:400;}
+.panel-head p{font-size:12px;color:var(--mist);margin-top:2px;}
+.order-items{padding:16px 22px;}
+.order-item{display:flex;gap:14px;padding:12px 0;border-bottom:1px solid var(--border);}
+.order-item:last-child{border-bottom:none;}
+.item-img{width:64px;height:64px;border-radius:4px;background:var(--sand);border:1px solid var(--border);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.item-img img{width:100%;height:100%;object-fit:cover;}
+.item-name{font-size:13.5px;font-weight:500;margin-bottom:3px;}
+.item-meta{font-size:11.5px;color:var(--mist);}
+.item-price{font-size:14px;font-weight:500;text-align:right;white-space:nowrap;margin-left:auto;}
+.order-totals{padding:16px 22px;border-top:1px solid var(--border);background:var(--sand);}
+.total-row{display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px;color:var(--slate);}
+.total-row.final{font-size:15px;font-weight:600;color:var(--ink);margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
+.form-body{padding:22px;}
+.frow{margin-bottom:16px;}
+.frow label{display:block;font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;color:var(--slate);font-weight:500;margin-bottom:6px;}
+.finput{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:2px;font-family:'Outfit',sans-serif;font-size:13.5px;color:var(--ink);background:var(--white);outline:none;transition:border-color .15s;}
+.finput:focus{border-color:var(--walnut);}
+.finput::placeholder{color:var(--mist);}
+.frow-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.pay-btn{width:100%;background:var(--walnut);color:#fff;border:none;padding:14px;border-radius:2px;font-size:14px;font-weight:500;cursor:pointer;transition:background .2s;margin-top:6px;display:flex;align-items:center;justify-content:center;gap:8px;}
+.pay-btn:hover{background:#5A3D2A;}
+.pay-btn:disabled{background:var(--mist);cursor:not-allowed;}
+.secure-note{text-align:center;font-size:11px;color:var(--mist);margin-top:10px;display:flex;align-items:center;justify-content:center;gap:5px;}
+.error-msg{background:#FBF0EE;color:var(--red);border:1px solid #EDCDC8;border-radius:2px;padding:10px 14px;font-size:12.5px;margin-top:12px;display:none;}
+.empty-cart{padding:40px;text-align:center;color:var(--mist);}
+.empty-cart .ei{font-size:36px;margin-bottom:10px;}
+.divider{text-align:center;position:relative;margin:20px 0;}
+.divider::before{content:'';position:absolute;top:50%;left:0;right:0;height:1px;background:var(--border);}
+.divider span{position:relative;background:var(--white);padding:0 12px;font-size:11px;color:var(--mist);letter-spacing:0.06em;text-transform:uppercase;}
+#card-element{padding:10px 12px;border:1px solid var(--border);border-radius:2px;background:var(--white);transition:border-color .15s;}
+#card-element.focused{border-color:var(--walnut);}
+@media(max-width:768px){.checkout-wrap{grid-template-columns:1fr;}}
 </style>
+<script src="https://js.stripe.com/v3/"></script>
 </head>
 <body>
-
-<div class="ann-bar">Free Shipping on <b>Every Order</b></div>
-
 <header>
-  <div class="header-inner">
-    <a href="index.html" class="logo">
-      <img src="https://slaffkwfwmudvernzjua.supabase.co/storage/v1/object/public/product-images/New%20wallpaper.jpeg" alt="Master Cove"/>
-    </a>
-    <div class="header-right">
-      <a href="index.html" class="nav-link">Shop</a>
-      <a href="collections.html" class="nav-link" style="color:var(--walnut);font-weight:500;">Collections</a>
-      <a href="about.html" class="nav-link">About</a>
-      <button class="cart-btn" onclick="window.location.href='index.html'">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-        Shop Now
-      </button>
-    </div>
-  </div>
+  <a href="index.html" class="logo"><img src="https://slaffkwfwmudvernzjua.supabase.co/storage/v1/object/public/product-images/New%20wallpaper.jpeg" alt="Master Cove" style="height:40px;object-fit:contain;"/></a>
+  <a href="index.html" class="back-link">← Continue Shopping</a>
 </header>
 
-<div class="cat-strip">
-  <div class="cat-strip-inner">
-    <a href="index.html" class="cat-btn">All Furniture</a>
-    <a href="index.html?room=bedroom" class="cat-btn">Bedroom</a>
-    <a href="index.html?room=living" class="cat-btn">Living Room</a>
-    <a href="index.html?room=entryway" class="cat-btn">Entryway</a>
-    <a href="index.html?room=dining" class="cat-btn">Dining</a>
-    <a href="index.html?room=kitchen" class="cat-btn">Kitchen</a>
-    <a href="index.html?room=bathroom" class="cat-btn">Bathroom</a>
-    <a href="index.html?room=office" class="cat-btn">Office</a>
-    <a href="index.html?room=outdoor" class="cat-btn">Outdoor</a>
-    <a href="collections.html" class="cat-btn active">Collections</a>
-  </div>
-</div>
-
-<div class="hero">
-  <div class="hero-inner">
-    <div class="hero-label">Curated by Master Cove</div>
-    <h1>Shop by <em>Collection</em></h1>
-    <p>Thoughtfully grouped pieces that work together — designed to help you build a cohesive space.</p>
-  </div>
-</div>
-
-<div class="main">
-
-  <!-- ALL COLLECTIONS LIST -->
-  <div id="collections-list" class="collections-list">
-    <div class="loading" id="loading-msg">Loading collections…</div>
-    <div class="collections-grid" id="collections-grid"></div>
-  </div>
-
-  <!-- SINGLE COLLECTION VIEW -->
-  <div id="collection-view" class="collection-view">
-    <button class="back-btn" onclick="showAllCollections()">
-      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-      All Collections
-    </button>
-    <div class="collection-header">
-      <h2 id="collection-title">Collection <em>Name</em></h2>
-      <p id="collection-subtitle">0 pieces</p>
+<div class="checkout-wrap">
+  <!-- ORDER SUMMARY -->
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Order Summary</h2>
+      <p id="item-count">0 items</p>
     </div>
-    <div class="prod-grid" id="collection-products"></div>
-  </div>
-
-</div>
-
-<footer>
-  <div class="foot-inner">
-    <div class="foot-bottom">
-      <span>© 2026 Master Cove LLC. All rights reserved.</span>
-      <span>mastercovestore@gmail.com · (347) 206-0372</span>
+    <div class="order-items" id="order-items"></div>
+    <div class="order-totals" id="order-totals" style="display:none;">
+      <div class="total-row"><span>Subtotal</span><span id="t-sub">$0</span></div>
+      <div class="total-row"><span>Shipping</span><span id="t-ship">Free</span></div>
+      <div class="total-row"><span id="t-tax-label">Tax</span><span id="t-tax">$0</span></div>
+      <div class="total-row final"><span>Total</span><span id="t-total">$0</span></div>
     </div>
   </div>
-</footer>
+
+  <!-- PAYMENT -->
+  <div class="panel" style="position:sticky;top:24px;">
+    <div class="panel-head">
+      <h2>Payment Details</h2>
+      <p>All transactions are secure and encrypted</p>
+    </div>
+    <div class="form-body">
+      <div class="frow">
+        <label>Email Address *</label>
+        <input class="finput" id="f-email" type="email" placeholder="you@email.com"/>
+      </div>
+      <div class="frow">
+        <label>Full Name *</label>
+        <input class="finput" id="f-name" type="text" placeholder="Sarah Johnson"/>
+      </div>
+      <div class="frow">
+        <label>Phone Number *</label>
+        <input class="finput" id="f-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(555) 123-4567" onblur="this.value=formatPhone(this.value)||this.value"/>
+        <div style="font-size:11px;color:var(--mist);margin-top:5px;">The carrier may use this to contact you about your delivery.</div>
+      </div>
+      <div class="frow">
+        <label>Shipping Address *</label>
+        <input class="finput" id="f-address" type="text" placeholder="123 Main Street"/>
+      </div>
+      <div class="frow-2">
+        <div>
+          <label>City *</label>
+          <input class="finput" id="f-city" type="text" placeholder="New York"/>
+        </div>
+        <div>
+          <label>State *</label>
+          <input class="finput" id="f-state" type="text" placeholder="NY" oninput="recalcTotals()"/>
+        </div>
+      </div>
+      <div class="frow" style="margin-top:16px;">
+        <label>ZIP Code *</label>
+        <input class="finput" id="f-zip" type="text" placeholder="10001" style="max-width:140px;"/>
+      </div>
+      <div class="divider"><span>Payment</span></div>
+      <div class="frow">
+        <label>Card Details</label>
+        <div id="card-element"></div>
+      </div>
+      <button class="pay-btn" id="pay-btn" onclick="submitPayment()">
+        🔒 Pay <span id="pay-amount">$0</span>
+      </button>
+      <div class="error-msg" id="error-msg"></div>
+      <div class="secure-note">🔒 Secured by Stripe · SSL encrypted</div>
+    </div>
+  </div>
+</div>
 
 <script>
-var allProducts = [];
-var CAT = {dresser:'Dresser',sideboard:'Sideboard',tv:'TV Console',sidetable:'Table',nightstand:'Nightstand',shoe:'Shoe Storage',bookcase:'Bookcase',desk:'Desk',chair:'Chair',accentchair:'Accent Chair',sofa:'Sofa',sectional:'Sectional',armchair:'Lounge & Armchairs',bench:'Bench',vanity:'Vanity',outdoor:'Outdoor Furniture',other:'Other'};
-
-// Check URL for collection param
-var urlParams = new URLSearchParams(window.location.search);
-var urlCollection = urlParams.get('collection');
-
-document.addEventListener('DOMContentLoaded', async function(){
-  try {
-    var res = await _sb.from('products').select('id,name,cat,price,was,img,finishes,dims,badge,collection,collection_cover,tagline,top_sizes,variant_mode,shipping_cost').eq('status','active');
-    if(res.data && res.data.length){
-      allProducts = res.data.map(function(p){
-        return {
-          id:p.id, name:p.name, cat:p.cat, price:p.price, was:p.was, shippingCost:p.shipping_cost||0,
-          img:p.img, finishes:p.finishes||[], dims:p.dims, badge:p.badge,
-          collection:p.collection||'', collectionCover:p.collection_cover||'', tagline:p.tagline||'',
-          rating:Number(p.rating)||0, reviewCount:Number(p.review_count)||0,
-          topSizes:p.top_sizes||[], variantMode:p.variant_mode||'finish'
-        };
-      });
-    }
-  } catch(e){ console.log('Load error:', e); }
-
-  document.getElementById('loading-msg').style.display = 'none';
-  console.log('All products:', allProducts.map(function(p){ return {name:p.name, collection:p.collection, collectionCover:p.collectionCover}; }));
-
-  if(urlCollection){
-    showCollection(decodeURIComponent(urlCollection));
-  } else {
-    renderCollections();
+var stripe = Stripe('pk_live_51TFIOpH0QTaCZxMQFEI0za0XoAESlpp2Fq8sFx8xIWntvAINqwhqnHFtFvD3K2HYdFmpmexKUgXT3ka2mtdhXJOe00zyjfauBG');
+var elements = stripe.elements();
+var card = elements.create('card', {
+  style: {
+    base: { fontFamily: "'Outfit',sans-serif", fontSize: '14px', color: '#1C1A17', '::placeholder': { color: '#A8A09A' } },
+    invalid: { color: '#B5432A' }
   }
 });
+card.mount('#card-element');
+card.on('focus', function(){ document.getElementById('card-element').classList.add('focused'); });
+card.on('blur',  function(){ document.getElementById('card-element').classList.remove('focused'); });
 
-function getActiveImg(p){
-  if(p.variantMode==='size'&&p.topSizes&&p.topSizes.length){
-    for(var si=0;si<p.topSizes.length;si++){
-      var sFins=p.topSizes[si].finishes||[];
-      for(var fi=0;fi<sFins.length;fi++){
-        if(sFins[fi].photos&&sFins[fi].photos.length)return sFins[fi].photos[0];
-        if(sFins[fi].fabrics&&sFins[fi].fabrics.length){
-          var fabWithPhoto=sFins[fi].fabrics.find(function(fb){return fb.photos&&fb.photos.length;});
-          if(fabWithPhoto)return fabWithPhoto.photos[0];
+var cart = JSON.parse(localStorage.getItem('mc_cart') || '[]');
+var orderTotal = 0;
+
+// Master Cove only collects sales tax in New York, where the business is
+// based. Every other state ships tax-free unless/until nexus is
+// established elsewhere.
+var NY_TAX_RATE = 0.08875;
+var NY_STATE_NAMES = ['NY', 'NEW YORK'];
+function calcTax(sub, stateInput) {
+  var s = (stateInput || '').trim().toUpperCase();
+  return NY_STATE_NAMES.indexOf(s) >= 0 ? Math.round(sub * NY_TAX_RATE * 100) / 100 : 0;
+}
+
+function gaItemsFromCart(){
+  return cart.map(function(item){
+    return {
+      item_id: String(item.id),
+      item_name: item.name,
+      item_variant: (item.finish||item.fabric||item.size||''),
+      price: item.price,
+      quantity: item.qty
+    };
+  });
+}
+
+function getSubtotal(){
+  return cart.reduce(function(s,item){ return s + item.price * item.qty; }, 0);
+}
+function getShipping(){
+  return cart.reduce(function(m,item){ return Math.max(m, item.shipping||0); }, 0);
+}
+
+function recalcTotals(){
+  if (!cart.length) return;
+  var sub = getSubtotal();
+  var ship = getShipping();
+  var stateVal = document.getElementById('f-state') ? document.getElementById('f-state').value : '';
+  var tax = calcTax(sub, stateVal);
+  orderTotal = sub + ship + tax;
+
+  var isNY = NY_STATE_NAMES.indexOf((stateVal||'').trim().toUpperCase()) >= 0;
+  document.getElementById('t-tax-label').textContent = isNY ? 'Tax (NY 8.875%)' : 'Tax';
+  document.getElementById('t-sub').textContent   = '$' + sub.toLocaleString();
+  document.getElementById('t-ship').textContent  = ship > 0 ? ('$' + ship.toFixed(2)) : 'Free';
+  document.getElementById('t-tax').textContent   = '$' + tax.toFixed(2);
+  document.getElementById('t-total').textContent = '$' + orderTotal.toLocaleString();
+  var payAmt = document.getElementById('pay-amount');
+  if (payAmt) payAmt.textContent = '$' + orderTotal.toLocaleString();
+}
+
+// Clean a phone number into (347) 206-0372 format. Returns '' if not a valid US number.
+function formatPhone(raw) {
+  var d = String(raw || '').replace(/\D/g, '');
+  if (d.length === 11 && d.charAt(0) === '1') d = d.slice(1);
+  if (d.length !== 10) return '';
+  return '(' + d.slice(0,3) + ') ' + d.slice(3,6) + '-' + d.slice(6);
+}
+
+// Put the Pay button back the way it started (keeps the amount span so totals can update it).
+function resetPayBtn() {
+  var btn = document.getElementById('pay-btn');
+  btn.disabled = false;
+  btn.innerHTML = '🔒 Pay <span id="pay-amount">$' + orderTotal.toLocaleString() + '</span>';
+}
+
+function loadSummary(skipTracking) {
+  var itemsEl = document.getElementById('order-items');
+  if (!cart.length) {
+    itemsEl.innerHTML = '<div class="empty-cart"><div class="ei">🪵</div><p>Your cart is empty.<br/><a href="index.html" style="color:var(--walnut);">Go back to shop</a></p></div>';
+    return;
+  }
+  itemsEl.innerHTML = '';
+  cart.forEach(function(item) {
+    var row = document.createElement('div');
+    row.className = 'order-item';
+    var imgDiv = document.createElement('div');
+    imgDiv.className = 'item-img';
+    if (item.img) {
+      var img = document.createElement('img');
+      img.src = item.img;
+      img.onerror = function(){ this.style.display='none'; };
+      imgDiv.appendChild(img);
+    }
+    row.appendChild(imgDiv);
+    var info = document.createElement('div');
+    info.style.flex = '1';
+    info.innerHTML = '<div class="item-name">' + item.name + '</div><div class="item-meta">Qty: ' + item.qty + (item.finish ? ' · ' + item.finish : '') + (item.fabric ? ' · ' + item.fabric : '') + '</div>';
+    row.appendChild(info);
+    var price = document.createElement('div');
+    price.className = 'item-price';
+    price.textContent = '$' + Number(item.price * item.qty).toLocaleString();
+    row.appendChild(price);
+    itemsEl.appendChild(row);
+  });
+  document.getElementById('item-count').textContent = cart.length + ' item' + (cart.length > 1 ? 's' : '');
+  document.getElementById('order-totals').style.display = 'block';
+  recalcTotals();
+
+  if (skipTracking) return;
+
+  if (typeof fbq === 'function' && cart.length) {
+    fbq('track', 'InitiateCheckout', {
+      content_ids: cart.map(function(i){ return String(i.id); }),
+      contents: cart.map(function(i){ return { id: String(i.id), quantity: i.qty }; }),
+      num_items: cart.reduce(function(s,i){ return s + i.qty; }, 0),
+      value: orderTotal,
+      currency: 'USD'
+    });
+  }
+  if (typeof gtag === 'function' && cart.length) {
+    gtag('event', 'begin_checkout', {
+      currency: 'USD',
+      value: orderTotal,
+      items: gaItemsFromCart()
+    });
+  }
+}
+
+var checkoutIdempotencyKey = null;
+
+function submitPayment() {
+  var email   = document.getElementById('f-email').value.trim();
+  var name    = document.getElementById('f-name').value.trim();
+  var phoneRaw = document.getElementById('f-phone').value.trim();
+  var phone   = formatPhone(phoneRaw);
+  var address = document.getElementById('f-address').value.trim();
+  var city    = document.getElementById('f-city').value.trim();
+  var state   = document.getElementById('f-state').value.trim();
+  var zip     = document.getElementById('f-zip').value.trim();
+  var errEl   = document.getElementById('error-msg');
+  errEl.style.display = 'none';
+
+  if (!email)   { showErr('Please enter your email address.'); return; }
+  if (!name)    { showErr('Please enter your full name.'); return; }
+  if (!phone)   { showErr('Please enter a valid 10-digit phone number so the delivery team can reach you.'); return; }
+  if (!address) { showErr('Please enter your shipping address.'); return; }
+  if (!city)    { showErr('Please enter your city.'); return; }
+  if (!zip)     { showErr('Please enter your ZIP code.'); return; }
+  if (!cart.length) { showErr('Your cart is empty.'); return; }
+
+  // Make sure the total being charged reflects the final state entered.
+  recalcTotals();
+
+  if (!checkoutIdempotencyKey) {
+    checkoutIdempotencyKey = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ('idem-' + Date.now() + '-' + Math.random().toString(36).slice(2));
+  }
+
+  var btn = document.getElementById('pay-btn');
+  btn.disabled = true;
+  btn.textContent = 'Processing...';
+
+  stripe.createPaymentMethod({
+    type: 'card',
+    card: card,
+    billing_details: { name: name, email: email, phone: phone, address: { line1: address, city: city, state: state, postal_code: zip, country: 'US' } }
+  }).then(function(result) {
+    if (result.error) {
+      showErr(result.error.message);
+      btn.disabled = false;
+      resetPayBtn();
+      return;
+    }
+    fetch('/.netlify/functions/create-payment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        paymentMethodId: result.paymentMethod.id,
+        amount: Math.round(orderTotal * 100),
+        currency: 'usd',
+        email: email,
+        name: name,
+        phone: phone,
+        address: address,
+        city: city,
+        state: state,
+        zip: zip,
+        items: cart,
+        idempotencyKey: checkoutIdempotencyKey
+      })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      if (data.error) {
+        if (data.updatedItems && data.updatedItems.length) {
+          // Server found out-of-date prices — update the cart with the real ones
+          // so the customer sees the correct total before paying.
+          data.updatedItems.forEach(function(u){
+            if (cart[u.index]) { cart[u.index].price = u.price; cart[u.index].shipping = u.shipping; }
+          });
+          localStorage.setItem('mc_cart', JSON.stringify(cart));
+          checkoutIdempotencyKey = null;
+          loadSummary(true);
         }
-      }
-    }
-    return p.img||null;
-  }
-  var f = p.finishes && p.finishes[0];
-  if(f && f.photos && f.photos.length) return f.photos[0];
-  if(f && f.fabrics && f.fabrics.length){
-    var favWithPhoto=f.fabrics.find(function(fb){return fb.photos&&fb.photos.length;});
-    if(favWithPhoto)return favWithPhoto.photos[0];
-  }
-  return p.img || null;
-}
-
-function getDisplaySwatches(p){
-  var seenFab={};var fabs=[];
-  if(p.variantMode==='size'&&p.topSizes&&p.topSizes.length){
-    p.topSizes.forEach(function(sz){
-      (sz.finishes||[]).forEach(function(f){
-        (f.fabrics||[]).forEach(function(fab){
-          var key=fab.name||'';
-          if(key&&!seenFab[key]){seenFab[key]=true;fabs.push({name:fab.name,swatch:fab.swatch||(fab.photos&&fab.photos[0])||'',color:''});}
+        showErr(data.error);
+        btn.disabled = false;
+        resetPayBtn();
+      } else if (data.requiresAction) {
+        stripe.confirmCardPayment(data.clientSecret).then(function(res){
+          if (res.error) { showErr(res.error.message); resetPayBtn(); return; }
+          // 3D Secure succeeded — create-payment.js never got to save the order
+          // for this path, so finalize it now that Stripe confirms it went through.
+          fetch('/.netlify/functions/confirm-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              paymentIntentId: data.orderId,
+              amount: Math.round(orderTotal * 100),
+              email: email, name: name, phone: phone, address: address, city: city, state: state, zip: zip, items: cart
+            })
+          })
+          .then(function(r){ return r.json(); })
+          .then(function(confirmData){
+            onSuccess(confirmData.orderNumber || data.orderId, name, email, address, city, state, zip);
+          })
+          .catch(function(){
+            // Payment definitely succeeded even if this confirmation call failed —
+            // still send the customer through rather than showing them an error.
+            onSuccess(data.orderId, name, email, address, city, state, zip);
+          });
         });
-      });
-    });
-    if(fabs.length)return fabs;
-    var seenFin={};var fins=[];
-    p.topSizes.forEach(function(sz){
-      (sz.finishes||[]).forEach(function(f){
-        var key=f.name||f.color;
-        if(key&&!seenFin[key]){seenFin[key]=true;fins.push({name:f.name,color:f.color,swatch:''});}
-      });
-    });
-    return fins;
-  }
-  (p.finishes||[]).forEach(function(f){
-    (f.fabrics||[]).forEach(function(fab){
-      var key=fab.name||'';
-      if(key&&!seenFab[key]){seenFab[key]=true;fabs.push({name:fab.name,swatch:fab.swatch||(fab.photos&&fab.photos[0])||'',color:''});}
-    });
-  });
-  if(fabs.length)return fabs;
-  return (p.finishes||[]).map(function(f){return{name:typeof f==='object'?f.name:'',color:typeof f==='object'?f.color:f,swatch:''};});
-}
-
-function getPriceDisplay(p){
-  if(p.variantMode==='size'&&p.topSizes&&p.topSizes.length){
-    var prices=p.topSizes.map(function(s){return s.price;}).filter(function(pr){return pr>0;});
-    if(prices.length){
-      var lo=Math.min.apply(null,prices), hi=Math.max.apply(null,prices);
-      return lo===hi ? ('$'+lo.toLocaleString()) : ('$'+lo.toLocaleString()+' – $'+hi.toLocaleString());
-    }
-  }
-  return '$'+Number(p.price).toLocaleString();
-}
-
-function renderCollections(){
-  // Group products by collection
-  var collections = {};
-  allProducts.forEach(function(p){
-    if(!p.collection || !p.collection.trim()) return;
-    var name = p.collection.trim();
-    if(!collections[name]) collections[name] = [];
-    collections[name].push(p);
-  });
-
-  var keys = Object.keys(collections);
-  var grid = document.getElementById('collections-grid');
-
-  if(!keys.length){
-    grid.innerHTML = '<div class="empty-state"><div class="ei">🛋️</div><h3>No Collections Yet</h3><p>Collections will appear here once you tag products in your admin panel.</p></div>';
-    return;
-  }
-
-  grid.innerHTML = '';
-  keys.forEach(function(name, i){
-    var products = collections[name];
-    var coverPhoto = null;
-    for(var ci=0; ci<products.length; ci++){
-      if(products[ci].collectionCover && products[ci].collectionCover.trim() !== ''){
-        coverPhoto = products[ci].collectionCover.trim();
-        break;
+      } else {
+        onSuccess(data.orderNumber || data.orderId, name, email, address, city, state, zip);
       }
-    }
-    var imgClass, imgsHTML;
-    if(coverPhoto){
-      imgClass = 'one';
-      imgsHTML = '<div class="ci"><img src="'+coverPhoto+'" onerror="this.style.display=\'none\'"/></div>';
-    } else {
-      var imgs = products.slice(0,4).map(function(p){ return getActiveImg(p); }).filter(Boolean);
-      var imgCount = Math.min(imgs.length, 4);
-      imgClass = imgCount === 1 ? 'one' : imgCount === 2 ? 'two' : imgCount === 3 ? 'three' : '';
-      imgsHTML = imgs.slice(0,4).map(function(src){
-        return '<div class="ci"><img src="'+src+'" onerror="this.style.display=\'none\'"/></div>';
-      }).join('');
-    }
-
-    // Style the collection name with italic on last word
-    var words = name.split(' ');
-    var displayName = words.length > 1
-      ? words.slice(0,-1).join(' ') + ' <em>' + words[words.length-1] + '</em>'
-      : '<em>' + name + '</em>';
-
-    var card = document.createElement('div');
-    card.className = 'collection-card fade-up';
-    card.style.animationDelay = (i * 0.08) + 's';
-    card.innerHTML =
-      '<div class="collection-card-imgs '+imgClass+'">' + imgsHTML + '</div>' +
-      '<div class="collection-card-info">' +
-        '<div>' +
-          '<div class="collection-name">' + displayName + '</div>' +
-          '<div class="collection-meta" style="margin-top:4px;">' +
-            '<span class="collection-count">' + products.length + ' piece' + (products.length !== 1 ? 's' : '') + '</span>' +
-            '<span>' + [...new Set(products.map(function(p){ return CAT[p.cat]||p.cat; }))].join(' · ') + '</span>' +
-          '</div>' +
-        '</div>' +
-        '<div class="view-collection-btn">View →</div>' +
-      '</div>';
-    card.onclick = function(){ showCollection(name); };
-    grid.appendChild(card);
+    })
+    .catch(function(){
+      showErr('Something went wrong. Please try again.');
+      btn.disabled = false;
+      resetPayBtn();
+    });
   });
 }
 
-function showCollection(name){
-  // Hide collections list, show single view
-  document.getElementById('collections-list').classList.add('hidden');
-  document.getElementById('collection-view').classList.add('active');
-
-  // Update URL
-  var newUrl = window.location.pathname + '?collection=' + encodeURIComponent(name);
-  window.history.pushState({}, '', newUrl);
-
-  // Set title
-  var words = name.split(' ');
-  var titleHTML = words.length > 1
-    ? words.slice(0,-1).join(' ') + ' <em>' + words[words.length-1] + '</em>'
-    : '<em>' + name + '</em>';
-  document.getElementById('collection-title').innerHTML = titleHTML;
-  document.title = name + ' — Master Cove Collections';
-
-  // Filter products
-  var products = allProducts.filter(function(p){ return p.collection && p.collection.trim() === name.trim(); });
-  document.getElementById('collection-subtitle').textContent = products.length + ' piece' + (products.length !== 1 ? 's' : '') + ' in this collection';
-
-  // Render products
-  var grid = document.getElementById('collection-products');
-  if(!products.length){
-    grid.innerHTML = '<div class="empty-state"><div class="ei">🪵</div><h3>No Products Found</h3><p>Products tagged with this collection will appear here.</p></div>';
-    return;
+function onSuccess(orderNumber, name, email, address, city, state, zip) {
+  if (typeof fbq === 'function') {
+    fbq('track', 'Purchase', {
+      content_ids: cart.map(function(i){ return String(i.id); }),
+      contents: cart.map(function(i){ return { id: String(i.id), quantity: i.qty }; }),
+      num_items: cart.reduce(function(s,i){ return s + i.qty; }, 0),
+      value: orderTotal,
+      currency: 'USD'
+    });
   }
 
-  grid.innerHTML = '';
-  products.forEach(function(p, i){
-    var card = document.createElement('div');
-    card.className = 'prod-card fade-up';
-    card.style.animationDelay = (i * 0.05) + 's';
-    card.onclick = function(){ window.location.href = 'product-detail.html?id=' + p.id; };
+  var itemNames = cart.map(function(i){ return i.name + (i.finish ? ' (' + i.finish + ')' : '') + (i.fabric ? ' - ' + i.fabric : '') + ' x' + i.qty; }).join(', ');
+  var gaItemsJSON = JSON.stringify(gaItemsFromCart());
+  localStorage.removeItem('mc_cart');
 
-    var img = getActiveImg(p);
-    // Star ratings only show once a product has real customer reviews.
-    var hasReviews = p.reviewCount > 0 && p.rating > 0;
-    var dimsText = p.dims ? p.dims.replace(/(\d+\.?\d*)\s*x/gi, '$1" x').replace(/(\d+\.?\d*)\s*$/, '$1"') : '';
-
-    var badgeHTML = p.badge ? '<div class="badge badge-'+p.badge+'">'+(p.badge==='new'?'New':p.badge==='sale'?'Sale':'Best Seller')+'</div>' : '';
-    var swatches = getDisplaySwatches(p);
-    var finishDotsHTML = swatches.slice(0,5).map(function(s){
-      var bg = s.swatch ? ('background-image:url(\''+s.swatch+'\');') : ('background:'+(s.color||'#ccc')+';');
-      return '<div class="finish" style="'+bg+'" title="'+(s.name||'')+'"></div>';
-    }).join('');
-    var isSizeMode = p.variantMode==='size' && p.topSizes && p.topSizes.length;
-
-    card.innerHTML =
-      '<div class="prod-img">' +
-        (img ? '<img src="'+img+'" alt="'+p.name+'" onerror="this.style.display=\'none\'"/>' : '') +
-        badgeHTML +
-      '</div>' +
-      '<div class="prod-info">' +
-        '<div class="prod-name">'+p.name+'</div>' +
-        '<div class="prod-cat">'+(CAT[p.cat]||p.cat||'')+'</div>' +
-        (hasReviews ? '<div class="prod-stars">'+'★★★★★'.slice(0,Math.round(p.rating))+'☆☆☆☆☆'.slice(0,5-Math.round(p.rating))+' <span>'+Number(p.rating).toFixed(1)+' ('+p.reviewCount+')</span></div>' : '') +
-        (dimsText ? '<div class="prod-dims">'+dimsText+'</div>' : '') +
-        (finishDotsHTML ? '<div class="finishes">'+finishDotsHTML+'</div>' : '') +
-        '<div class="prod-footer">' +
-          '<div>' +
-            '<span class="price">'+getPriceDisplay(p)+'</span>' +
-            (p.was && !isSizeMode ? '<span class="was">$'+Number(p.was).toLocaleString()+'</span>' : '') +
-            '<div class="unit-tag"'+((p.shippingCost&&p.shippingCost>0)?' style="color:var(--walnut);"':'')+'>'+((p.shippingCost&&p.shippingCost>0)?('+ $'+Number(p.shippingCost).toLocaleString()+' shipping'):'free shipping')+'</div>' +
-          '</div>' +
-          '<button class="add-btn" onclick="event.stopPropagation();window.location.href=\'product-detail.html?id='+p.id+'\'">View</button>' +
-        '</div>' +
-      '</div>';
-    grid.appendChild(card);
-  });
+  var fullAddress = address + ', ' + city + ', ' + state + ' ' + zip;
+  window.location.href = 'order-confirmed.html'
+    + '?order=' + encodeURIComponent(orderNumber)
+    + '&name=' + encodeURIComponent(name)
+    + '&address=' + encodeURIComponent(fullAddress)
+    + '&product=' + encodeURIComponent(itemNames)
+    + '&total=' + encodeURIComponent(orderTotal.toLocaleString())
+    + '&value=' + encodeURIComponent(orderTotal)
+    + '&items=' + encodeURIComponent(gaItemsJSON);
 }
 
-function showAllCollections(){
-  document.getElementById('collections-list').classList.remove('hidden');
-  document.getElementById('collection-view').classList.remove('active');
-  window.history.pushState({}, '', window.location.pathname);
-  document.title = 'Collections — Master Cove';
+function showErr(msg) {
+  var el = document.getElementById('error-msg');
+  el.textContent = msg;
+  el.style.display = 'block';
 }
+
+loadSummary();
 </script>
 </body>
 </html>
