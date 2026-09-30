@@ -213,11 +213,23 @@ footer{background:var(--ink);color:rgba(255,255,255,0.6);padding:48px 0 24px;}
 @media(max-width:1024px){.prod-grid{grid-template-columns:repeat(2,1fr);}}
 @media(max-width:900px){.header-trust{display:none;}.room-grid{grid-template-columns:repeat(3,1fr);}.foot-grid{grid-template-columns:1fr 1fr;}}
 @media(max-width:600px){.room-grid{grid-template-columns:repeat(2,1fr);}.prod-grid{grid-template-columns:1fr;}.header-inner{padding:0 12px;gap:8px;}.main{padding:0 16px;}.foot-grid{grid-template-columns:1fr;}.logo img{height:32px;}.mobile-menu-btn{display:flex;order:1;}.header-trust{display:none;}.search-wrap{display:none;}.mobile-search-btn{display:flex;order:2;}.icon-btn span{display:none;}.cart-btn{padding:8px;order:5;}.cart-btn-text{display:none;}.cart-count-badge{display:flex;align-items:center;justify-content:center;position:absolute;top:2px;right:2px;background:var(--maple);color:var(--ink);font-size:9px;font-weight:700;width:15px;height:15px;border-radius:50%;line-height:1;}.drawer{width:92vw;max-width:380px;}.cat-strip{display:none;}.header-right{display:contents;}.logo{order:3;flex:1;justify-content:center;}.wishlist-btn{order:4;}}
+.why-mc{padding:40px 0 8px;}
+.why-mc-head{text-align:center;margin-bottom:26px;}
+.why-mc-head .sec-title{font-size:30px;}
+.why-mc-head p{font-size:13.5px;color:var(--slate);margin-top:8px;font-weight:300;max-width:620px;margin-left:auto;margin-right:auto;line-height:1.7;}
+.why-mc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+.why-mc-item{background:var(--sand);border:1px solid var(--border);border-radius:4px;padding:22px 20px;}
+.why-mc-icon{font-size:22px;margin-bottom:10px;}
+.why-mc-item h4{font-family:'Playfair Display',serif;font-size:17px;font-weight:400;color:var(--ink);margin-bottom:8px;}
+.why-mc-item p{font-size:12.5px;color:var(--slate);line-height:1.65;font-weight:300;}
+.why-mc-item a{color:var(--walnut);border-bottom:1px solid var(--maple);}
+@media(max-width:900px){.why-mc-grid{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:600px){.why-mc-grid{grid-template-columns:1fr;}.why-mc{padding:28px 0 0;}}
 </style>
 </head>
 <body>
 
-<div class="ann-bar">White-Glove Delivery on <b>Every Order</b></div>
+<div class="ann-bar">Free Shipping on <b>Every Order</b></div>
 
 <header>
   <div class="header-inner">
@@ -228,7 +240,7 @@ footer{background:var(--ink);color:rgba(255,255,255,0.6);padding:48px 0 24px;}
       <img src="https://slaffkwfwmudvernzjua.supabase.co/storage/v1/object/public/product-images/New%20wallpaper.jpeg" alt="Master Cove"/>
     </a>
     <div class="header-trust">
-      <div class="trust-item">🚛 White-Glove Delivery</div>
+      <div class="trust-item">🚚 Free Shipping to Your Door</div>
       <a href="returns.html" class="trust-item" style="text-decoration:none;color:inherit;" title="30-day return window. 20% restocking fee applies; return shipping is the customer's responsibility.">↩️ Returns Within 30 Days</a>
       <div class="trust-item">💳 Secure Checkout</div>
     </div>
@@ -273,6 +285,34 @@ footer{background:var(--ink);color:rgba(255,255,255,0.6);padding:48px 0 24px;}
 <div class="mega-dropdown" id="mega-dropdown"></div>
 
 <div class="main">
+  <div class="why-mc" id="why-mc-section">
+    <div class="why-mc-head">
+      <div class="sec-title">Why <em>Master Cove</em></div>
+      <p>Thoughtfully designed furniture in real woods and quality finishes, curated by a small Brooklyn-based team and shipped free to your door.</p>
+    </div>
+    <div class="why-mc-grid">
+      <div class="why-mc-item">
+        <div class="why-mc-icon">🪵</div>
+        <h4>Materials, Clearly Listed</h4>
+        <p>Every product page spells out the woods, veneers, finishes, and dimensions, so you know exactly what you're buying before it arrives.</p>
+      </div>
+      <div class="why-mc-item">
+        <div class="why-mc-icon">🚚</div>
+        <h4>Free Shipping, Tracked</h4>
+        <p>Every order ships free to your front door with tracking. Larger pieces travel by freight, and the carrier calls ahead to schedule. <a href="shipping.html">Shipping details</a></p>
+      </div>
+      <div class="why-mc-item">
+        <div class="why-mc-icon">↩️</div>
+        <h4>30-Day Returns</h4>
+        <p>Changed your mind? Return within 30 days. Anything that arrives damaged is replaced or refunded. <a href="returns.html">Return policy</a></p>
+      </div>
+      <div class="why-mc-item">
+        <div class="why-mc-icon">💬</div>
+        <h4>Real People, Real Answers</h4>
+        <p>Questions before or after you buy? Reach us at <a href="mailto:mastercovestore@gmail.com">mastercovestore@gmail.com</a> or <a href="tel:+13472060372">(347) 206-0372</a>.</p>
+      </div>
+    </div>
+  </div>
   <div class="section" id="new-arrivals-section">
     <div class="sec-head">
       <div>
@@ -613,9 +653,9 @@ function closeMegaDropdown(){
 function jumpToCat(cat){
   document.querySelectorAll('.cat-btn').forEach(function(b){ b.classList.remove('active'); });
   currentCat = cat; currentRoom = null; visibleCount = PAGE_SIZE;
-  var naSection = document.getElementById('new-arrivals-section');
+  var naSection = document.getElementById('new-arrivals-section'); var whySec = document.getElementById('why-mc-section');
   var bsSection = document.getElementById('best-sellers-section');
-  if(naSection) naSection.style.display = 'none';
+  if(naSection) naSection.style.display = 'none'; if(whySec) whySec.style.display = 'none';
   if(bsSection) bsSection.style.display = 'none';
   document.getElementById('section-title').innerHTML = getCatLabel(cat)+' <em>Collection</em>';
   document.getElementById('section-sub').textContent = 'All '+getCatLabel(cat).toLowerCase()+' pieces in our collection';
@@ -625,9 +665,9 @@ function jumpToCat(cat){
 function jumpToRoom(room){
   document.querySelectorAll('.cat-btn').forEach(function(b){ b.classList.remove('active'); });
   currentRoom = room; currentCat = 'all'; visibleCount = PAGE_SIZE;
-  var naSection = document.getElementById('new-arrivals-section');
+  var naSection = document.getElementById('new-arrivals-section'); var whySec = document.getElementById('why-mc-section');
   var bsSection = document.getElementById('best-sellers-section');
-  if(naSection) naSection.style.display = 'none';
+  if(naSection) naSection.style.display = 'none'; if(whySec) whySec.style.display = 'none';
   if(bsSection) bsSection.style.display = 'none';
   var labels = {bedroom:'Bedroom',living:'Living Room',entryway:'Entryway',dining:'Dining',kitchen:'Kitchen',bathroom:'Bathroom',office:'Office',outdoor:'Outdoor'};
   document.getElementById('section-title').innerHTML = (labels[room]||room)+' <em>Furniture</em>';
@@ -778,14 +818,14 @@ function buildCard(p, i) {
   var nameEl = document.createElement('div');
   nameEl.className = 'prod-name'; nameEl.textContent = p.name;
   info.appendChild(nameEl);
-  var starsDiv = document.createElement('div');
-  starsDiv.className = 'prod-stars';
-  var ratings = [4.8, 4.9, 5.0, 4.7, 4.9];
-  var rating = ratings[Math.floor(Math.abs(p.id||0) % ratings.length)];
-  var reviewCounts = [24, 18, 31, 12, 47];
-  var reviewCount = reviewCounts[Math.floor(Math.abs(p.id||0) % reviewCounts.length)];
-  starsDiv.innerHTML = '★★★★★ <span>' + rating.toFixed(1) + ' (' + reviewCount + ')</span>';
-  info.appendChild(starsDiv);
+  // Star ratings only show once a product has real customer reviews.
+  if (p.reviewCount > 0 && p.rating > 0) {
+    var starsDiv = document.createElement('div');
+    starsDiv.className = 'prod-stars';
+    var full = Math.round(p.rating);
+    starsDiv.innerHTML = '★★★★★'.slice(0, full) + '☆☆☆☆☆'.slice(0, 5 - full) + ' <span>' + Number(p.rating).toFixed(1) + ' (' + p.reviewCount + ')</span>';
+    info.appendChild(starsDiv);
+  }
   if (p.dims) {
     var dims = document.createElement('div');
     dims.className = 'prod-dims';
@@ -925,19 +965,19 @@ function setSort(val){ currentSort = val; if(val==='random')allProducts=shuffle(
 function onSearch(){
   currentRoom = null; visibleCount = PAGE_SIZE;
   var q = document.getElementById('search-input').value.trim();
-  var naSection = document.getElementById('new-arrivals-section');
+  var naSection = document.getElementById('new-arrivals-section'); var whySec = document.getElementById('why-mc-section');
   var bsSection = document.getElementById('best-sellers-section');
   var newUrl = window.location.pathname + (q ? ('?search=' + encodeURIComponent(q)) : '');
   window.history.replaceState({search:q}, '', newUrl);
   if(q){
-    if(naSection) naSection.style.display = 'none';
+    if(naSection) naSection.style.display = 'none'; if(whySec) whySec.style.display = 'none';
     if(bsSection) bsSection.style.display = 'none';
     document.getElementById('section-title').innerHTML = 'Search Results for "'+q+'"';
     document.getElementById('section-sub').textContent = 'Matching products from our full catalog';
     renderProducts();
     scrollToProducts();
   } else {
-    if(naSection) naSection.style.display = '';
+    if(naSection) naSection.style.display = ''; if(whySec) whySec.style.display = '';
     renderHomeSections();
     document.getElementById('section-title').innerHTML = 'Shop <em>All Furniture</em>';
     document.getElementById('section-sub').textContent = 'Browse our full collection of furniture, built to last';
@@ -1176,6 +1216,7 @@ document.addEventListener('DOMContentLoaded', async function() {
           topSizes:p.top_sizes||[], variantMode:p.variant_mode||'finish',
           dims:p.dims, badge:p.badge, supplierLink:p.supplier_link,
           collection:p.collection||'',
+          rating:Number(p.rating)||0, reviewCount:Number(p.review_count)||0,
           createdAt:p.created_at
         };
       });
