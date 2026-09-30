@@ -5,7 +5,7 @@
 <link rel="icon" type="image/png" href="https://slaffkwfwmudvernzjua.supabase.co/storage/v1/object/public/product-images/New%20wallpaper.jpeg"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Product — Master Cove</title>
-<meta name="description" id="meta-desc" content="Shop quality furniture at Master Cove, built to last. White-glove delivery on every order."/>
+<meta name="description" id="meta-desc" content="Shop quality furniture at Master Cove, built to last. Free shipping on every order."/>
 <meta property="og:title" id="og-title" content="Product — Master Cove"/>
 <meta property="og:description" id="og-desc" content="Shop quality furniture at Master Cove, built to last."/>
 <meta property="og:type" content="product"/>
@@ -573,7 +573,7 @@ function renderProduct(p){
   var catLabel=catLabels[p.cat]||'Shop';
   document.getElementById('bc-cat').textContent=catLabel;document.getElementById('bc-cat').href='index.html?cat='+encodeURIComponent(p.cat);
   document.getElementById('bc-name').textContent=p.name;document.getElementById('pdp-title').textContent=p.name;
-  var metaDesc=p.desc?p.desc.substring(0,155)+'...':'Shop the '+p.name+' at Master Cove. Quality furniture with white-glove delivery.';
+  var metaDesc=p.desc?p.desc.substring(0,155)+'...':'Shop the '+p.name+' at Master Cove. Quality furniture with free shipping.';
   var descEl=document.getElementById('meta-desc');if(descEl)descEl.setAttribute('content',metaDesc);
   var ogTitle=document.getElementById('og-title');if(ogTitle)ogTitle.setAttribute('content',p.name+' — Master Cove');
   var ogDesc=document.getElementById('og-desc');if(ogDesc)ogDesc.setAttribute('content',metaDesc);
