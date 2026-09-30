@@ -50,7 +50,7 @@ exports.handler = async function(event) {
         message: `<p>Hi ${safeName},</p>
           <p>Your furniture is on its way!</p>
           ${safeTracking ? `<p><strong>Tracking Number:</strong> ${safeTracking}</p>` : ''}
-          <p>You can expect white-glove delivery to your door. We'll be in touch to schedule a delivery window.</p>`
+          <p>Your order will be delivered to your door. Larger pieces ship by freight carrier, who will call ahead to schedule a delivery day.</p>`
       },
       delivered: {
         subject: 'Your Master Cove order has been delivered — ' + orderNumber,
