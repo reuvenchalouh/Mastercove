@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Leave a Review — Master Cove</title>
+<meta name="robots" content="noindex, nofollow"/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root{--ink:#1C1A17;--sand:#F5EFE6;--linen:#EDE5D8;--walnut:#6B4C35;--oak:#B8895A;--maple:#D4AA7D;--slate:#5C5750;--mist:#A8A09A;--border:#DDD5C8;--white:#FDFBF8;--green:#4A7A5A;--red:#B5432A;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Outfit',sans-serif;background:var(--white);color:var(--ink);font-size:14px;}
+a{color:var(--walnut);text-decoration:none;}
+.ann-bar{background:var(--ink);color:var(--maple);text-align:center;padding:9px;font-size:12px;letter-spacing:0.06em;}
+header{border-bottom:1px solid var(--border);}
+.header-inner{max-width:760px;margin:0 auto;padding:0 24px;height:64px;display:flex;align-items:center;justify-content:space-between;}
+.header-inner img{height:40px;}
+.wrap{max-width:760px;margin:0 auto;padding:44px 24px 90px;}
+h1{font-family:'Playfair Display',serif;font-size:32px;font-weight:400;margin-bottom:8px;}
+h1 em{color:var(--walnut);font-style:italic;}
+.sub{font-size:14px;color:var(--slate);font-weight:300;line-height:1.7;margin-bottom:30px;}
+.item{border:1px solid var(--border);border-radius:4px;padding:20px;margin-bottom:18px;background:#fff;}
+.item-head{display:flex;gap:14px;align-items:center;margin-bottom:14px;}
+.item-head img{width:64px;height:64px;object-fit:cover;border-radius:3px;border:1px solid var(--border);background:var(--sand);}
+.item-name{font-size:16px;font-weight:500;}
+.stars{display:flex;gap:4px;margin-bottom:6px;}
+.star{background:none;border:none;font-size:32px;line-height:1;color:var(--border);cursor:pointer;padding:0 2px;transition:color .1s,transform .1s;}
+.star.on{color:var(--oak);}
+.star:hover{transform:scale(1.1);}
+.star-label{font-size:12px;color:var(--mist);margin-bottom:12px;min-height:16px;}
+label{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--slate);margin:10px 0 6px;font-weight:500;}
+input,textarea{width:100%;border:1px solid var(--border);border-radius:2px;padding:10px 12px;font-family:'Outfit',sans-serif;font-size:14px;background:var(--white);color:var(--ink);outline:none;}
+input:focus,textarea:focus{border-color:var(--walnut);}
+textarea{min-height:96px;resize:vertical;}
+.btn{width:100%;background:var(--walnut);color:#fff;border:none;padding:15px;border-radius:2px;font-size:14px;font-weight:500;letter-spacing:.04em;cursor:pointer;font-family:'Outfit',sans-serif;margin-top:8px;}
+.btn:disabled{opacity:.6;cursor:default;}
+.err{background:#FBF0EE;color:var(--red);border-radius:3px;padding:10px 14px;font-size:13px;margin:12px 0;display:none;}
+.msg{text-align:center;padding:50px 10px;}
+.msg .icon{font-size:40px;margin-bottom:14px;}
+.msg h2{font-family:'Playfair Display',serif;font-size:26px;font-weight:400;margin-bottom:10px;}
+.msg p{font-size:14px;color:var(--slate);font-weight:300;line-height:1.7;}
+.note{font-size:12px;color:var(--mist);text-align:center;margin-top:14px;line-height:1.6;}
+</style>
+</head>
+<body>
+<div class="ann-bar">Free Shipping on <b>Every Order</b></div>
+<header><div class="header-inner">
+  <a href="index.html"><img src="/android-chrome-192x192.png" alt="Master Cove"/></a>
+  <a href="index.html" style="font-size:12.5px;color:var(--slate);">← Back to shop</a>
+</div></header>
+
+<div class="wrap" id="app"><div class="msg"><p>Loading…</p></div></div>
+
+<script>
+var params = new URLSearchParams(location.search);
+var token = params.get('t') || '';
+var app = document.getElementById('app');
+var LABELS = ['', 'Poor', 'Fair', 'Good', 'Very good', 'Excellent'];
+var ratings = {};
+
+function esc(s){ return String(s||'').replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+function showMsg(icon, title, text){
+  app.innerHTML = '<div class="msg"><div class="icon">'+icon+'</div><h2>'+title+'</h2><p>'+text+'</p><p style="margin-top:22px;"><a href="index.html">Continue shopping →</a></p></div>';
+}
+
+async function api(method, body, query){
+  var url = '/.netlify/functions/reviews' + (query || '');
+  var r = await fetch(url, { method: method, headers: {'Content-Type':'application/json'}, body: body ? JSON.stringify(body) : undefined });
+  var j = {}; try { j = await r.json(); } catch(e){}
+  if (!r.ok) throw new Error(j.error || 'Something went wrong.');
+  return j;
+}
+
+function setStars(pid, n){
+  ratings[pid] = n;
+  document.querySelectorAll('.star[data-pid="'+pid+'"]').forEach(function(b){ b.classList.toggle('on', Number(b.dataset.n) <= n); });
+  var lab = document.getElementById('lab-'+pid); if (lab) lab.textContent = LABELS[n];
+}
+
+function render(data){
+  var html = '<h1>How did we <em>do</em>?</h1>'
+    + '<p class="sub">' + (data.firstName ? 'Thanks, '+esc(data.firstName)+'! ' : '') + 'Your honest review helps other shoppers — and helps a small shop like ours. It only takes a minute.</p>';
+  data.products.forEach(function(p){
+    html += '<div class="item">'
+      + '<div class="item-head">' + (p.img ? '<img src="'+esc(p.img)+'" alt=""/>' : '') + '<div class="item-name">'+esc(p.name)+'</div></div>'
+      + '<div class="stars">' + [1,2,3,4,5].map(function(n){ return '<button type="button" class="star" data-pid="'+p.id+'" data-n="'+n+'" aria-label="'+n+' star">★</button>'; }).join('') + '</div>'
+      + '<div class="star-label" id="lab-'+p.id+'">Tap to rate</div>'
+      + '<label>Headline (optional)</label><input id="title-'+p.id+'" maxlength="120" placeholder="e.g. Beautiful and sturdy"/>'
+      + '<label>Your review (optional)</label><textarea id="body-'+p.id+'" maxlength="3000" placeholder="How does it look and feel? How was delivery and assembly?"></textarea>'
+      + '</div>';
+  });
+  html += '<div class="err" id="err"></div><button class="btn" id="submit">Submit Review</button>'
+    + '<p class="note">Your first name and last initial will appear with your review. We never show your email.</p>';
+  app.innerHTML = html;
+  document.querySelectorAll('.star').forEach(function(b){ b.onclick = function(){ setStars(b.dataset.pid, Number(b.dataset.n)); }; });
+  document.getElementById('submit').onclick = submit;
+}
+
+async function submit(){
+  var err = document.getElementById('err'); err.style.display = 'none';
+  var list = Object.keys(ratings).map(function(pid){
+    return { product_id: pid, rating: ratings[pid], title: document.getElementById('title-'+pid).value, body: document.getElementById('body-'+pid).value };
+  });
+  if (!list.length) { err.textContent = 'Please tap the stars to rate at least one item.'; err.style.display = 'block'; return; }
+  var btn = document.getElementById('submit'); btn.disabled = true; btn.textContent = 'Submitting…';
+  try {
+    await api('POST', { token: token, reviews: list });
+    showMsg('🎉', 'Thank you!', 'Your review has been posted. We really appreciate you taking the time.');
+  } catch(e) {
+    err.textContent = e.message; err.style.display = 'block'; btn.disabled = false; btn.textContent = 'Submit Review';
+  }
+}
+
+(async function(){
+  if (!token) { showMsg('🔗', 'Link not found', 'Please use the review link from your Master Cove email.'); return; }
+  try {
+    if (params.get('stop') === '1') {
+      await api('POST', { token: token, stop: true });
+      showMsg('✓', 'You\'re all set', 'We won\'t send any more review reminders for this order.');
+      return;
+    }
+    var data = await api('GET', null, '?t=' + encodeURIComponent(token));
+    if (data.done) { showMsg('✓', 'Already reviewed', 'Thanks — we already have your review for this order.'); return; }
+    if (!data.products || !data.products.length) { showMsg('🔗', 'Nothing to review', 'We couldn\'t find the items for this order. Reply to our email and we\'ll help.'); return; }
+    render(data);
+  } catch(e) {
+    showMsg('🔗', 'Link not valid', esc(e.message) + ' If you think this is a mistake, reply to our email and we\'ll help.');
+  }
+})();
+</script>
+</body>
+</html>
