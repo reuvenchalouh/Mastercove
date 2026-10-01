@@ -36,7 +36,7 @@ function buildEmail(req, productNames, n) {
 <body style="margin:0;background:#F0EBE3;font-family:'Helvetica Neue',Arial,sans-serif;">
   <div style="max-width:560px;margin:32px auto;background:#FDFBF8;border:1px solid #DDD5C8;border-radius:6px;overflow:hidden;">
     <div style="background:#1C1A17;padding:22px 32px;text-align:center;">
-      <img src="${SITE}/android-chrome-192x192.png" alt="Master Cove" style="height:46px;"/>
+      <img src="${SITE}/android-chrome-512x512.png" alt="Master Cove" width="72" height="72" style="width:72px;height:72px;border-radius:8px;"/>
     </div>
     <div style="padding:32px;">
       <h2 style="font-family:Georgia,serif;font-size:23px;font-weight:400;color:#1C1A17;margin:0 0 16px;">Hi ${first},</h2>
