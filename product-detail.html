@@ -265,6 +265,7 @@ src="https://www.facebook.com/tr?id=2156219968568427&ev=PageView&noscript=1"
     <div class="pdp-brand" id="pdp-brand"></div>
     <h1 class="pdp-title" id="pdp-title">Loading...</h1>
     <div id="pdp-tagline" style="font-size:15px;color:var(--slate);font-weight:300;margin-top:6px;margin-bottom:4px;font-style:italic;display:none;"></div>
+    <a href="#reviews" id="pdp-rating" style="display:none;font-size:13.5px;color:var(--slate);margin-top:6px;text-decoration:none;"></a>
   </div>
 
   <div class="pdp-info">
@@ -361,14 +362,17 @@ src="https://www.facebook.com/tr?id=2156219968568427&ev=PageView&noscript=1"
 </div>
 
 <!-- REVIEWS -->
-<div class="tabs-section" style="max-width:1380px;margin:0 auto;padding:0 24px 80px;">
-  <div style="margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:12px;">
+<div class="tabs-section" id="reviews" style="max-width:1380px;margin:0 auto;padding:0 24px 80px;">
+  <div style="margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:12px;display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;">
     <h2 style="font-family:'Playfair Display',serif;font-size:22px;font-weight:400;">Customer <em style="color:var(--walnut);font-style:italic;">Reviews</em></h2>
+    <div id="rev-summary" style="font-size:13px;color:var(--slate);"></div>
   </div>
-  <div style="text-align:center;padding:48px 20px;color:var(--mist);">
-    <div style="font-size:32px;margin-bottom:12px;">✧</div>
-    <p style="font-size:14px;font-weight:300;margin-bottom:6px;color:var(--slate);">No reviews yet for this product.</p>
-    <p style="font-size:12.5px;font-weight:300;">Be the first to share your experience after your order arrives.</p>
+  <div id="rev-list">
+    <div style="text-align:center;padding:48px 20px;color:var(--mist);">
+      <div style="font-size:32px;margin-bottom:12px;">✧</div>
+      <p style="font-size:14px;font-weight:300;margin-bottom:6px;color:var(--slate);">No reviews yet for this product.</p>
+      <p style="font-size:12.5px;font-weight:300;">Customers are invited to review their furniture after it's delivered.</p>
+    </div>
   </div>
 </div>
 
@@ -563,11 +567,13 @@ function injectProductSchema(p,metaDesc){
     }
   };
   if(img)schema.image=img;
+  if(p.reviewCount>0&&p.rating>0)schema.aggregateRating={"@type":"AggregateRating","ratingValue":Number(p.rating),"reviewCount":Number(p.reviewCount),"bestRating":5,"worstRating":1};
   el.textContent=JSON.stringify(schema);
 }
 
 function renderProduct(p){
   currentProduct=p;basePrice=p.price||0;
+  try{loadReviews(p);}catch(e){console.log('Reviews error:',e);}
   document.title=p.name+' — Master Cove';
   var catLabels={dresser:'Dressers',chest:'Chests',sideboard:'Sideboards',tv:'TV Consoles',coffeetable:'Coffee Tables',diningtable:'Dining Tables',sidetable:'Side Tables',nightstand:'Nightstands',shoe:'Shoe Storage',bookcase:'Bookcases',desk:'Desks',chair:'Chairs',accentchair:'Accent Chairs',sofa:'Sofas',sectional:'Sectionals',armchair:'Lounge & Armchairs',bar:'Bars',bed:'Beds',bench:'Benches',vanity:'Vanities',outdoor:'Outdoor Furniture',other:'Shop'};
   var catLabel=catLabels[p.cat]||'Shop';
@@ -1074,10 +1080,39 @@ document.addEventListener('DOMContentLoaded',function(){
   fetch('https://slaffkwfwmudvernzjua.supabase.co/rest/v1/products?id=eq.'+encodeURIComponent(id)+'&select=*',{
     headers:{'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsYWZma3dmd211ZHZlcm56anVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMzU4MDksImV4cCI6MjA5MTYxMTgwOX0.BEz8_GNKPTQB90LJBJTZFyJYFF-9ypdfbEsLAfEESqY','Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsYWZma3dmd211ZHZlcm56anVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMzU4MDksImV4cCI6MjA5MTYxMTgwOX0.BEz8_GNKPTQB90LJBJTZFyJYFF-9ypdfbEsLAfEESqY'}
   }).then(function(r){return r.json();}).then(function(data){
-    if(data&&data.length){var row=data[0];renderProduct({id:row.id,name:row.name,brand:row.brand,cat:row.cat,price:row.price,was:row.was,shippingCost:row.shipping_cost||0,desc:row.description,tagline:row.tagline||'',features:row.features||'',wood:row.wood,status:row.status,img:row.img,finishes:row.finishes||[],topSizes:row.top_sizes||[],variantMode:row.variant_mode||'finish',dims:row.dims,badge:row.badge,supplierLink:row.supplier_link,createdAt:row.created_at});}
+    if(data&&data.length){var row=data[0];renderProduct({id:row.id,name:row.name,brand:row.brand,cat:row.cat,price:row.price,was:row.was,shippingCost:row.shipping_cost||0,desc:row.description,tagline:row.tagline||'',features:row.features||'',wood:row.wood,status:row.status,img:row.img,finishes:row.finishes||[],topSizes:row.top_sizes||[],variantMode:row.variant_mode||'finish',dims:row.dims,badge:row.badge,supplierLink:row.supplier_link,createdAt:row.created_at,rating:Number(row.rating)||0,reviewCount:Number(row.review_count)||0});}
     else{document.getElementById('pdp-title').textContent='Product not found.';}
   }).catch(function(){document.getElementById('pdp-title').textContent='Could not load product.';});
 });
+
+// ---- Customer reviews (real reviews only, collected after delivery) ----
+function revStars(n){var f=Math.round(n);return '★★★★★'.slice(0,f)+'☆☆☆☆☆'.slice(0,5-f);}
+function revEsc(s){return String(s||'').replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+async function loadReviews(p){
+  if(p.reviewCount>0&&p.rating>0){
+    var top=document.getElementById('pdp-rating');
+    if(top){top.innerHTML='<span style="color:#B8895A;letter-spacing:1px;">'+revStars(p.rating)+'</span> '+Number(p.rating).toFixed(1)+' · '+p.reviewCount+' review'+(p.reviewCount===1?'':'s');top.style.display='inline-block';}
+    var sum=document.getElementById('rev-summary');
+    if(sum)sum.innerHTML='<span style="color:#B8895A;font-size:15px;letter-spacing:1px;">'+revStars(p.rating)+'</span> <b>'+Number(p.rating).toFixed(1)+'</b> out of 5 · '+p.reviewCount+' verified review'+(p.reviewCount===1?'':'s');
+  }
+  if(!(p.reviewCount>0))return;
+  try{
+    var r=await fetch('/.netlify/functions/reviews?product='+encodeURIComponent(p.id));
+    var j=await r.json();
+    var list=(j&&j.reviews)||[];
+    if(!list.length)return;
+    document.getElementById('rev-list').innerHTML=list.map(function(v){
+      var d=new Date(v.date);
+      return '<div style="padding:18px 0;border-bottom:1px solid var(--border);">'
+        +'<div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:6px;">'
+        +'<span style="color:#B8895A;font-size:15px;letter-spacing:1px;">'+revStars(v.rating)+'</span>'
+        +'<span style="font-size:12px;color:var(--mist);">'+revEsc(v.name)+' · Verified Buyer · '+d.toLocaleDateString('en-US',{month:'short',year:'numeric'})+'</span></div>'
+        +(v.title?'<div style="font-size:15px;font-weight:500;margin-bottom:4px;">'+revEsc(v.title)+'</div>':'')
+        +(v.body?'<div style="font-size:14px;color:var(--slate);line-height:1.7;font-weight:300;">'+revEsc(v.body)+'</div>':'')
+        +'</div>';
+    }).join('');
+  }catch(e){console.log('Load reviews error:',e);}
+}
 </script>
 </body>
 </html>
