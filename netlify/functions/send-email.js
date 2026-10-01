@@ -90,7 +90,7 @@ exports.handler = async function(event) {
       <body>
         <div class="wrap">
           <div class="header">
-            <img src="https://slaffkwfwmudvernzjua.supabase.co/storage/v1/object/public/product-images/logo.png" alt="Master Cove"/>
+            <img src="https://mastercove.com/android-chrome-512x512.png" alt="Master Cove" width="72" height="72" style="width:72px;height:72px;border-radius:8px;"/>
           </div>
           <div class="body">
             <h2>${config.heading}</h2>
@@ -105,7 +105,8 @@ exports.handler = async function(event) {
             </div>
           </div>
           <div class="footer">
-            <p>Questions? <a href="mailto:mastercovestore@gmail.com">mastercovestore@gmail.com</a> · <a href="tel:+13472060372">(347) 206-0372</a></p>
+            <p>Questions? <a href="mailto:mastercovestore@gmail.com">mastercovestore@gmail.com</a></p>
+            <p style="margin-top:6px;"><a href="tel:+13472060372">(347) 206-0372</a></p>
             <p style="margin-top:8px;">Master Cove LLC · Brooklyn, NY</p>
           </div>
         </div>
