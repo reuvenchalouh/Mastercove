@@ -114,7 +114,8 @@ exports.handler = async function(event) {
     `;
 
     await resend.emails.send({
-      from: 'Master Cove <onboarding@resend.dev>',
+      from: 'Master Cove <orders@mastercove.com>',
+      reply_to: 'mastercovestore@gmail.com',
       to: to,
       subject: config.subject,
       html: html
