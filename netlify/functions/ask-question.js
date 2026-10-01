@@ -74,7 +74,8 @@ exports.handler = async function(event) {
     `;
 
     await resend.emails.send({
-      from: 'Master Cove <onboarding@resend.dev>',
+      from: 'Master Cove <orders@mastercove.com>',
+      reply_to: 'mastercovestore@gmail.com',
       to: 'mastercovestore@gmail.com',
       replyTo: email,
       subject: 'New FAQ Question from ' + name + (product ? ' — re: ' + product : ''),
