@@ -192,7 +192,8 @@ async function sendOwnerNotification({ orderNumber, customerName, customerEmail,
     }).join('');
 
     await resend.emails.send({
-      from: 'Master Cove <onboarding@resend.dev>',
+      from: 'Master Cove <orders@mastercove.com>',
+      reply_to: 'mastercovestore@gmail.com',
       to: 'mastercovestore@gmail.com',
       subject: '🛋️ New Order ' + orderNumber + ' — $' + revenue,
       html: `
@@ -248,6 +249,7 @@ async function saveOrder({ email, name, phone, address, city, state, zip, items,
       email: email,
       address: address + ', ' + city + ', ' + state + ' ' + zip,
       product: productNames,
+      product_ids: (items || []).map(i => i.id).filter(id => id !== undefined && id !== null),
       variant: (function(){ var f=items&&items[0]; if(!f)return ''; var vp=[]; if(f.finish)vp.push(f.finish); if(f.fabric)vp.push(f.fabric); return vp.join(' / '); })(),
       revenue: revenue,
       cost: 0,
