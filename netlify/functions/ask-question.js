@@ -50,7 +50,7 @@ exports.handler = async function(event) {
       <body>
         <div class="wrap">
           <div class="header">
-            <img src="https://slaffkwfwmudvernzjua.supabase.co/storage/v1/object/public/product-images/logo.png" alt="Master Cove"/>
+            <img src="https://mastercove.com/android-chrome-512x512.png" alt="Master Cove" width="72" height="72" style="width:72px;height:72px;border-radius:8px;"/>
           </div>
           <div class="body">
             <h2>New Question from the FAQ Page</h2>
