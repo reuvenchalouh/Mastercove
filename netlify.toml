@@ -7,6 +7,12 @@
   status = 200
  
 
+# Readable product URLs: /products/orson-nightstand shows the product page
+[[redirects]]
+  from = "/products/*"
+  to = "/product-detail.html"
+  status = 200
+
 # Review-request emails: checks once a day (11am New York time) and sends day 3 / 7 / 14 reminders
 [functions."review-reminders"]
   schedule = "0 15 * * *"
