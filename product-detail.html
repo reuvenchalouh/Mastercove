@@ -73,6 +73,9 @@ header{background:var(--white);border-bottom:1px solid var(--border);position:st
 .dim-key{font-size:11px;color:var(--mist);letter-spacing:.06em;text-transform:uppercase;}
 .atc-btn{background:var(--ink);color:#fff;border:none;padding:15px 32px;border-radius:2px;font-size:15px;font-weight:500;letter-spacing:0.04em;cursor:pointer;transition:background .2s;flex:1;font-family:'Outfit',sans-serif;}
 .atc-btn:hover{background:#2E2A26;}
+.atc-btn:disabled,.atc-btn:disabled:hover{background:var(--border);color:var(--slate);cursor:not-allowed;}
+.oos-note{display:none;margin:-10px 0 16px;font-size:13px;color:var(--red);}
+.oos-note.show{display:block;}
 .atc-row{display:flex;align-items:center;gap:10px;margin:20px 0;}
 .qty-wrap{display:flex;align-items:center;gap:12px;background:var(--sand);border:1px solid var(--border);padding:8px 14px;border-radius:2px;}
 .qty-btn{background:none;border:none;font-size:18px;cursor:pointer;color:var(--ink);padding:0 4px;}
@@ -80,9 +83,10 @@ header{background:var(--white);border-bottom:1px solid var(--border);position:st
 .save-btn:hover{background:var(--linen);}
 .trust-mini{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;}
 .tmini{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--mist);}
-.fin-opt.oos{opacity:0.35;cursor:not-allowed;pointer-events:none;}
+.fin-opt.oos{cursor:pointer;}
+.fin-opt.oos .fin-name{color:var(--mist);}
 .fin-opt.oos .fin-swatch{position:relative;}
-.fin-opt.oos .fin-swatch::after{content:'✕';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--red);font-weight:700;}
+.fin-opt.oos .fin-swatch::after{content:'✕';position:absolute;top:-4px;right:-4px;width:18px;height:18px;border-radius:50%;background:var(--white);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;line-height:1;color:var(--red);font-weight:700;}
 .fabric-row{margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:none;}
 .fabric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:10px;}
 .fab-opt{display:flex;flex-direction:column;align-items:flex-start;gap:5px;cursor:pointer;}
@@ -91,7 +95,9 @@ header{background:var(--white);border-bottom:1px solid var(--border);position:st
 .fab-opt.active .fab-swatch{outline-color:var(--walnut);outline-width:2.5px;}
 .fab-name{font-size:12.5px;color:var(--ink);font-weight:500;line-height:1.3;margin-top:2px;}
 .fab-opt.active .fab-name{color:var(--walnut);}
-.fab-opt.oos{opacity:0.35;cursor:not-allowed;pointer-events:none;}
+.fab-opt.oos{cursor:pointer;position:relative;}
+.fab-opt.oos .fab-name{color:var(--mist);}
+.fab-opt.oos::before{content:'✕';position:absolute;top:4px;right:4px;z-index:2;width:18px;height:18px;border-radius:50%;background:var(--white);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;line-height:1;color:var(--red);font-weight:700;}
 .fabric-toggle-wrap{margin-top:10px;}
 .fabric-type-heading{font-size:12px;font-weight:600;color:var(--walnut);text-transform:uppercase;letter-spacing:0.05em;margin:16px 0 8px;}
 .fabric-type-heading:first-child{margin-top:0;}
@@ -109,7 +115,8 @@ header{background:var(--white);border-bottom:1px solid var(--border);position:st
 .sz-opt{padding:10px 18px;border:1.5px solid var(--border);border-radius:4px;cursor:pointer;font-size:13px;font-weight:500;color:var(--slate);background:var(--white);transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:3px;}
 .sz-opt:hover{border-color:var(--oak);color:var(--ink);}
 .sz-opt.active{border-color:var(--walnut);background:var(--linen);color:var(--walnut);}
-.sz-opt.oos{opacity:0.35;cursor:not-allowed;pointer-events:none;text-decoration:line-through;}
+.sz-opt.oos{opacity:0.6;cursor:pointer;text-decoration:line-through;}
+.sz-opt.oos.active{opacity:1;}
 .sz-price{font-size:11px;color:var(--mist);font-weight:400;}
 .sz-opt.active .sz-price{color:var(--walnut);}
 /* CAROUSEL */
@@ -326,9 +333,10 @@ src="https://www.facebook.com/tr?id=2156219968568427&ev=PageView&noscript=1"
         <span id="qty">1</span>
         <button class="qty-btn" onclick="changeQty(1)">+</button>
       </div>
-      <button class="atc-btn" onclick="addToCart()">Add to Cart</button>
+      <button class="atc-btn" id="atc-btn" onclick="addToCart()">Add to Cart</button>
       <button class="save-btn" id="wish-btn" onclick="toggleWish()">♡</button>
     </div>
+    <div class="oos-note" id="oos-note">This option is currently out of stock. Choose another finish or fabric to order.</div>
     <div style="margin-top:12px;padding:10px 14px;background:var(--sand);border-radius:2px;font-size:13px;color:var(--slate);display:flex;align-items:center;gap:8px;">
       🚛 <span>Ships within <strong>7–12 business days</strong></span>
     </div>
@@ -654,6 +662,9 @@ function renderProduct(p){
         fgrid.appendChild(div);
       });
       var first=fins.find(function(f){return!f.outOfStock;})||fins[0];
+      var firstIdx=fins.indexOf(first);
+      fgrid.querySelectorAll('.fin-opt').forEach(function(o,k){o.classList.toggle('active',k===firstIdx);});
+      oosState.finish=!!first.outOfStock;
       document.getElementById('finish-name').textContent=first.name||'Default';
       var initPhotos=[];
       if(first.fabrics&&first.fabrics.length){var firstFab=first.fabrics.find(function(f){return!f.outOfStock;})||first.fabrics[0];if(firstFab&&firstFab.photos&&firstFab.photos.length)initPhotos=firstFab.photos;}
@@ -675,6 +686,7 @@ function renderProduct(p){
       }
       if(first.fabrics&&first.fabrics.length)renderFabrics(first.fabrics);else renderFabrics([]);
       renderSizes(first.sizes||[]);
+      updateBuyState();
     }
   }
 
@@ -707,17 +719,38 @@ function loadFinishImages(photos){
   photos.forEach(function(src,i){var div=document.createElement('div');div.className='thumb'+(i===0?' active':'');var img=document.createElement('img');img.src=src;img.style.cssText='width:100%;height:100%;object-fit:cover;';div.appendChild(img);div.addEventListener('click',(function(s){return function(){switchMainImg(this,s);};})(src));thumbsEl.appendChild(div);});
 }
 
+/* ── OUT-OF-STOCK STATE: options stay clickable so customers can preview them,
+      but Add to Cart is disabled while an out-of-stock choice is selected ── */
+var oosState={finish:false,fabric:false,size:false,topSize:false,topFinish:false,topFabric:false};
+function isOosEl(el){return !!(el&&el.classList&&el.classList.contains('oos'));}
+function isSelectionOutOfStock(){
+  var isSizeMode=currentProduct&&(currentProduct.variantMode==='size')&&currentProduct.topSizes&&currentProduct.topSizes.length;
+  return isSizeMode?(oosState.topSize||oosState.topFinish||oosState.topFabric):(oosState.finish||oosState.fabric||oosState.size);
+}
+function updateBuyState(){
+  var btn=document.getElementById('atc-btn');var note=document.getElementById('oos-note');
+  if(!btn)return;
+  var out=isSelectionOutOfStock();
+  btn.disabled=out;
+  btn.textContent=out?'Out of Stock':'Add to Cart';
+  if(note)note.classList.toggle('show',out);
+}
+
 function selectFinish(el,name,color,photos,fabrics,sizes){
+  oosState.finish=isOosEl(el);
   document.querySelectorAll('.fin-opt').forEach(function(f){f.classList.remove('active');});
   el.classList.add('active');document.getElementById('finish-name').textContent=name;
   if(fabrics&&fabrics.length){renderFabrics(fabrics);}else{if(photos&&photos.length)loadFinishImages(photos);renderFabrics([]);}
   renderSizes(sizes||[]);
+  updateBuyState();
 }
 
 function selectFabric(el,name,photos){
   document.querySelectorAll('.fab-opt').forEach(function(f){f.classList.remove('active');});
   el.classList.add('active');document.getElementById('fabric-name').textContent=name;currentFabric=name;
+  oosState.fabric=isOosEl(el);
   if(photos&&photos.length)loadFinishImages(photos);
+  updateBuyState();
 }
 
 function showFabPreview(anchorEl,imgUrl,name){
@@ -740,7 +773,7 @@ function hideFabPreview(){
 function buildFabricSwatchEl(fab,isActive){
   var thumb=fab.swatch?fab.swatch:((fab.photos&&fab.photos[0])?fab.photos[0]:'');
   var div=document.createElement('div');
-  div.className='fab-opt'+(isActive&&!fab.outOfStock?' active':'')+(fab.outOfStock?' oos':'');
+  div.className='fab-opt'+(isActive?' active':'')+(fab.outOfStock?' oos':'');
   var sw=document.createElement('div');sw.className='fab-swatch';
   if(thumb)sw.style.backgroundImage='url(\''+thumb+'\')';
   var lb=document.createElement('span');lb.className='fab-name';lb.textContent=fab.name+(fab.outOfStock?' — Out of Stock':'');
@@ -763,7 +796,7 @@ function groupFabricsByType(fabrics){
 }
 function renderFabrics(fabrics){
   var row=document.getElementById('fabric-row');var wrap=document.getElementById('fabric-grid-wrap');var toggleWrap=document.getElementById('fabric-toggle-wrap');var toggleBtn=document.getElementById('fabric-toggle-btn');
-  if(!fabrics||!fabrics.length){if(row)row.style.display='none';currentFabric='';document.getElementById('fabric-name').textContent='';return;}
+  if(!fabrics||!fabrics.length){if(row)row.style.display='none';currentFabric='';document.getElementById('fabric-name').textContent='';oosState.fabric=false;return;}
   wrap.innerHTML='';
   fabricGridExpanded=false;
   wrap.classList.remove('fabric-grid-collapsed');
@@ -790,6 +823,7 @@ function renderFabrics(fabrics){
   } else {
     if(toggleWrap)toggleWrap.style.display='none';
   }
+  oosState.fabric=!!(firstFab&&firstFab.outOfStock);
   if(firstFab){
     currentFabric=firstFab.name||'';
     document.getElementById('fabric-name').textContent=currentFabric;
@@ -815,7 +849,7 @@ function renderTopSizeMode(topSizes,fallbackImg){
     grid.appendChild(div);
   });
   var first=sizes.find(function(s){return!s.outOfStock;})||sizes[0];
-  if(first){selectTopSize(grid.querySelector('.sz-opt'),first,fallbackImg);}
+  if(first){selectTopSize(grid.querySelectorAll('.sz-opt')[sizes.indexOf(first)],first,fallbackImg);}
 }
 
 function renderDescFeatures(desc,features){
@@ -843,6 +877,7 @@ function renderDescFeatures(desc,features){
 function selectTopSize(el,sz,fallbackImg){
   document.querySelectorAll('#top-size-grid .sz-opt').forEach(function(s){s.classList.remove('active');});
   if(el)el.classList.add('active');
+  oosState.topSize=!!sz.outOfStock;
   currentTopSize=sz.name||'';
   document.getElementById('top-size-name').textContent=currentTopSize;
   document.getElementById('pdp-price').textContent='$'+Number(sz.price||basePrice).toLocaleString();
@@ -871,7 +906,7 @@ function selectTopSize(el,sz,fallbackImg){
       finGrid.appendChild(div);
     });
     var firstFin=finishes.find(function(f){return!f.outOfStock;})||finishes[0];
-    selectTopSizeFinish(finGrid.querySelector('.fin-opt'),firstFin);
+    selectTopSizeFinish(finGrid.querySelectorAll('.fin-opt')[finishes.indexOf(firstFin)],firstFin);
     finRow.style.display='block';
   } else {
     finRow.style.display='none';
@@ -879,25 +914,30 @@ function selectTopSize(el,sz,fallbackImg){
     var photos=fallbackImg?[fallbackImg]:[];
     if(photos.length)loadFinishImages(photos);
     currentFabric='';currentSize=currentTopSize;
+    oosState.topFinish=false;oosState.topFabric=false;
   }
+  updateBuyState();
 }
 
 function selectTopSizeFinish(el,f){
   document.querySelectorAll('#top-size-finish-grid .fin-opt').forEach(function(o){o.classList.remove('active');});
   if(el)el.classList.add('active');
+  oosState.topFinish=!!f.outOfStock;
   document.getElementById('top-size-finish-name').textContent=f.name||'';
   if(f.fabrics&&f.fabrics.length){
     renderTopSizeFabrics(f.fabrics);
   } else {
     document.getElementById('top-size-fabric-row').style.display='none';
     currentFabric=f.name||'';currentSize=currentTopSize;
+    oosState.topFabric=false;
     if(f.photos&&f.photos.length)loadFinishImages(f.photos);
   }
+  updateBuyState();
 }
 
 function renderTopSizeFabrics(fabrics){
   var row=document.getElementById('top-size-fabric-row');var wrap=document.getElementById('top-size-fabric-grid-wrap');var toggleWrap=document.getElementById('top-size-fabric-toggle-wrap');var toggleBtn=document.getElementById('top-size-fabric-toggle-btn');
-  if(!fabrics||!fabrics.length){row.style.display='none';return;}
+  if(!fabrics||!fabrics.length){row.style.display='none';oosState.topFabric=false;return;}
   wrap.innerHTML='';
   topSizeFabricGridExpanded=false;
   wrap.classList.remove('fabric-grid-collapsed');
@@ -912,6 +952,7 @@ function renderTopSizeFabrics(fabrics){
       var thumb=fab.swatch?fab.swatch:((fab.photos&&fab.photos[0])?fab.photos[0]:'');
       var div=document.createElement('div');
       div.className='fab-opt'+(fab.outOfStock?' oos':'');
+      div._fab=fab;
       var sw=document.createElement('div');sw.className='fab-swatch';
       if(thumb)sw.style.backgroundImage='url(\''+thumb+'\')';
       var lb=document.createElement('span');lb.className='fab-name';lb.textContent=fab.name+(fab.outOfStock?' — Out of Stock':'');
@@ -933,29 +974,33 @@ function renderTopSizeFabrics(fabrics){
     if(toggleWrap)toggleWrap.style.display='none';
   }
   var firstFab=fabrics.find(function(f){return!f.outOfStock;})||fabrics[0];
-  if(firstFab){var firstEl=wrap.querySelector('.fab-opt');selectTopSizeFabric(firstEl,firstFab.name||'',firstFab.photos||[]);}
+  if(firstFab){var firstEl=[].slice.call(wrap.querySelectorAll('.fab-opt')).find(function(o){return o._fab===firstFab;})||wrap.querySelector('.fab-opt');selectTopSizeFabric(firstEl,firstFab.name||'',firstFab.photos||[]);}
   row.style.display='block';
 }
 
 function selectTopSizeFabric(el,name,photos){
   document.querySelectorAll('#top-size-fabric-grid-wrap .fab-opt').forEach(function(o){o.classList.remove('active');});
   if(el)el.classList.add('active');
+  oosState.topFabric=isOosEl(el);
   document.getElementById('top-size-fabric-name').textContent=name;
   currentFabric=name;currentSize=currentTopSize;
   if(photos&&photos.length)loadFinishImages(photos);
+  updateBuyState();
 }
 
 function renderSizes(sizes){
   var row=document.getElementById('size-row');var grid=document.getElementById('size-grid');
-  if(!sizes||!sizes.length){if(row)row.style.display='none';currentSize='';document.getElementById('size-name').textContent='';return;}
+  if(!sizes||!sizes.length){if(row)row.style.display='none';currentSize='';document.getElementById('size-name').textContent='';oosState.size=false;return;}
   grid.innerHTML='';
+  var firstSzPick=sizes.find(function(s){return!s.outOfStock;})||sizes[0];
   sizes.forEach(function(sz,j){
-    var div=document.createElement('div');div.className='sz-opt'+(j===0&&!sz.outOfStock?' active':'')+(sz.outOfStock?' oos':'');
+    var div=document.createElement('div');div.className='sz-opt'+(sz===firstSzPick?' active':'')+(sz.outOfStock?' oos':'');
     div.innerHTML=sz.name+(sz.price?'<span class="sz-price">$'+Number(sz.price).toLocaleString()+'</span>':'');
     div._szName=sz.name||'';div._szPrice=sz.price||0;div._szPhotos=sz.photos||[];div._szDims=sz.dims||{};
     div.addEventListener('click',function(){selectSize(this,this._szName,this._szPrice,this._szPhotos,this._szDims);});grid.appendChild(div);
   });
-  var firstSz=sizes.find(function(s){return!s.outOfStock;})||sizes[0];
+  var firstSz=firstSzPick;
+  oosState.size=!!(firstSz&&firstSz.outOfStock);
   if(firstSz){
     currentSize=firstSz.name||'';document.getElementById('size-name').textContent=currentSize;
     if(firstSz.price)document.getElementById('pdp-price').textContent='$'+Number(firstSz.price).toLocaleString();
@@ -966,8 +1011,9 @@ function renderSizes(sizes){
 }
 
 function selectSize(el,name,price,photos,dims){
-  document.querySelectorAll('.sz-opt').forEach(function(s){s.classList.remove('active');});
+  document.querySelectorAll('#size-grid .sz-opt').forEach(function(s){s.classList.remove('active');});
   el.classList.add('active');currentSize=name;document.getElementById('size-name').textContent=name;
+  oosState.size=isOosEl(el);updateBuyState();
   if(price)document.getElementById('pdp-price').textContent='$'+Number(price).toLocaleString();
   else document.getElementById('pdp-price').textContent='$'+Number(basePrice).toLocaleString();
   if(photos&&photos.length)loadFinishImages(photos);
@@ -1002,6 +1048,7 @@ function toggleWish(){var b=document.getElementById('wish-btn');b.textContent=b.
 
 function addToCart(){
   if(!currentProduct)return;
+  if(isSelectionOutOfStock()){showToast('That option is out of stock');updateBuyState();return;}
   cart=loadMcCart();
   var isSizeMode=(currentProduct.variantMode==='size')&&currentProduct.topSizes&&currentProduct.topSizes.length;
   var fn,fab,sz,cartPrice;
