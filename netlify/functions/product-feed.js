@@ -195,7 +195,7 @@ exports.handler = async function(event, context) {
       const price = (onSale ? wasPrice : shownPrice).toFixed(2);
       const colors = getColors(p);
       const highlights = getHighlights(p);
-      const link = 'https://mastercove.com/product-detail.html?id=' + p.id;
+      const link = p.slug ? ('https://mastercove.com/products/' + p.slug) : ('https://mastercove.com/product-detail.html?id=' + p.id);
       const description = escapeXml(buildDescription(p));
 
       items += '  <item>\n';
