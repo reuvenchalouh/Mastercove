@@ -237,7 +237,7 @@ document.addEventListener('DOMContentLoaded', async function(){
         return {
           id:p.id, name:p.name, cat:p.cat, price:p.price, was:p.was, shippingCost:p.shipping_cost||0,
           img:p.img, finishes:p.finishes||[], dims:p.dims, badge:p.badge,
-          collection:p.collection||'', collectionCover:p.collection_cover||'', tagline:p.tagline||'',
+          collection:p.collection||'', collectionCover:p.collection_cover||'', tagline:p.tagline||'', slug:p.slug||'',
           rating:Number(p.rating)||0, reviewCount:Number(p.review_count)||0,
           topSizes:p.top_sizes||[], variantMode:p.variant_mode||'finish'
         };
@@ -420,7 +420,7 @@ function showCollection(name){
     var card = document.createElement('div');
     card.className = 'prod-card fade-up';
     card.style.animationDelay = (i * 0.05) + 's';
-    card.onclick = function(){ window.location.href = 'product-detail.html?id=' + p.id; };
+    card.onclick = function(){ window.location.href = p.slug ? ('/products/' + p.slug) : ('product-detail.html?id=' + p.id); };
 
     var img = getActiveImg(p);
     // Star ratings only show once a product has real customer reviews.
@@ -452,7 +452,7 @@ function showCollection(name){
             (p.was && !isSizeMode ? '<span class="was">$'+Number(p.was).toLocaleString()+'</span>' : '') +
             '<div class="unit-tag"'+((p.shippingCost&&p.shippingCost>0)?' style="color:var(--walnut);"':'')+'>'+((p.shippingCost&&p.shippingCost>0)?('+ $'+Number(p.shippingCost).toLocaleString()+' shipping'):'free shipping')+'</div>' +
           '</div>' +
-          '<button class="add-btn" onclick="event.stopPropagation();window.location.href=\'product-detail.html?id='+p.id+'\'">View</button>' +
+          '<button class="add-btn" onclick="event.stopPropagation();window.location.href=\''+(p.slug?('/products/'+p.slug):('product-detail.html?id='+p.id))+'\'">View</button>' +
         '</div>' +
       '</div>';
     grid.appendChild(card);
