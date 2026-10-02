@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<base href="/"/>
+<link rel="canonical" id="canonical-link" href="https://mastercove.com/"/>
 <meta charset="UTF-8"/>
 <link rel="icon" type="image/png" href="https://slaffkwfwmudvernzjua.supabase.co/storage/v1/object/public/product-images/New%20wallpaper.jpeg"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -265,7 +267,7 @@ src="https://www.facebook.com/tr?id=2156219968568427&ev=PageView&noscript=1"
     <div class="pdp-brand" id="pdp-brand"></div>
     <h1 class="pdp-title" id="pdp-title">Loading...</h1>
     <div id="pdp-tagline" style="font-size:15px;color:var(--slate);font-weight:300;margin-top:6px;margin-bottom:4px;font-style:italic;display:none;"></div>
-    <a href="#reviews" id="pdp-rating" style="display:none;font-size:13.5px;color:var(--slate);margin-top:6px;text-decoration:none;"></a>
+    <a href="#reviews" onclick="var r=document.getElementById('reviews');if(r)r.scrollIntoView({behavior:'smooth'});return false;" id="pdp-rating" style="display:none;font-size:13.5px;color:var(--slate);margin-top:6px;text-decoration:none;"></a>
   </div>
 
   <div class="pdp-info">
@@ -454,7 +456,7 @@ function buildCarousel(products){
     if(rp.finishes&&rp.finishes[0]&&rp.finishes[0].photos&&rp.finishes[0].photos[0])img=rp.finishes[0].photos[0];
     else if(rp.img)img=rp.img;
     var card=document.createElement('div');card.className='rel-card fade-up';
-    card.onclick=function(){window.location.href='product-detail.html?id='+rp.id;};
+    card.onclick=function(){window.location.href=rp.slug?('/products/'+rp.slug):('/product-detail.html?id='+rp.id);};
     card.innerHTML='<div class="rel-img">'+(img?'<img src="'+img+'" alt="'+rp.name+'" onerror="this.style.display=\'none\'"/>':'')+'</div>'
       +'<div class="rel-info"><div class="rel-brand">'+getCatLabelStandalone(rp.cat)+'</div><div class="rel-name">'+rp.name+'</div>'
       +'<div class="rel-foot"><div class="rel-price">$'+Number(rp.price).toLocaleString()+'</div>'
@@ -541,7 +543,7 @@ function injectProductSchema(p,metaDesc){
     "brand":{"@type":"Brand","name":"Master Cove"},
     "offers":{
       "@type":"Offer",
-      "url":"https://mastercove.com/product-detail.html?id="+encodeURIComponent(p.id),
+      "url":p.slug?("https://mastercove.com/products/"+p.slug):("https://mastercove.com/product-detail.html?id="+encodeURIComponent(p.id)),
       "priceCurrency":"USD",
       "price":p.price,
       "availability":isProductInStock(p)?"https://schema.org/InStock":"https://schema.org/OutOfStock",
@@ -1075,12 +1077,20 @@ function showToast(msg){var t=document.getElementById('toast');t.textContent='âœ
 document.addEventListener('DOMContentLoaded',function(){
   cart=loadMcCart();
   updateCart();
+  // Works with both new links (/products/orson-nightstand) and old ones (product-detail.html?id=123)
   var params=new URLSearchParams(window.location.search);var id=params.get('id');
-  if(!id){document.getElementById('pdp-title').textContent='No product ID in URL.';return;}
-  fetch('https://slaffkwfwmudvernzjua.supabase.co/rest/v1/products?id=eq.'+encodeURIComponent(id)+'&select=*',{
+  var slugMatch=window.location.pathname.match(/^\/products\/([^\/?#]+)/);var slug=slugMatch?decodeURIComponent(slugMatch[1]):'';
+  if(!id&&!slug){document.getElementById('pdp-title').textContent='Product not found.';return;}
+  var lookup=slug?('slug=eq.'+encodeURIComponent(slug)):('id=eq.'+encodeURIComponent(id));
+  fetch('https://slaffkwfwmudvernzjua.supabase.co/rest/v1/products?'+lookup+'&select=*',{
     headers:{'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsYWZma3dmd211ZHZlcm56anVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMzU4MDksImV4cCI6MjA5MTYxMTgwOX0.BEz8_GNKPTQB90LJBJTZFyJYFF-9ypdfbEsLAfEESqY','Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsYWZma3dmd211ZHZlcm56anVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMzU4MDksImV4cCI6MjA5MTYxMTgwOX0.BEz8_GNKPTQB90LJBJTZFyJYFF-9ypdfbEsLAfEESqY'}
   }).then(function(r){return r.json();}).then(function(data){
-    if(data&&data.length){var row=data[0];renderProduct({id:row.id,name:row.name,brand:row.brand,cat:row.cat,price:row.price,was:row.was,shippingCost:row.shipping_cost||0,desc:row.description,tagline:row.tagline||'',features:row.features||'',wood:row.wood,status:row.status,img:row.img,finishes:row.finishes||[],topSizes:row.top_sizes||[],variantMode:row.variant_mode||'finish',dims:row.dims,badge:row.badge,supplierLink:row.supplier_link,createdAt:row.created_at,rating:Number(row.rating)||0,reviewCount:Number(row.review_count)||0});}
+    if(data&&data.length){var row=data[0];renderProduct({id:row.id,name:row.name,brand:row.brand,cat:row.cat,price:row.price,was:row.was,shippingCost:row.shipping_cost||0,desc:row.description,tagline:row.tagline||'',features:row.features||'',wood:row.wood,status:row.status,img:row.img,finishes:row.finishes||[],topSizes:row.top_sizes||[],variantMode:row.variant_mode||'finish',dims:row.dims,badge:row.badge,supplierLink:row.supplier_link,createdAt:row.created_at,rating:Number(row.rating)||0,reviewCount:Number(row.review_count)||0,slug:row.slug||''});
+      if(row.slug){
+        var clean='/products/'+row.slug;
+        if(window.location.pathname!==clean){try{history.replaceState(null,'',clean+window.location.hash);}catch(e){}}
+        var cl=document.getElementById('canonical-link');if(cl)cl.href='https://mastercove.com'+clean;
+      }}
     else{document.getElementById('pdp-title').textContent='Product not found.';}
   }).catch(function(){document.getElementById('pdp-title').textContent='Could not load product.';});
 });
