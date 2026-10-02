@@ -13,7 +13,7 @@ exports.handler = async function(event) {
   try {
     const { data: products, error } = await supabase
       .from('products')
-      .select('id, created_at')
+      .select('id, created_at, slug')
       .eq('status', 'active');
 
     if (error) throw error;
@@ -40,7 +40,7 @@ exports.handler = async function(event) {
       if (p.created_at) {
         try { lastmod = new Date(p.created_at).toISOString().split('T')[0]; } catch (e) {}
       }
-      urls.push('  <url>\n    <loc>' + baseUrl + '/product-detail.html?id=' + encodeURIComponent(p.id) + '</loc>\n    <lastmod>' + lastmod + '</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>');
+      urls.push('  <url>\n    <loc>' + baseUrl + (p.slug ? ('/products/' + encodeURIComponent(p.slug)) : ('/product-detail.html?id=' + encodeURIComponent(p.id))) + '</loc>\n    <lastmod>' + lastmod + '</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>');
     });
 
     const xml = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + urls.join('\n') + '\n</urlset>';
