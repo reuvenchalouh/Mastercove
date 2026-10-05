@@ -17,7 +17,8 @@
 [functions."review-reminders"]
   schedule = "0 15 * * *"
 
-# Modway stock sync: checks every Modway product each morning (7am New York time)
-# and marks finishes/fabrics/sizes in or out of stock automatically
+# Modway stock sync: checks Modway products each morning in 4 parts
+# (7:00, 7:15, 7:30, 7:45am New York time) and marks finishes/fabrics/sizes
+# in or out of stock automatically. Split up so Modway doesn't rate-limit us.
 [functions."modway-stock-sync"]
-  schedule = "0 11 * * *"
+  schedule = "0,15,30,45 11 * * *"
