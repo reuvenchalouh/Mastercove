@@ -62,7 +62,14 @@ async function fetchText(url) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), PAGE_TIMEOUT_MS);
   try {
-    const r = await fetch(url, { signal: ctrl.signal, headers: { 'User-Agent': 'Mozilla/5.0 (MasterCove stock check)' } });
+    const r = await fetch(url, {
+      signal: ctrl.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9'
+      }
+    });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     return await r.text();
   } finally {
@@ -135,10 +142,40 @@ async function emailOwner(wentOut, cameBack, failed) {
   } catch (e) { console.error('Summary email failed:', e.message); }
 }
 
+async function emailFailure(reason, details) {
+  try {
+    await resend.emails.send({
+      from: 'Master Cove <orders@mastercove.com>',
+      to: OWNER_EMAIL,
+      subject: 'Modway stock sync FAILED: nothing was changed',
+      html: `<div style="font-family:Arial,sans-serif;font-size:14px;color:#1C1A17;max-width:600px;">
+        <h2 style="font-family:Georgia,serif;font-weight:400;">Modway stock sync didn't run</h2>
+        <p><b>Reason:</b> ${escapeHtml(reason)}</p>
+        ${details ? `<p style="color:#5A5550;">${escapeHtml(details)}</p>` : ''}
+        <p>No products were changed. Your site still shows yesterday's stock.</p>
+      </div>`
+    });
+  } catch (e) { console.error('Failure email failed:', e.message); }
+}
+
 // Runs every morning (schedule set in netlify.toml).
 exports.handler = async function() {
+  try {
+    return await runSync();
+  } catch (e) {
+    console.error('Sync crashed:', e);
+    await emailFailure('The sync crashed', e && e.message);
+    return { statusCode: 500, body: 'Sync crashed: ' + (e && e.message) };
+  }
+};
+
+async function runSync() {
   const { data: products, error } = await supabase.from('products').select('id,name,finishes,top_sizes');
-  if (error) { console.error(error); return { statusCode: 500, body: 'Could not load products' }; }
+  if (error) {
+    console.error(error);
+    await emailFailure('Could not load products from the database', error.message);
+    return { statusCode: 500, body: 'Could not load products' };
+  }
 
   // Build the list of options to check, and the unique Modway pages behind them
   const options = [];
@@ -153,17 +190,26 @@ exports.handler = async function() {
 
   const results = {};
   let failed = 0;
+  const errorTypes = {};
   await runPool(Object.keys(pages), async (key) => {
     try {
       const s = await checkVariant(pages[key].handle, pages[key].variant);
-      if (s) results[key] = s; else failed++;
-    } catch (e) { failed++; }
+      if (s) results[key] = s; else { failed++; errorTypes['no stock badge on page'] = (errorTypes['no stock badge on page'] || 0) + 1; }
+    } catch (e) {
+      failed++;
+      const msg = (e && e.name === 'AbortError') ? 'timed out' : ((e && e.message) || 'unknown error');
+      errorTypes[msg] = (errorTypes[msg] || 0) + 1;
+    }
   });
+  const errorSummary = Object.entries(errorTypes).map(([k, v]) => `${k}: ${v}`).join(', ');
+  if (failed) console.log('Check errors:', errorSummary);
 
   const total = Object.keys(pages).length;
   if (!total) return { statusCode: 200, body: 'No Modway products found' };
   if (failed / total > MAX_FAILURE_RATE) {
-    console.error(`Aborting: ${failed}/${total} Modway checks failed. Nothing changed.`);
+    console.error(`Aborting: ${failed}/${total} Modway checks failed (${errorSummary}). Nothing changed.`);
+    await emailFailure(`${failed} of ${total} Modway pages couldn't be checked`,
+      `Errors: ${errorSummary}. "HTTP 403" or "HTTP 429" means Modway is blocking the server; "no stock badge" means Modway changed its page layout.`);
     return { statusCode: 502, body: 'Too many failed checks; nothing changed' };
   }
 
@@ -193,4 +239,4 @@ exports.handler = async function() {
   const summary = `Checked ${total} Modway variants (${failed} failed). ${wentOut.length} marked out, ${cameBack.length} back in, ${changed.size} products updated.`;
   console.log(summary);
   return { statusCode: 200, body: summary };
-};
+}
