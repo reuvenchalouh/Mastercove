@@ -12,8 +12,13 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 // and go OUT OF STOCK if the restock date is further away (or unknown).
 const PREORDER_CUTOFF_DAYS = 30;
 const OWNER_EMAIL = 'mastercovestore@gmail.com';
-const PARALLEL = 10;          // pages checked at the same time
-const PAGE_TIMEOUT_MS = 8000; // give up on one page after 8 seconds
+const PARALLEL = 3;           // pages checked at the same time (Modway rate-limits faster checks)
+const PAGE_TIMEOUT_MS = 5000; // give up on one page after 5 seconds
+const PAUSE_MS = 250;         // short pause between pages, per worker
+const TIME_BUDGET_MS = 18000; // Netlify scheduled functions stop at 30s; stay well under
+// The catalog is split into 4 parts, one per run at 7:00, 7:15, 7:30 and 7:45am NY
+// (schedule in netlify.toml). Each run checks one part, picked by the minute it runs.
+const SLICES = 4;
 // Lighter version of Modway's product page. If Modway changes its theme this
 // stops working and the function quietly falls back to the full page.
 const SECTION_ID = 'template--20039205847212__main';
@@ -85,13 +90,29 @@ function readStatus(html) {
   return { code: icons[0], text: text.trim() };
 }
 
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+// Fetch with polite retries when Modway says "slow down" (HTTP 429)
+async function fetchPolitely(url) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await fetchText(url);
+    } catch (e) {
+      if (e && e.message === 'HTTP 429' && attempt < 1) { await sleep(1500); continue; }
+      throw e;
+    }
+  }
+}
+
 async function checkVariant(handle, variant) {
   const base = 'https://modway.com/products/' + handle + '?' + (variant ? 'variant=' + variant + '&' : '');
   try {
-    const s = readStatus(await fetchText(base + 'section_id=' + SECTION_ID));
+    const s = readStatus(await fetchPolitely(base + 'section_id=' + SECTION_ID));
     if (s) return s;
-  } catch (e) { /* fall through to full page */ }
-  return readStatus(await fetchText(base.replace(/[?&]$/, '')));
+  } catch (e) {
+    if (e && e.message === 'HTTP 429') throw e; // don't double the load when rate-limited
+  }
+  return readStatus(await fetchPolitely(base.replace(/[?&]$/, '')));
 }
 
 // Decides whether an option should be out of stock on mastercove.com
@@ -110,10 +131,15 @@ function shouldBeOut(status) {
   return null; // unknown badge: leave alone
 }
 
-async function runPool(items, worker) {
+// Works through items a few at a time; stops starting new ones when time runs low.
+async function runPool(items, worker, deadline) {
   let i = 0;
   const runners = Array.from({ length: PARALLEL }, async () => {
-    while (i < items.length) { const n = i++; await worker(items[n]); }
+    while (i < items.length && Date.now() < deadline) {
+      const n = i++;
+      await worker(items[n]);
+      await sleep(PAUSE_MS);
+    }
   });
   await Promise.all(runners);
 }
@@ -170,6 +196,8 @@ exports.handler = async function() {
 };
 
 async function runSync() {
+  const started = Date.now();
+  const slice = Math.floor(new Date().getUTCMinutes() / 15) % SLICES;
   const { data: products, error } = await supabase.from('products').select('id,name,finishes,top_sizes');
   if (error) {
     console.error(error);
@@ -188,10 +216,15 @@ async function runSync() {
   const pages = {};
   for (const o of options) pages[o.handle + '|' + o.variant] = { handle: o.handle, variant: o.variant };
 
+  // This run's quarter of the catalog
+  const allKeys = Object.keys(pages).sort();
+  const sliceKeys = allKeys.filter((_, i) => i % SLICES === slice);
   const results = {};
   let failed = 0;
   const errorTypes = {};
-  await runPool(Object.keys(pages), async (key) => {
+  const attempted = new Set();
+  await runPool(sliceKeys, async (key) => {
+    attempted.add(key);
     try {
       const s = await checkVariant(pages[key].handle, pages[key].variant);
       if (s) results[key] = s; else { failed++; errorTypes['no stock badge on page'] = (errorTypes['no stock badge on page'] || 0) + 1; }
@@ -200,12 +233,13 @@ async function runSync() {
       const msg = (e && e.name === 'AbortError') ? 'timed out' : ((e && e.message) || 'unknown error');
       errorTypes[msg] = (errorTypes[msg] || 0) + 1;
     }
-  });
+  }, started + TIME_BUDGET_MS);
   const errorSummary = Object.entries(errorTypes).map(([k, v]) => `${k}: ${v}`).join(', ');
   if (failed) console.log('Check errors:', errorSummary);
 
-  const total = Object.keys(pages).length;
-  if (!total) return { statusCode: 200, body: 'No Modway products found' };
+  const total = attempted.size;
+  if (!allKeys.length) return { statusCode: 200, body: 'No Modway products found' };
+  if (!total) return { statusCode: 200, body: 'Nothing checked this run' };
   if (failed / total > MAX_FAILURE_RATE) {
     console.error(`Aborting: ${failed}/${total} Modway checks failed (${errorSummary}). Nothing changed.`);
     await emailFailure(`${failed} of ${total} Modway pages couldn't be checked`,
@@ -218,7 +252,9 @@ async function runSync() {
   const wentOut = [], cameBack = [];
   let unchecked = 0;
   for (const o of options) {
-    const s = results[o.handle + '|' + o.variant];
+    const key = o.handle + '|' + o.variant;
+    if (!attempted.has(key)) continue; // checked in another run
+    const s = results[key];
     const decision = s && shouldBeOut(s);
     if (!decision) { unchecked++; continue; }
     const now = o.obj.outOfStock === true;
@@ -236,7 +272,7 @@ async function runSync() {
   }
 
   await emailOwner(wentOut, cameBack, unchecked);
-  const summary = `Checked ${total} Modway variants (${failed} failed). ${wentOut.length} marked out, ${cameBack.length} back in, ${changed.size} products updated.`;
+  const summary = `Part ${slice + 1}/${SLICES}: checked ${total} of ${sliceKeys.length} Modway variants (${failed} failed). ${wentOut.length} marked out, ${cameBack.length} back in, ${changed.size} products updated.`;
   console.log(summary);
   return { statusCode: 200, body: summary };
 }
