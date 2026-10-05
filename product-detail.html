@@ -1124,10 +1124,20 @@ function showToast(msg){var t=document.getElementById('toast');t.textContent='�
 document.addEventListener('DOMContentLoaded',function(){
   cart=loadMcCart();
   updateCart();
+  // Deleted or unknown product: tell Google not to index this page, so removed
+  // products drop out of search and Merchant Center instead of showing as "Product — Master Cove"
+  function markProductNotFound(){
+    document.getElementById('pdp-title').textContent='Product not found.';
+    document.title='Product not found — Master Cove';
+    var m=document.createElement('meta');m.name='robots';m.content='noindex, nofollow';document.head.appendChild(m);
+    var ld=document.getElementById('ld-json');if(ld)ld.textContent='';
+    var cl=document.getElementById('canonical-link');if(cl)cl.parentNode.removeChild(cl);
+    var atc=document.getElementById('atc-btn');if(atc){atc.disabled=true;atc.textContent='Unavailable';}
+  }
   // Works with both new links (/products/orson-nightstand) and old ones (product-detail.html?id=123)
   var params=new URLSearchParams(window.location.search);var id=params.get('id');
   var slugMatch=window.location.pathname.match(/^\/products\/([^\/?#]+)/);var slug=slugMatch?decodeURIComponent(slugMatch[1]):'';
-  if(!id&&!slug){document.getElementById('pdp-title').textContent='Product not found.';return;}
+  if(!id&&!slug){markProductNotFound();return;}
   var lookup=slug?('slug=eq.'+encodeURIComponent(slug)):('id=eq.'+encodeURIComponent(id));
   fetch('https://slaffkwfwmudvernzjua.supabase.co/rest/v1/products?'+lookup+'&select=*',{
     headers:{'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsYWZma3dmd211ZHZlcm56anVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMzU4MDksImV4cCI6MjA5MTYxMTgwOX0.BEz8_GNKPTQB90LJBJTZFyJYFF-9ypdfbEsLAfEESqY','Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsYWZma3dmd211ZHZlcm56anVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMzU4MDksImV4cCI6MjA5MTYxMTgwOX0.BEz8_GNKPTQB90LJBJTZFyJYFF-9ypdfbEsLAfEESqY'}
@@ -1138,7 +1148,7 @@ document.addEventListener('DOMContentLoaded',function(){
         if(window.location.pathname!==clean){try{history.replaceState(null,'',clean+window.location.hash);}catch(e){}}
         var cl=document.getElementById('canonical-link');if(cl)cl.href='https://mastercove.com'+clean;
       }}
-    else{document.getElementById('pdp-title').textContent='Product not found.';}
+    else{markProductNotFound();}
   }).catch(function(){document.getElementById('pdp-title').textContent='Could not load product.';});
 });
 
