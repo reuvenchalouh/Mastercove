@@ -61,7 +61,13 @@ function firstSize(p) {
 // Price the customer sees first on the product page (for size-based items, the first size).
 function landingPrice(p) {
   const sz = firstSize(p);
-  if (sz && Number(sz.price) > 0) return Number(sz.price);
+  if (sz) {
+    // A finish inside the first size can have its own price (shown first on the page)
+    const fins = (Array.isArray(sz.finishes) ? sz.finishes : []).filter(f => f && typeof f === 'object');
+    const f = fins.find(x => !x.outOfStock) || fins[0];
+    if (f && Number(f.price) > 0) return Number(f.price);
+    if (Number(sz.price) > 0) return Number(sz.price);
+  }
   return Number(p.price || 0);
 }
 
