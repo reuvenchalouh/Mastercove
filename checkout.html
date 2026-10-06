@@ -76,6 +76,18 @@ header{background:var(--white);border-bottom:1px solid var(--border);padding:0 3
 #card-element{padding:10px 12px;border:1px solid var(--border);border-radius:2px;background:var(--white);transition:border-color .15s;}
 #card-element.focused{border-color:var(--walnut);}
 #wallet-wrap{display:none;}
+.promo-row{display:flex;gap:8px;margin-bottom:14px;}
+.promo-row .finput{flex:1;text-transform:uppercase;}
+.promo-row .finput::placeholder{text-transform:none;}
+.promo-apply{padding:0 16px;border:1px solid var(--walnut);background:var(--white);color:var(--walnut);border-radius:2px;font-family:'Outfit',sans-serif;font-size:13px;cursor:pointer;}
+.promo-apply:hover{background:var(--walnut);color:#fff;}
+.promo-apply:disabled{opacity:.5;cursor:default;}
+.promo-msg{font-size:12px;margin:-8px 0 12px;display:none;}
+.promo-msg.err{display:block;color:var(--red);}
+.promo-applied{display:none;align-items:center;justify-content:space-between;font-size:12.5px;margin-bottom:14px;padding:8px 12px;border:1px dashed var(--border);border-radius:2px;}
+.promo-applied.show{display:flex;}
+.promo-applied button{background:none;border:none;color:var(--mist);font-size:12px;cursor:pointer;text-decoration:underline;font-family:'Outfit',sans-serif;}
+.discount-row span:last-child{color:#3E7B4F;}
 #wallet-wrap.show{display:block;}
 #payment-request-button{min-height:44px;}
 .wallet-note{font-size:11px;color:var(--mist);text-align:center;margin-top:8px;}
@@ -98,7 +110,17 @@ header{background:var(--white);border-bottom:1px solid var(--border);padding:0 3
     </div>
     <div class="order-items" id="order-items"></div>
     <div class="order-totals" id="order-totals" style="display:none;">
+      <div class="promo-row" id="promo-row">
+        <input class="finput" id="promo-input" type="text" placeholder="Promo code" autocomplete="off" autocapitalize="characters" onkeydown="if(event.key==='Enter'){event.preventDefault();applyPromo();}"/>
+        <button class="promo-apply" id="promo-btn" type="button" onclick="applyPromo()">Apply</button>
+      </div>
+      <div class="promo-msg" id="promo-msg"></div>
+      <div class="promo-applied" id="promo-applied">
+        <span id="promo-applied-text"></span>
+        <button type="button" onclick="removePromo()">Remove</button>
+      </div>
       <div class="total-row"><span>Subtotal</span><span id="t-sub">$0</span></div>
+      <div class="total-row discount-row" id="t-discount-row" style="display:none;"><span id="t-discount-label">Discount</span><span id="t-discount">−$0</span></div>
       <div class="total-row"><span>Shipping</span><span id="t-ship">Free</span></div>
       <div class="total-row"><span id="t-tax-label">Tax</span><span id="t-tax">$0</span></div>
       <div class="total-row final"><span>Total</span><span id="t-total">$0</span></div>
@@ -208,13 +230,90 @@ function getShipping(){
   return cart.reduce(function(m,item){ return Math.max(m, item.shipping||0); }, 0);
 }
 
+/* ── PROMO CODES ──────────────────────────────────────────────
+   Percentage off the product subtotal (not shipping). Tax is charged
+   on the discounted subtotal. The server re-checks the code at payment. */
+var appliedPromo = null; // { code, percent, minOrder }
+
+function getDiscount(sub) {
+  if (!appliedPromo) return 0;
+  return Math.round(sub * appliedPromo.percent) / 100; // cents-accurate, same rounding as the server
+}
+
+function setPromoMsg(text) {
+  var m = document.getElementById('promo-msg');
+  m.textContent = text || '';
+  m.className = 'promo-msg' + (text ? ' err' : '');
+}
+
+function showPromoState() {
+  var row = document.getElementById('promo-row');
+  var box = document.getElementById('promo-applied');
+  if (appliedPromo) {
+    row.style.display = 'none';
+    document.getElementById('promo-applied-text').textContent = '✓ ' + appliedPromo.code + ' applied (' + appliedPromo.percent + '% off)';
+    box.classList.add('show');
+  } else {
+    row.style.display = '';
+    box.classList.remove('show');
+  }
+}
+
+function applyPromo() {
+  var input = document.getElementById('promo-input');
+  var code = (input.value || '').trim().toUpperCase();
+  if (!code) { setPromoMsg('Please enter a promo code.'); return; }
+  var btn = document.getElementById('promo-btn');
+  btn.disabled = true; btn.textContent = '…';
+  setPromoMsg('');
+  fetch('/.netlify/functions/validate-promo', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code: code, subtotal: getSubtotal() })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if (d.valid) {
+      appliedPromo = { code: d.code, percent: d.percent, minOrder: d.minOrder || 0 };
+      checkoutIdempotencyKey = null; // total changed, so this is a new payment attempt
+      input.value = '';
+      showPromoState();
+      recalcTotals();
+    } else {
+      setPromoMsg(d.error || "That promo code isn't valid.");
+    }
+  })
+  .catch(function(){ setPromoMsg('Could not check that code. Please try again.'); })
+  .then(function(){ btn.disabled = false; btn.textContent = 'Apply'; });
+}
+
+function removePromo(message) {
+  appliedPromo = null;
+  checkoutIdempotencyKey = null;
+  showPromoState();
+  setPromoMsg(message || '');
+  recalcTotals();
+}
+
 function recalcTotals(){
   if (!cart.length) return;
   var sub = getSubtotal();
   var ship = getShipping();
+  // If the cart dropped below the code's minimum (e.g. a price update), drop the code
+  if (appliedPromo && appliedPromo.minOrder && sub < appliedPromo.minOrder) {
+    appliedPromo = null; showPromoState();
+    setPromoMsg('Your promo code was removed because the order is below its minimum.');
+  }
+  var discount = getDiscount(sub);
   var stateVal = document.getElementById('f-state') ? document.getElementById('f-state').value : '';
-  var tax = calcTax(sub, stateVal);
-  orderTotal = sub + ship + tax;
+  var tax = calcTax(sub - discount, stateVal);
+  orderTotal = Math.round((sub - discount + ship + tax) * 100) / 100;
+  var dRow = document.getElementById('t-discount-row');
+  if (dRow) {
+    dRow.style.display = discount > 0 ? '' : 'none';
+    document.getElementById('t-discount-label').textContent = appliedPromo ? ('Discount (' + appliedPromo.code + ')') : 'Discount';
+    document.getElementById('t-discount').textContent = '−$' + discount.toFixed(2);
+  }
 
   var isNY = NY_STATE_NAMES.indexOf((stateVal||'').trim().toUpperCase()) >= 0;
   document.getElementById('t-tax-label').textContent = isNY ? 'Tax (NY 8.875%)' : 'Tax';
@@ -354,12 +453,14 @@ function submitPayment() {
         state: state,
         zip: zip,
         items: cart,
+        promoCode: appliedPromo ? appliedPromo.code : '',
         idempotencyKey: checkoutIdempotencyKey
       })
     })
     .then(function(r){ return r.json(); })
     .then(function(data) {
       if (data.error) {
+        if (data.promoInvalid) { removePromo(data.error); btn.disabled = false; resetPayBtn(); showErr('Your promo code could not be applied, so your total has been updated. Please review it and press Pay again.'); return; }
         if (data.updatedItems && data.updatedItems.length) {
           // Server found out-of-date prices — update the cart with the real ones
           // so the customer sees the correct total before paying.
@@ -454,14 +555,16 @@ var paymentRequest = null;
 function walletTotalCents(stateVal) {
   var sub = getSubtotal();
   var ship = getShipping();
-  var tax = calcTax(sub, stateVal || '');
-  return Math.round((sub + ship + tax) * 100);
+  var discount = getDiscount(sub);
+  var tax = calcTax(sub - discount, stateVal || '');
+  return Math.round((sub - discount + ship + tax) * 100);
 }
 
 function walletDisplayItems(stateVal) {
-  var sub = getSubtotal(), ship = getShipping(), tax = calcTax(sub, stateVal || '');
-  var rows = [{ label: 'Subtotal', amount: Math.round(sub * 100) },
-              { label: ship > 0 ? 'Shipping' : 'Shipping (free)', amount: Math.round(ship * 100) }];
+  var sub = getSubtotal(), ship = getShipping(), discount = getDiscount(sub), tax = calcTax(sub - discount, stateVal || '');
+  var rows = [{ label: 'Subtotal', amount: Math.round(sub * 100) }];
+  if (discount > 0) rows.push({ label: 'Discount (' + appliedPromo.code + ')', amount: -Math.round(discount * 100) });
+  rows.push({ label: ship > 0 ? 'Shipping' : 'Shipping (free)', amount: Math.round(ship * 100) });
   if (tax > 0) rows.push({ label: 'NY sales tax (8.875%)', amount: Math.round(tax * 100) });
   return rows;
 }
@@ -566,6 +669,7 @@ function initWalletPay() {
         email: email, name: name, phone: phone,
         address: address, city: city, state: state, zip: zip,
         items: cart,
+        promoCode: appliedPromo ? appliedPromo.code : '',
         idempotencyKey: checkoutIdempotencyKey
       })
     })
@@ -573,6 +677,7 @@ function initWalletPay() {
     .then(function(data) {
       if (data.error) {
         ev.complete('fail');
+        if (data.promoInvalid) { removePromo(data.error); showErr('Your promo code could not be applied, so your total has been updated. Please review it and try again.'); return; }
         if (data.updatedItems && data.updatedItems.length) {
           data.updatedItems.forEach(function(u){
             if (cart[u.index]) { cart[u.index].price = u.price; cart[u.index].shipping = u.shipping; }
