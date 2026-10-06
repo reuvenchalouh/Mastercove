@@ -94,6 +94,10 @@ body{font-family:'Outfit',sans-serif;background:#F0EBE3;color:var(--ink);font-si
 .frow label .req{color:var(--red);}
 .finput{width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:2px;font-family:'Outfit',sans-serif;font-size:13px;color:var(--ink);background:var(--white);outline:none;transition:border-color 0.15s;}
 .finput:focus{border-color:var(--walnut);}
+.promo-lbl{display:block;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--mist);margin-bottom:6px;}
+.promo-act{background:none;border:1px solid var(--border);border-radius:2px;padding:4px 10px;font-family:'Outfit',sans-serif;font-size:12px;cursor:pointer;margin-right:6px;color:var(--ink);}
+.promo-act:hover{border-color:var(--walnut);color:var(--walnut);}
+.promo-pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;}
 .finput::placeholder{color:var(--mist);}
 textarea.finput{resize:vertical;min-height:64px;line-height:1.6;}
 select.finput{cursor:pointer;}
@@ -306,6 +310,11 @@ async function adminUpload(path, file){
     <button class="nav-btn" id="nav-oos" onclick="showView('oos')">
       <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="4.9" y1="4.9" x2="19.1" y2="19.1"/></svg>
       Out of Stock
+    </button>
+    <div class="nav-label">Marketing</div>
+    <button class="nav-btn" id="nav-promos" onclick="showView('promos')">
+      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>
+      Promo Codes
     </button>
   </nav>
   <div class="sidebar-foot">Master Cove v2.0</div>
@@ -533,6 +542,28 @@ async function adminUpload(path, file){
           <th>Actions</th>
         </tr></thead>
         <tbody id="oos-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="view" id="view-promos">
+    <div class="panel" style="margin-bottom:20px;">
+      <div class="panel-head">
+        <div><h3>Create a Promo Code</h3><p>Percentage off the product subtotal (shipping isn't discounted). Saving an existing code updates it.</p></div>
+      </div>
+      <div style="padding:18px 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;align-items:end;">
+        <div><label class="promo-lbl">Code</label><input class="finput" id="promo-code" placeholder="WELCOME10" style="text-transform:uppercase;"/></div>
+        <div><label class="promo-lbl">Percent off</label><input class="finput" id="promo-pct" type="number" min="1" max="90" step="1" placeholder="10"/></div>
+        <div><label class="promo-lbl">Minimum order ($)</label><input class="finput" id="promo-min" type="number" min="0" step="1" placeholder="0 = none"/></div>
+        <div><label class="promo-lbl">Expires (last day valid)</label><input class="finput" id="promo-exp" type="date"/></div>
+        <div><button onclick="savePromo()" id="promo-save" style="width:100%;padding:9px 14px;background:var(--walnut);color:#fff;border:none;border-radius:2px;font-family:'Outfit',sans-serif;font-size:13px;cursor:pointer;">Save Code</button></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><div><h3>All Promo Codes</h3><p>Turn codes off anytime without deleting them</p></div></div>
+      <table class="prod-table">
+        <thead><tr><th>Code</th><th>Discount</th><th>Minimum</th><th>Expires</th><th>Uses</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="promo-tbody"><tr><td colspan="7" style="color:var(--mist);">Loading…</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -1597,10 +1628,69 @@ function renderOrders(){
 function showView(v){
   document.querySelectorAll('.view').forEach(function(el){el.classList.remove('active');});document.getElementById('view-'+v).classList.add('active');
   document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('active');});var nb=document.getElementById('nav-'+v);if(nb)nb.classList.add('active');
-  document.getElementById('page-title').innerHTML={products:'Product <em>Catalog</em>',orders:'Customer <em>Orders</em>',oos:'Out of <em>Stock</em>'}[v]||v;
+  document.getElementById('page-title').innerHTML={products:'Product <em>Catalog</em>',orders:'Customer <em>Orders</em>',oos:'Out of <em>Stock</em>',promos:'Promo <em>Codes</em>'}[v]||v;
   if(v==='orders')loadOrdersFromSupabase();
   if(v==='oos')renderOOSTable();
+  if(v==='promos')loadPromos();
   closeSidebar();
+}
+
+/* ── PROMO CODES ── */
+var promoList=[];
+function promoEsc(t){return String(t==null?'':t).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function todayNYStr(){return new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'});}
+async function loadPromos(){
+  var r=await adminDb({action:'promo_list'});
+  if(r.error){document.getElementById('promo-tbody').innerHTML='<tr><td colspan="7" style="color:var(--red);">Could not load codes: '+promoEsc(r.error.message)+'</td></tr>';return;}
+  promoList=r.data||[];renderPromos();
+}
+function renderPromos(){
+  var tb=document.getElementById('promo-tbody');
+  if(!promoList.length){tb.innerHTML='<tr><td colspan="7" style="color:var(--mist);">No promo codes yet. Create one above.</td></tr>';return;}
+  var today=todayNYStr();
+  tb.innerHTML=promoList.map(function(p){
+    var expired=p.expires_at&&today>String(p.expires_at);
+    var status=!p.active?'<span class="promo-pill" style="background:#EEE;color:#888;">Off</span>':(expired?'<span class="promo-pill" style="background:#FBF0EE;color:var(--red);">Expired</span>':'<span class="promo-pill" style="background:#EAF3EC;color:#3E7B4F;">Active</span>');
+    var exp=p.expires_at?new Date(p.expires_at+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'Never';
+    var c=promoEsc(p.code);
+    return '<tr><td><b>'+c+'</b></td><td>'+Number(p.percent_off)+'% off</td><td>'+(Number(p.min_order)>0?'$'+Number(p.min_order).toLocaleString():'None')+'</td><td>'+exp+'</td><td>'+(p.uses||0)+'</td><td>'+status+'</td>'
+      +'<td><button class="promo-act" onclick="editPromo(\''+c+'\')">Edit</button><button class="promo-act" onclick="togglePromo(\''+c+'\')">'+(p.active?'Turn off':'Turn on')+'</button><button class="promo-act" onclick="deletePromo(\''+c+'\')">Delete</button></td></tr>';
+  }).join('');
+}
+async function savePromo(){
+  var code=document.getElementById('promo-code').value.trim().toUpperCase().replace(/\s+/g,'');
+  var pct=parseFloat(document.getElementById('promo-pct').value);
+  var min=parseFloat(document.getElementById('promo-min').value)||0;
+  var exp=document.getElementById('promo-exp').value||null;
+  if(!/^[A-Z0-9_-]{2,40}$/.test(code)){showToast('Code: 2–40 letters/numbers, no spaces','error');return;}
+  if(!(pct>0&&pct<=90)){showToast('Percent off must be 1–90','error');return;}
+  var existing=promoList.find(function(p){return p.code===code;});
+  var btn=document.getElementById('promo-save');btn.disabled=true;btn.textContent='Saving…';
+  var r=await adminDb({action:'promo_upsert',promo:{code:code,percent_off:pct,min_order:min,expires_at:exp,active:existing?existing.active:true}});
+  btn.disabled=false;btn.textContent='Save Code';
+  if(r.error){showToast(r.error.message,'error');return;}
+  ['promo-code','promo-pct','promo-min','promo-exp'].forEach(function(id){document.getElementById(id).value='';});
+  showToast(existing?('Updated '+code):('Created '+code));loadPromos();
+}
+function editPromo(code){
+  var p=promoList.find(function(x){return x.code===code;});if(!p)return;
+  document.getElementById('promo-code').value=p.code;
+  document.getElementById('promo-pct').value=Number(p.percent_off);
+  document.getElementById('promo-min').value=Number(p.min_order)||'';
+  document.getElementById('promo-exp').value=p.expires_at||'';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+async function togglePromo(code){
+  var p=promoList.find(function(x){return x.code===code;});if(!p)return;
+  var r=await adminDb({action:'promo_upsert',promo:{code:p.code,percent_off:p.percent_off,min_order:p.min_order,expires_at:p.expires_at,active:!p.active}});
+  if(r.error){showToast(r.error.message,'error');return;}
+  showToast(code+(p.active?' turned off':' turned on'));loadPromos();
+}
+async function deletePromo(code){
+  if(!confirm('Delete promo code '+code+'? Customers will no longer be able to use it.'))return;
+  var r=await adminDb({action:'promo_delete',code:code});
+  if(r.error){showToast(r.error.message,'error');return;}
+  showToast('Deleted '+code);loadPromos();
 }
 
 function showToast(msg,type){
