@@ -75,6 +75,10 @@ header{background:var(--white);border-bottom:1px solid var(--border);padding:0 3
 .divider span{position:relative;background:var(--white);padding:0 12px;font-size:11px;color:var(--mist);letter-spacing:0.06em;text-transform:uppercase;}
 #card-element{padding:10px 12px;border:1px solid var(--border);border-radius:2px;background:var(--white);transition:border-color .15s;}
 #card-element.focused{border-color:var(--walnut);}
+#wallet-wrap{display:none;}
+#wallet-wrap.show{display:block;}
+#payment-request-button{min-height:44px;}
+.wallet-note{font-size:11px;color:var(--mist);text-align:center;margin-top:8px;}
 @media(max-width:768px){.checkout-wrap{grid-template-columns:1fr;}}
 </style>
 <script src="https://js.stripe.com/v3/"></script>
@@ -108,6 +112,12 @@ header{background:var(--white);border-bottom:1px solid var(--border);padding:0 3
       <p>All transactions are secure and encrypted</p>
     </div>
     <div class="form-body">
+      <!-- Express checkout: Apple Pay / Google Pay (only shows on devices that support it) -->
+      <div id="wallet-wrap">
+        <div id="payment-request-button"></div>
+        <div class="wallet-note">Shipping address and contact details come from your wallet.</div>
+        <div class="divider"><span>Or pay with card</span></div>
+      </div>
       <div class="frow">
         <label>Email Address *</label>
         <input class="finput" id="f-email" type="email" placeholder="you@email.com"/>
@@ -214,6 +224,7 @@ function recalcTotals(){
   document.getElementById('t-total').textContent = '$' + orderTotal.toLocaleString();
   var payAmt = document.getElementById('pay-amount');
   if (payAmt) payAmt.textContent = '$' + orderTotal.toLocaleString();
+  if (typeof updateWalletTotal === 'function') updateWalletTotal();
 }
 
 // Clean a phone number into (347) 206-0372 format. Returns '' if not a valid US number.
@@ -430,7 +441,180 @@ function showErr(msg) {
   el.style.display = 'block';
 }
 
+/* ─────────────────────────────────────────────────────────────
+   APPLE PAY / GOOGLE PAY (Stripe Payment Request Button)
+   Shows only on devices with a wallet set up. The wallet supplies the
+   shipping address, name, email and phone; tax is recalculated when the
+   customer picks an address (NY = 8.875%). The payment goes through the
+   same create-payment function as cards, so price checks, order saving
+   and emails all work the same way.
+   ───────────────────────────────────────────────────────────── */
+var paymentRequest = null;
+
+function walletTotalCents(stateVal) {
+  var sub = getSubtotal();
+  var ship = getShipping();
+  var tax = calcTax(sub, stateVal || '');
+  return Math.round((sub + ship + tax) * 100);
+}
+
+function walletDisplayItems(stateVal) {
+  var sub = getSubtotal(), ship = getShipping(), tax = calcTax(sub, stateVal || '');
+  var rows = [{ label: 'Subtotal', amount: Math.round(sub * 100) },
+              { label: ship > 0 ? 'Shipping' : 'Shipping (free)', amount: Math.round(ship * 100) }];
+  if (tax > 0) rows.push({ label: 'NY sales tax (8.875%)', amount: Math.round(tax * 100) });
+  return rows;
+}
+
+function walletShippingOptions() {
+  var ship = getShipping();
+  return [{ id: 'standard', label: ship > 0 ? 'Standard delivery' : 'Free delivery',
+            detail: 'Ships from our partner warehouse', amount: Math.round(ship * 100) }];
+}
+
+function updateWalletTotal() {
+  if (!paymentRequest || !cart.length) return;
+  var stateVal = document.getElementById('f-state') ? document.getElementById('f-state').value : '';
+  try {
+    paymentRequest.update({
+      total: { label: 'Master Cove', amount: walletTotalCents(stateVal) },
+      displayItems: walletDisplayItems(stateVal)
+    });
+  } catch (e) { /* can't update while the wallet sheet is open; that's fine */ }
+}
+
+function initWalletPay() {
+  if (!cart.length) return;
+  paymentRequest = stripe.paymentRequest({
+    country: 'US',
+    currency: 'usd',
+    total: { label: 'Master Cove', amount: walletTotalCents('') },
+    displayItems: walletDisplayItems(''),
+    requestPayerName: true,
+    requestPayerEmail: true,
+    requestPayerPhone: true,
+    requestShipping: true,
+    shippingOptions: walletShippingOptions(),
+    disableWallets: ['link', 'browserCard']
+  });
+
+  var prButton = elements.create('paymentRequestButton', {
+    paymentRequest: paymentRequest,
+    style: { paymentRequestButton: { type: 'buy', theme: 'dark', height: '46px' } }
+  });
+
+  paymentRequest.canMakePayment().then(function(result) {
+    if (result && (result.applePay || result.googlePay)) {
+      prButton.mount('#payment-request-button');
+      document.getElementById('wallet-wrap').classList.add('show');
+    }
+  });
+
+  // Customer picked / changed their address in the wallet: US only, recalc NY tax
+  paymentRequest.on('shippingaddresschange', function(ev) {
+    var a = ev.shippingAddress || {};
+    if (a.country && a.country !== 'US') {
+      ev.updateWith({ status: 'invalid_shipping_address' });
+      return;
+    }
+    ev.updateWith({
+      status: 'success',
+      total: { label: 'Master Cove', amount: walletTotalCents(a.region) },
+      displayItems: walletDisplayItems(a.region),
+      shippingOptions: walletShippingOptions()
+    });
+  });
+
+  // Customer approved the payment in the wallet
+  paymentRequest.on('paymentmethod', function(ev) {
+    var a = ev.shippingAddress || {};
+    var name    = (a.recipient || ev.payerName || '').trim();
+    var email   = (ev.payerEmail || '').trim();
+    var phone   = formatPhone(ev.payerPhone || a.phone || '');
+    var address = ((a.addressLine || []).filter(Boolean).join(', ')).trim();
+    var city    = (a.city || '').trim();
+    var state   = (a.region || '').trim();
+    var zip     = (a.postalCode || '').trim();
+
+    // Fill the visible form so the totals and confirmation match what was charged
+    var fill = { 'f-email': email, 'f-name': name, 'f-phone': phone, 'f-address': address, 'f-city': city, 'f-state': state, 'f-zip': zip };
+    Object.keys(fill).forEach(function(id){ var el = document.getElementById(id); if (el && fill[id]) el.value = fill[id]; });
+    recalcTotals();
+
+    if (!email || !name || !address || !city || !zip) {
+      ev.complete('fail');
+      showErr('Your wallet is missing part of your contact or shipping details. Please fill in the form and pay by card, or update your wallet and try again.');
+      return;
+    }
+    if (!phone) {
+      ev.complete('fail');
+      showErr('Please add a valid 10-digit US phone number to your wallet (the delivery team uses it), or pay by card below.');
+      return;
+    }
+
+    if (!checkoutIdempotencyKey) {
+      checkoutIdempotencyKey = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ('idem-' + Date.now() + '-' + Math.random().toString(36).slice(2));
+    }
+
+    fetch('/.netlify/functions/create-payment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        paymentMethodId: ev.paymentMethod.id,
+        amount: Math.round(orderTotal * 100),
+        currency: 'usd',
+        email: email, name: name, phone: phone,
+        address: address, city: city, state: state, zip: zip,
+        items: cart,
+        idempotencyKey: checkoutIdempotencyKey
+      })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      if (data.error) {
+        ev.complete('fail');
+        if (data.updatedItems && data.updatedItems.length) {
+          data.updatedItems.forEach(function(u){
+            if (cart[u.index]) { cart[u.index].price = u.price; cart[u.index].shipping = u.shipping; }
+          });
+          localStorage.setItem('mc_cart', JSON.stringify(cart));
+          checkoutIdempotencyKey = null;
+          loadSummary(true);
+        }
+        showErr(data.error);
+        return;
+      }
+      // Close the wallet sheet first, then finish (3D Secure may need its own popup)
+      ev.complete('success');
+      if (data.requiresAction) {
+        stripe.confirmCardPayment(data.clientSecret).then(function(res){
+          if (res.error) { showErr(res.error.message); return; }
+          fetch('/.netlify/functions/confirm-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              paymentIntentId: data.orderId,
+              amount: Math.round(orderTotal * 100),
+              email: email, name: name, phone: phone, address: address, city: city, state: state, zip: zip, items: cart
+            })
+          })
+          .then(function(r){ return r.json(); })
+          .then(function(confirmData){ onSuccess(confirmData.orderNumber || data.orderId, name, email, address, city, state, zip); })
+          .catch(function(){ onSuccess(data.orderId, name, email, address, city, state, zip); });
+        });
+      } else {
+        onSuccess(data.orderNumber || data.orderId, name, email, address, city, state, zip);
+      }
+    })
+    .catch(function(){
+      ev.complete('fail');
+      showErr('Something went wrong. Please try again.');
+    });
+  });
+}
+
 loadSummary();
+initWalletPay();
 </script>
 </body>
 </html>
