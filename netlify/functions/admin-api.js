@@ -61,6 +61,37 @@ exports.handler = async function(event) {
       return json(200, { path: data.path, token: data.token });
     }
 
+    // ---- Promo codes ----
+    if (action === 'promo_list') {
+      const { data, error } = await supabase.from('promo_codes').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
+      return json(200, { data: data || [] });
+    }
+
+    if (action === 'promo_upsert') {
+      const p = body.promo || {};
+      const code = String(p.code || '').trim().toUpperCase().replace(/\s+/g, '');
+      if (!/^[A-Z0-9_-]{2,40}$/.test(code)) return json(400, { error: 'Code must be 2–40 letters or numbers (no spaces).' });
+      const pct = Number(p.percent_off);
+      if (!(pct > 0 && pct <= 90)) return json(400, { error: 'Percent off must be between 1 and 90.' });
+      const min = Number(p.min_order) || 0;
+      if (min < 0) return json(400, { error: 'Minimum order can\'t be negative.' });
+      const exp = p.expires_at ? String(p.expires_at).slice(0, 10) : null;
+      if (exp && !/^\d{4}-\d{2}-\d{2}$/.test(exp)) return json(400, { error: 'Bad expiration date.' });
+      const row = { code, percent_off: pct, min_order: min, expires_at: exp, active: p.active !== false };
+      const { error } = await supabase.from('promo_codes').upsert(row);
+      if (error) throw error;
+      return json(200, { success: true });
+    }
+
+    if (action === 'promo_delete') {
+      const code = String(body.code || '').trim().toUpperCase();
+      if (!code) return json(400, { error: 'Missing code.' });
+      const { error } = await supabase.from('promo_codes').delete().eq('code', code);
+      if (error) throw error;
+      return json(200, { success: true });
+    }
+
     return json(400, { error: 'Unknown action.' });
   } catch (err) {
     console.error('Admin-api error:', err.message);
