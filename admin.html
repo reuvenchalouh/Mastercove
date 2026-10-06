@@ -716,7 +716,7 @@ function addFinish(color,name,photos,sku,outOfStock,finLink,fabrics){
   document.getElementById('finish-builder').appendChild(card);
   finishPhotos[id]=photos.slice();
   renderFinPhotos(id);
-  if(fabrics&&fabrics.length){fabrics.forEach(function(fab){addFabricToFinish(id,fab.name||'',fab.outOfStock||false,fab.photos||[],fab.swatch||'',fab.sku||'',fab.link||'',fab.type||'');});}
+  if(fabrics&&fabrics.length){fabrics.forEach(function(fab){addFabricToFinish(id,fab.name||'',fab.outOfStock||false,fab.photos||[],fab.swatch||'',fab.sku||'',fab.link||'',fab.type||'',fab.price||'');});}
   var oosDiv=document.createElement('div');oosDiv.style.cssText='margin:8px 0;padding:8px 10px;background:var(--sand);border-radius:2px;display:flex;align-items:center;gap:8px;';
   var oosChk=document.createElement('input');oosChk.type='checkbox';oosChk.id='oos'+id;oosChk.checked=outOfStock||false;oosChk.style.cssText='width:15px;height:15px;cursor:pointer;';oosChk.onchange=function(){updateOOS(id,this.checked);};
   var oosLbl=document.createElement('label');oosLbl.htmlFor='oos'+id;oosLbl.style.cssText='font-size:12px;color:var(--slate);cursor:pointer;';oosLbl.innerHTML='Mark as <b>Out of Stock</b> — hides this finish from customers';
@@ -790,7 +790,8 @@ function getFinishes(){
         var fsku=document.getElementById('fabsku'+fid)?document.getElementById('fabsku'+fid).value.trim():'';
         var flink=document.getElementById('fablink'+fid)?document.getElementById('fablink'+fid).value.trim():'';
         var ftype=document.getElementById('fabtype'+fid)?document.getElementById('fabtype'+fid).value.trim():'';
-        if(fname)fabrics.push({name:fname,outOfStock:foos,photos:fphotos,swatch:fswatch,sku:fsku,link:flink,type:ftype});
+        var fbprice=document.getElementById('fabprice'+fid)?parseFloat(document.getElementById('fabprice'+fid).value)||0:0;
+        if(fname){var fbo={name:fname,outOfStock:foos,photos:fphotos,swatch:fswatch,sku:fsku,link:flink,type:ftype};if(fbprice>0)fbo.price=fbprice;fabrics.push(fbo);}
       });
     }
     if(name||color)result.push({color:color,name:name,photos:photos,sku:sku,outOfStock:outOfStock,link:finLink,fabrics:fabrics});
@@ -1001,7 +1002,7 @@ function addFinishToSize(sizeId,color,name,photos,outOfStock,sku,link,fabrics,pr
   body.appendChild(fabDivider);
 
   card.appendChild(body);builder.appendChild(card);renderFinPhotos(id);
-  if(fabrics&&fabrics.length){fabrics.forEach(function(fab){addFabricToFinish(id,fab.name||'',fab.outOfStock||false,fab.photos||[],fab.swatch||'',fab.sku||'',fab.link||'',fab.type||'');});}
+  if(fabrics&&fabrics.length){fabrics.forEach(function(fab){addFabricToFinish(id,fab.name||'',fab.outOfStock||false,fab.photos||[],fab.swatch||'',fab.sku||'',fab.link||'',fab.type||'',fab.price||'');});}
 }
 
 function getTopSizes(){
@@ -1037,7 +1038,8 @@ function getTopSizes(){
             var fabsku=document.getElementById('fabsku'+fabid)?document.getElementById('fabsku'+fabid).value.trim():'';
             var fablink=document.getElementById('fablink'+fabid)?document.getElementById('fablink'+fabid).value.trim():'';
             var fabtype=document.getElementById('fabtype'+fabid)?document.getElementById('fabtype'+fabid).value.trim():'';
-            if(fabname)ffabrics.push({name:fabname,outOfStock:faboos,photos:fabphotos,swatch:fabswatch,sku:fabsku,link:fablink,type:fabtype});
+            var fabprice=document.getElementById('fabprice'+fabid)?parseFloat(document.getElementById('fabprice'+fabid).value)||0:0;
+            if(fabname){var fbo2={name:fabname,outOfStock:faboos,photos:fabphotos,swatch:fabswatch,sku:fabsku,link:fablink,type:fabtype};if(fabprice>0)fbo2.price=fabprice;ffabrics.push(fbo2);}
           });
         }
         if(fname||fcolor){var fo={color:fcolor,name:fname,photos:fphotos,outOfStock:foos,sku:fsku,link:flink,fabrics:ffabrics};if(fprice>0)fo.price=fprice;finishes.push(fo);}
@@ -1058,8 +1060,8 @@ function getTopSizes(){
 }
 function selBadge(el,val){document.querySelectorAll('.badge-opt').forEach(function(b){b.classList.remove('sel');});el.classList.add('sel');selectedBadge=val;}
 
-function addFabricToFinish(finId,name,outOfStock,photos,swatch,sku,link,fabType){
-  name=name||'';outOfStock=outOfStock||false;photos=photos||[];swatch=swatch||'';sku=sku||'';link=link||'';fabType=fabType||'';
+function addFabricToFinish(finId,name,outOfStock,photos,swatch,sku,link,fabType,price){
+  name=name||'';outOfStock=outOfStock||false;photos=photos||[];swatch=swatch||'';sku=sku||'';link=link||'';fabType=fabType||'';price=price||'';
   var id='fab'+Date.now()+Math.floor(Math.random()*9999);
   if(!finishPhotos[id])finishPhotos[id]=(Array.isArray(photos)?photos:[]).slice();
   if(swatch)fabricSwatches[id]=swatch;
@@ -1093,6 +1095,10 @@ function addFabricToFinish(finId,name,outOfStock,photos,swatch,sku,link,fabType)
   var fabSkuLbl=document.createElement('span');fabSkuLbl.style.cssText='font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--mist);font-weight:500;display:block;margin-bottom:4px;';fabSkuLbl.textContent='SKU (optional)';
   var fabSkuInp=document.createElement('input');fabSkuInp.type='text';fabSkuInp.id='fabsku'+id;fabSkuInp.value=sku;fabSkuInp.placeholder='e.g. SOFA-MOCHA-VEL';fabSkuInp.style.cssText='width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:2px;font-family:monospace;font-size:12px;outline:none;margin-bottom:10px;';
   body.appendChild(fabSkuLbl);body.appendChild(fabSkuInp);
+
+  var fabPriceLbl=document.createElement('span');fabPriceLbl.style.cssText='font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--mist);font-weight:500;display:block;margin-bottom:4px;';fabPriceLbl.textContent='Fabric Price (optional, overrides finish/size price)';
+  var fabPriceInp=document.createElement('input');fabPriceInp.type='number';fabPriceInp.step='0.01';fabPriceInp.min='0';fabPriceInp.id='fabprice'+id;fabPriceInp.value=price||'';fabPriceInp.placeholder='Leave blank to use the finish/size price';fabPriceInp.style.cssText='width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:2px;font-family:Outfit,sans-serif;font-size:12px;outline:none;margin-bottom:10px;';
+  body.appendChild(fabPriceLbl);body.appendChild(fabPriceInp);
 
   var fabLinkLbl=document.createElement('span');fabLinkLbl.style.cssText='font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--mist);font-weight:500;display:block;margin-bottom:4px;';fabLinkLbl.textContent='Supplier Link (optional)';
   var fabLinkInp=document.createElement('input');fabLinkInp.type='text';fabLinkInp.id='fablink'+id;fabLinkInp.value=link;fabLinkInp.placeholder='https://hernest.com/products/...';fabLinkInp.style.cssText='width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:2px;font-family:Outfit,sans-serif;font-size:12px;outline:none;margin-bottom:10px;';
@@ -1217,6 +1223,8 @@ function submitProduct(){
       var fsz=topSizes[0];var ffins=(fsz&&fsz.finishes)||[];
       var ffin=ffins.find(function(f){return !f.outOfStock;})||ffins[0];
       if(fsz===firstValidSize&&ffin&&ffin.price>0)price=ffin.price;
+      var ffabs=(ffin&&ffin.fabrics)||[];var ffab=ffabs.find(function(b){return !b.outOfStock;})||ffabs[0];
+      if(fsz===firstValidSize&&ffab&&ffab.price>0)price=ffab.price;
     } else if(!price||price<=0){
       showToast('Enter a price — either in Retail Price above, or on at least one size','error');return;
     }
