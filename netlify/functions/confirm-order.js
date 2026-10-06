@@ -61,6 +61,38 @@ function findUnitPrice(p, item) {
   return null; // size doesn't exist on this product
 }
 
+// ---------------------------------------------------------------------------
+// PROMO CODES (percentage off the product subtotal; shipping is never discounted)
+// Codes live in the Supabase table promo_codes and can only be read by the server.
+// Tax is charged on the discounted subtotal.
+// ---------------------------------------------------------------------------
+function computeTotals(subCents, shipCents, state, percentOff) {
+  const pct = Number(percentOff) || 0;
+  const discountCents = pct > 0 ? Math.round(subCents * pct / 100) : 0;
+  const taxable = subCents - discountCents;
+  const isNY = NY_STATE_NAMES.indexOf(String(state || '').trim().toUpperCase()) >= 0;
+  const taxCents = isNY ? Math.round(taxable * NY_TAX_RATE) : 0;
+  return { discountCents, taxCents, totalCents: taxable + shipCents + taxCents };
+}
+
+function todayNY() {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' }); // YYYY-MM-DD
+}
+
+async function lookupPromo(rawCode, subCents) {
+  const code = String(rawCode || '').trim().toUpperCase();
+  if (!code) return null;
+  if (code.length > 40) return { error: "That promo code isn't valid." };
+  const { data, error } = await supabase.from('promo_codes').select('*').eq('code', code).maybeSingle();
+  if (error || !data || !data.active) return { error: "That promo code isn't valid." };
+  if (data.expires_at && todayNY() > String(data.expires_at)) return { error: 'That promo code has expired.' };
+  const minCents = toCents(data.min_order);
+  if (subCents < minCents) {
+    return { error: 'This code requires a minimum order of $' + (minCents / 100).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + '.' };
+  }
+  return { code, percent: Number(data.percent_off), minOrder: Number(data.min_order) };
+}
+
 async function priceCart(supabase, items, state) {
   if (!Array.isArray(items) || !items.length) return { error: 'Your cart is empty.' };
   if (items.length > 50) return { error: 'Too many items in cart.' };
@@ -114,11 +146,8 @@ async function priceCart(supabase, items, state) {
     });
   }
 
-  const isNY = NY_STATE_NAMES.indexOf(String(state || '').trim().toUpperCase()) >= 0;
-  const taxCents = isNY ? Math.round(subCents * NY_TAX_RATE) : 0;
-  const totalCents = subCents + shipCents + taxCents;
-
-  return { totalCents, subCents, shipCents, taxCents, verifiedItems, updatedItems };
+  const totals = computeTotals(subCents, shipCents, state, 0);
+  return Object.assign({ subCents, shipCents, verifiedItems, updatedItems }, totals);
 }
 // ---------------------------------------------------------------------------
 
@@ -157,6 +186,11 @@ exports.handler = async function(event) {
     const effectiveAmount = intent.amount;
     let items = body.items;
     const priced = await priceCart(supabase, body.items, state);
+    const md = intent.metadata || {};
+    const promoCode = md.promo_code || '';
+    const promoPct = Number(md.promo_percent) || 0;
+    const promoText = promoCode ? (promoCode + ' (' + promoPct + '% off, -$' + ((Number(md.discount_cents) || 0) / 100).toFixed(2) + ')') : '';
+    if (!priced.error && promoPct > 0) Object.assign(priced, computeTotals(priced.subCents, priced.shipCents, state, promoPct));
     if (!priced.error) {
       items = priced.verifiedItems; // real product names + supplier links from Supabase
       if (Math.abs(priced.totalCents - intent.amount) > 1) {
@@ -164,9 +198,10 @@ exports.handler = async function(event) {
       }
     }
     const revenue = (Math.round(effectiveAmount) / 100).toFixed(2);
-    const orderNumber = await saveOrder({ email, name, phone, address, city, state, zip, items, amount: effectiveAmount, stripeId: paymentIntentId });
+    const orderNumber = await saveOrder({ email, name, phone, address, city, state, zip, items, amount: effectiveAmount, stripeId: paymentIntentId, promoText });
+    if (promoCode) { try { await supabase.rpc('increment_promo_use', { c: promoCode }); } catch (e) { console.error('Promo count error:', e.message); } }
     const fullAddress = address + ', ' + city + ', ' + state + ' ' + zip;
-    await sendOwnerNotification({ orderNumber, customerName: name, customerEmail: email, customerPhone: phone, items, address: fullAddress, revenue });
+    await sendOwnerNotification({ orderNumber, customerName: name, customerEmail: email, customerPhone: phone, items, address: fullAddress, revenue, promoText });
 
     return { statusCode: 200, body: JSON.stringify({ success: true, orderNumber }) };
   } catch (err) {
@@ -175,7 +210,7 @@ exports.handler = async function(event) {
   }
 };
 
-async function sendOwnerNotification({ orderNumber, customerName, customerEmail, customerPhone, items, address, revenue }) {
+async function sendOwnerNotification({ orderNumber, customerName, customerEmail, customerPhone, items, address, revenue, promoText }) {
   try {
     const itemRows = (items || []).map(function(i) {
       var variantParts = []; if (i.finish) variantParts.push(i.finish); if (i.fabric) variantParts.push(i.fabric); var label = i.name + (variantParts.length ? ' (' + variantParts.join(' / ') + ')' : '');
@@ -204,6 +239,7 @@ async function sendOwnerNotification({ orderNumber, customerName, customerEmail,
             <tr><td style="padding:8px 0;color:#888;font-size:13px;border-bottom:1px solid #eee;">Customer</td><td colspan="2" style="padding:8px 0;font-size:13px;border-bottom:1px solid #eee;">${customerName} (${customerEmail})</td></tr>
             <tr><td style="padding:8px 0;color:#888;font-size:13px;border-bottom:1px solid #eee;">Phone</td><td colspan="2" style="padding:8px 0;font-size:13px;border-bottom:1px solid #eee;">${customerPhone || 'Not provided'}</td></tr>
             <tr><td style="padding:8px 0;color:#888;font-size:13px;border-bottom:1px solid #eee;">Ship To</td><td colspan="2" style="padding:8px 0;font-size:13px;border-bottom:1px solid #eee;">${address}</td></tr>
+            ${promoText ? `<tr><td style="padding:8px 0;color:#888;font-size:13px;border-bottom:1px solid #eee;">Promo</td><td colspan="2" style="padding:8px 0;font-size:13px;border-bottom:1px solid #eee;">${promoText}</td></tr>` : ''}
             <tr><td style="padding:8px 0;color:#888;font-size:13px;border-bottom:1px solid #eee;">Total</td><td colspan="2" style="padding:8px 0;font-weight:700;font-size:15px;color:#6B4C35;border-bottom:1px solid #eee;">$${revenue}</td></tr>
           </table>
           <div style="margin-top:20px;">
@@ -231,7 +267,7 @@ async function sendOwnerNotification({ orderNumber, customerName, customerEmail,
   }
 }
 
-async function saveOrder({ email, name, phone, address, city, state, zip, items, amount, stripeId }) {
+async function saveOrder({ email, name, phone, address, city, state, zip, items, amount, stripeId, promoText }) {
   try {
     const { count } = await supabase.from('orders').select('*', { count: 'exact', head: true });
     const orderNumber = 'MC-' + String((count || 0) + 1).padStart(4, '0');
@@ -254,7 +290,7 @@ async function saveOrder({ email, name, phone, address, city, state, zip, items,
       revenue: revenue,
       cost: 0,
       link: (items && items[0] && items[0].supplierLink) ? items[0].supplierLink : '',
-      notes: phone ? ('Phone: ' + phone) : '',
+      notes: [phone ? ('Phone: ' + phone) : '', promoText ? ('Promo: ' + promoText) : ''].filter(Boolean).join(' · '),
       status: 'new',
       timestamps: {},
       stripe_id: stripeId,
