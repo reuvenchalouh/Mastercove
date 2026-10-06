@@ -61,6 +61,10 @@ function findUnitPrice(p, item) {
     const sz = topSizes.find(s => String(s.name || '') === String(item.size || ''))
             || topSizes.find(s => norm(s.name) === wantSize);
     if (!sz) return null; // size-mode product must have a real size chosen
+    // A finish inside the size can carry its own price (e.g. Lippa colors)
+    const fins = Array.isArray(sz.finishes) ? sz.finishes.filter(f => f && typeof f === 'object') : [];
+    const fin = fins.find(f => norm(f.name) === norm(item.finish)) || (fins.length === 1 ? fins[0] : null);
+    if (fin && Number(fin.price) > 0) return Number(fin.price);
     return Number(sz.price) > 0 ? Number(sz.price) : base;
   }
 
