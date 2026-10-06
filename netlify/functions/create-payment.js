@@ -64,11 +64,21 @@ function findUnitPrice(p, item) {
     // A finish inside the size can carry its own price (e.g. Lippa colors)
     const fins = Array.isArray(sz.finishes) ? sz.finishes.filter(f => f && typeof f === 'object') : [];
     const fin = fins.find(f => norm(f.name) === norm(item.finish)) || (fins.length === 1 ? fins[0] : null);
+    // A fabric color inside the finish can carry its own price (e.g. Keynote colors)
+    const fabs = fin && Array.isArray(fin.fabrics) ? fin.fabrics.filter(b => b && typeof b === 'object') : [];
+    const fab = item.fabric ? fabs.find(b => norm(b.name) === norm(item.fabric)) : null;
+    if (fab && Number(fab.price) > 0) return Number(fab.price);
     if (fin && Number(fin.price) > 0) return Number(fin.price);
     return Number(sz.price) > 0 ? Number(sz.price) : base;
   }
 
   const finishes = (Array.isArray(p.finishes) ? p.finishes : []).filter(f => f && typeof f === 'object');
+  // Finish-first products: a fabric color can carry its own price
+  if (item.fabric) {
+    const fin = finishes.find(f => norm(f.name) === norm(item.finish)) || (finishes.length === 1 ? finishes[0] : null);
+    const fab = fin && Array.isArray(fin.fabrics) ? fin.fabrics.find(b => b && norm(b.name) === norm(item.fabric)) : null;
+    if (fab && Number(fab.price) > 0) return Number(fab.price);
+  }
   if (!wantSize) return base;
   const anySizes = finishes.some(f => Array.isArray(f.sizes) && f.sizes.length);
   if (!anySizes) return base;
@@ -315,10 +325,22 @@ async function sendOwnerNotification({ orderNumber, customerName, customerEmail,
   }
 }
 
+// Random, non-sequential order numbers (e.g. MC-482917) so customers can't tell
+// how many orders the store has had. Checks the database to avoid duplicates.
+async function generateOrderNumber() {
+  const crypto = require('crypto');
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const candidate = 'MC-' + String(crypto.randomInt(100000, 1000000));
+    const { data, error } = await supabase.from('orders').select('id').eq('order_number', candidate).limit(1);
+    if (!error && (!data || !data.length)) return candidate;
+  }
+  // Extremely unlikely fallback: longer number
+  return 'MC-' + String(crypto.randomInt(10000000, 100000000));
+}
+
 async function saveOrder({ email, name, phone, address, city, state, zip, items, amount, stripeId, promoText }) {
   try {
-    const { count } = await supabase.from('orders').select('*', { count: 'exact', head: true });
-    const orderNumber = 'MC-' + String((count || 0) + 1).padStart(4, '0');
+    const orderNumber = await generateOrderNumber();
     const productNames = (items || []).map(i => {
       var qty = i.qty || i.quantity || 1;
       return i.name + (qty > 1 ? ' x' + qty : '');
