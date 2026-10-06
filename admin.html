@@ -922,7 +922,7 @@ function addTopSize(sizeName,price,dims,outOfStock,finishes,componentDims,sku,li
   document.getElementById('size-builder-top').appendChild(card);
 
   if(finishes&&finishes.length){
-    finishes.forEach(function(fn){addFinishToSize(id,fn.color||'',fn.name||'',fn.photos||[],fn.outOfStock||false,fn.sku||'',fn.link||'',fn.fabrics||[]);});
+    finishes.forEach(function(fn){addFinishToSize(id,fn.color||'',fn.name||'',fn.photos||[],fn.outOfStock||false,fn.sku||'',fn.link||'',fn.fabrics||[],fn.price||'');});
   }
   if(componentDims&&componentDims.length){
     componentDims.forEach(function(cd){addComponentDim(id,cd.label||'',cd.w||'',cd.d||'',cd.h||'');});
@@ -943,8 +943,8 @@ function addComponentDim(sizeId,label,w,d,h){
   builder.appendChild(row);
 }
 
-function addFinishToSize(sizeId,color,name,photos,outOfStock,sku,link,fabrics){
-  color=color||'';name=name||'';photos=photos||[];outOfStock=outOfStock||false;sku=sku||'';link=link||'';fabrics=fabrics||[];
+function addFinishToSize(sizeId,color,name,photos,outOfStock,sku,link,fabrics,price){
+  color=color||'';name=name||'';photos=photos||[];outOfStock=outOfStock||false;sku=sku||'';link=link||'';fabrics=fabrics||[];price=price||'';
   var id='tszf'+Date.now()+Math.floor(Math.random()*9999);
   if(!finishPhotos[id])finishPhotos[id]=photos.slice();
   var builder=document.getElementById('tsz-fin-builder-'+sizeId);if(!builder)return;
@@ -970,6 +970,10 @@ function addFinishToSize(sizeId,color,name,photos,outOfStock,sku,link,fabrics){
   var tszSkuLbl=document.createElement('span');tszSkuLbl.style.cssText='font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--mist);font-weight:500;display:block;margin-bottom:4px;';tszSkuLbl.textContent='SKU (optional)';
   var tszSkuInp=document.createElement('input');tszSkuInp.type='text';tszSkuInp.id='tszfsku'+id;tszSkuInp.value=sku||'';tszSkuInp.placeholder='e.g. BED-CHEV-NAT-QUEEN';tszSkuInp.style.cssText='width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:2px;font-family:monospace;font-size:12px;outline:none;margin-bottom:10px;';
   body.appendChild(tszSkuLbl);body.appendChild(tszSkuInp);
+
+  var tszPriceLbl=document.createElement('span');tszPriceLbl.style.cssText='font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--mist);font-weight:500;display:block;margin-bottom:4px;';tszPriceLbl.textContent='Finish Price (optional, overrides size price)';
+  var tszPriceInp=document.createElement('input');tszPriceInp.type='number';tszPriceInp.step='0.01';tszPriceInp.min='0';tszPriceInp.id='tszfprice'+id;tszPriceInp.value=price||'';tszPriceInp.placeholder='Leave blank to use the size price';tszPriceInp.style.cssText='width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:2px;font-family:Outfit,sans-serif;font-size:12px;outline:none;margin-bottom:10px;';
+  body.appendChild(tszPriceLbl);body.appendChild(tszPriceInp);
 
   var tszLinkLbl=document.createElement('span');tszLinkLbl.style.cssText='font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--mist);font-weight:500;display:block;margin-bottom:4px;';tszLinkLbl.textContent='Supplier Link (optional)';
   var tszLinkInp=document.createElement('input');tszLinkInp.type='text';tszLinkInp.id='tszflink'+id;tszLinkInp.value=link||'';tszLinkInp.placeholder='https://modway.com/products/...';tszLinkInp.style.cssText='width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:2px;font-family:Outfit,sans-serif;font-size:12px;outline:none;margin-bottom:10px;';
@@ -1020,6 +1024,7 @@ function getTopSizes(){
         var fphotos=finishPhotos[fid]||[];
         var fsku=document.getElementById('tszfsku'+fid)?document.getElementById('tszfsku'+fid).value.trim():'';
         var flink=document.getElementById('tszflink'+fid)?document.getElementById('tszflink'+fid).value.trim():'';
+        var fprice=document.getElementById('tszfprice'+fid)?parseFloat(document.getElementById('tszfprice'+fid).value)||0:0;
         var ffabrics=[];
         var fabBuilder=document.getElementById('fab-builder-'+fid);
         if(fabBuilder){
@@ -1035,7 +1040,7 @@ function getTopSizes(){
             if(fabname)ffabrics.push({name:fabname,outOfStock:faboos,photos:fabphotos,swatch:fabswatch,sku:fabsku,link:fablink,type:fabtype});
           });
         }
-        if(fname||fcolor)finishes.push({color:fcolor,name:fname,photos:fphotos,outOfStock:foos,sku:fsku,link:flink,fabrics:ffabrics});
+        if(fname||fcolor){var fo={color:fcolor,name:fname,photos:fphotos,outOfStock:foos,sku:fsku,link:flink,fabrics:ffabrics};if(fprice>0)fo.price=fprice;finishes.push(fo);}
       });
     }
     var componentDims=[];
@@ -1208,6 +1213,10 @@ function submitProduct(){
     var firstValidSize=topSizes.find(function(s){return s.price>0;});
     if(firstValidSize){
       price=firstValidSize.price;
+      // If the first size's first finish has its own price, that's the price shoppers see first
+      var fsz=topSizes[0];var ffins=(fsz&&fsz.finishes)||[];
+      var ffin=ffins.find(function(f){return !f.outOfStock;})||ffins[0];
+      if(fsz===firstValidSize&&ffin&&ffin.price>0)price=ffin.price;
     } else if(!price||price<=0){
       showToast('Enter a price — either in Retail Price above, or on at least one size','error');return;
     }
