@@ -45,6 +45,10 @@ function collectOptions(p) {
   const label = (...parts) => parts.filter(Boolean).join(' / ');
   (p.finishes || []).forEach(f => {
     if (isModway(f.link)) out.push({ obj: f, link: f.link, label: label(f.name) });
+    // Sizes inside a finish (e.g. Lippa: each color comes in 48" / 60" / 78")
+    (f.sizes || []).forEach(sz => {
+      if (sz && isModway(sz.link)) out.push({ obj: sz, link: sz.link, label: label(f.name, sz.name) });
+    });
     (f.fabrics || []).forEach(b => {
       if (isModway(b.link)) out.push({ obj: b, link: b.link, label: label(f.name !== 'Fabric Only' && f.name, b.name) });
     });
