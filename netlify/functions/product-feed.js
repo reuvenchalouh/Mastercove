@@ -65,6 +65,9 @@ function landingPrice(p) {
     // A finish inside the first size can have its own price (shown first on the page)
     const fins = (Array.isArray(sz.finishes) ? sz.finishes : []).filter(f => f && typeof f === 'object');
     const f = fins.find(x => !x.outOfStock) || fins[0];
+    const fabs = f && Array.isArray(f.fabrics) ? f.fabrics.filter(b => b && typeof b === 'object') : [];
+    const b = fabs.find(x => !x.outOfStock) || fabs[0];
+    if (b && Number(b.price) > 0) return Number(b.price);
     if (f && Number(f.price) > 0) return Number(f.price);
     if (Number(sz.price) > 0) return Number(sz.price);
   }
