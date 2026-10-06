@@ -32,6 +32,26 @@ const NY_STATE_NAMES = ['NY', 'NEW YORK'];
 function norm(s) { return String(s || '').trim().toLowerCase(); }
 function toCents(n) { return Math.round((Number(n) || 0) * 100); }
 
+// Supplier link for the exact option the customer bought (finish / fabric / size),
+// so the "Buy from Supplier" button in your order email opens the right variant.
+// Falls back to the product's main supplier link.
+function findVariantLink(p, item) {
+  const pick = (arr, name) => (Array.isArray(arr) ? arr : []).find(x => x && typeof x === 'object' && norm(x.name) === norm(name));
+  const only = arr => (Array.isArray(arr) && arr.length === 1) ? arr[0] : null;
+  if (p.variant_mode === 'size' && Array.isArray(p.top_sizes) && p.top_sizes.length) {
+    const sz = pick(p.top_sizes, item.size);
+    if (!sz) return '';
+    const f = pick(sz.finishes, item.finish) || only(sz.finishes);
+    const fab = f ? pick(f.fabrics, item.fabric) : null;
+    return (fab && fab.link) || (f && f.link) || sz.link || '';
+  }
+  const f = pick(p.finishes, item.finish) || only(p.finishes);
+  if (!f) return '';
+  const s = pick(f.sizes, item.size);
+  const fab = pick(f.fabrics, item.fabric);
+  return (s && s.link) || (fab && fab.link) || f.link || '';
+}
+
 function findUnitPrice(p, item) {
   const base = Number(p.price) || 0;
   const wantSize = norm(item.size);
@@ -142,7 +162,7 @@ async function priceCart(supabase, items, state) {
       size: String(item.size || ''),
       qty: qty,
       price: unit,
-      supplierLink: p.supplier_link || ''
+      supplierLink: findVariantLink(p, item) || p.supplier_link || ''
     });
   }
 
