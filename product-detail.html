@@ -539,6 +539,17 @@ function isProductInStock(p){
   }
   return false;
 }
+// Price shown first on the page, matching the Google product feed
+function schemaLandingPrice(p){
+  var sz=(p.variantMode==='size'&&p.topSizes&&p.topSizes.length)?p.topSizes[0]:null;
+  if(sz){
+    var fins=(sz.finishes||[]).filter(function(f){return f&&typeof f==='object';});
+    var f=fins.find(function(x){return !x.outOfStock;})||fins[0];
+    if(f&&Number(f.price)>0)return Number(f.price);
+    if(Number(sz.price)>0)return Number(sz.price);
+  }
+  return p.price;
+}
 function injectProductSchema(p,metaDesc){
   var el=document.getElementById('ld-json');if(!el)return;
   var img=getSchemaImage(p);
@@ -553,7 +564,7 @@ function injectProductSchema(p,metaDesc){
       "@type":"Offer",
       "url":p.slug?("https://mastercove.com/products/"+p.slug):("https://mastercove.com/product-detail.html?id="+encodeURIComponent(p.id)),
       "priceCurrency":"USD",
-      "price":p.price,
+      "price":schemaLandingPrice(p),
       "availability":isProductInStock(p)?"https://schema.org/InStock":"https://schema.org/OutOfStock",
       "itemCondition":"https://schema.org/NewCondition",
       "hasMerchantReturnPolicy":{
@@ -835,6 +846,14 @@ function renderFabrics(fabrics){
 
 /* ── SIZE-FIRST MODE (Beds) ── */
 var currentTopSize=null;
+var currentTopSizePrice=0;   // price of the selected size
+var currentTopFinishPrice=0; // optional price of the selected finish (overrides the size price)
+// Lowest price a customer can pay for a size (finish prices can override the size price)
+function sizeFromPrice(sz){
+  var fins=sz.finishes||[];
+  var prices=fins.map(function(f){return Number(f.price)>0?Number(f.price):(Number(sz.price)||0);}).filter(function(x){return x>0;});
+  return prices.length?Math.min.apply(null,prices):(Number(sz.price)||0);
+}
 function renderTopSizeMode(topSizes,fallbackImg){
   var sizes=(topSizes||[]).map(function(s){
     return{name:s.name||'',price:s.price||0,outOfStock:s.outOfStock||false,dims:s.dims||{},sku:s.sku||'',componentDims:s.componentDims||[],desc:s.desc||'',features:s.features||'',
@@ -843,7 +862,9 @@ function renderTopSizeMode(topSizes,fallbackImg){
   var grid=document.getElementById('top-size-grid');grid.innerHTML='';
   sizes.forEach(function(sz,j){
     var div=document.createElement('div');div.className='sz-opt'+(j===0&&!sz.outOfStock?' active':'')+(sz.outOfStock?' oos':'');
-    div.innerHTML=sz.name+(sz.price?'<span class="sz-price">$'+Number(sz.price).toLocaleString()+'</span>':'');
+    var fromP=sizeFromPrice(sz);
+    var variesP=(sz.finishes||[]).some(function(f){var fp=Number(f.price)>0?Number(f.price):(Number(sz.price)||0);return fp!==fromP;});
+    div.innerHTML=sz.name+(fromP?'<span class="sz-price">'+(variesP?'from ':'')+'$'+Number(fromP).toLocaleString()+'</span>':'');
     div._sz=sz;
     div.addEventListener('click',function(){selectTopSize(this,this._sz);});
     grid.appendChild(div);
@@ -879,6 +900,8 @@ function selectTopSize(el,sz,fallbackImg){
   if(el)el.classList.add('active');
   oosState.topSize=!!sz.outOfStock;
   currentTopSize=sz.name||'';
+  currentTopSizePrice=Number(sz.price)||Number(basePrice)||0;
+  currentTopFinishPrice=0;
   document.getElementById('top-size-name').textContent=currentTopSize;
   document.getElementById('pdp-price').textContent='$'+Number(sz.price||basePrice).toLocaleString();
   if(sz.dims)updateSizeDims(sz.dims);
@@ -924,6 +947,9 @@ function selectTopSizeFinish(el,f){
   if(el)el.classList.add('active');
   oosState.topFinish=!!f.outOfStock;
   document.getElementById('top-size-finish-name').textContent=f.name||'';
+  // A finish can have its own price; otherwise the size price applies
+  currentTopFinishPrice=Number(f.price)>0?Number(f.price):0;
+  document.getElementById('pdp-price').textContent='$'+Number(currentTopFinishPrice||currentTopSizePrice||basePrice).toLocaleString();
   if(f.fabrics&&f.fabrics.length){
     renderTopSizeFabrics(f.fabrics);
   } else {
@@ -1057,7 +1083,7 @@ function addToCart(){
     fn=document.getElementById('top-size-finish-name').textContent||'';
     fab=(currentFabric&&currentFabric!==fn)?currentFabric:'';
     var activeTopSzEl=document.querySelector('#top-size-grid .sz-opt.active');
-    cartPrice=activeTopSzEl&&activeTopSzEl._sz&&activeTopSzEl._sz.price?activeTopSzEl._sz.price:currentProduct.price;
+    cartPrice=currentTopFinishPrice>0?currentTopFinishPrice:(activeTopSzEl&&activeTopSzEl._sz&&activeTopSzEl._sz.price?activeTopSzEl._sz.price:currentProduct.price);
   } else {
     fn=document.getElementById('finish-name').textContent;
     fab=currentFabric||'';
