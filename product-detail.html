@@ -545,6 +545,9 @@ function schemaLandingPrice(p){
   if(sz){
     var fins=(sz.finishes||[]).filter(function(f){return f&&typeof f==='object';});
     var f=fins.find(function(x){return !x.outOfStock;})||fins[0];
+    var fabs=f?(f.fabrics||[]).filter(function(b){return b&&typeof b==='object';}):[];
+    var b=fabs.find(function(x){return !x.outOfStock;})||fabs[0];
+    if(b&&Number(b.price)>0)return Number(b.price);
     if(f&&Number(f.price)>0)return Number(f.price);
     if(Number(sz.price)>0)return Number(sz.price);
   }
@@ -756,9 +759,15 @@ function selectFinish(el,name,color,photos,fabrics,sizes){
   updateBuyState();
 }
 
+function finishModePrice(){
+  var activeSzEl=document.querySelector('#size-grid .sz-opt.active');
+  return currentFabricPrice||(activeSzEl&&activeSzEl._szPrice)||basePrice;
+}
 function selectFabric(el,name,photos){
   document.querySelectorAll('.fab-opt').forEach(function(f){f.classList.remove('active');});
   el.classList.add('active');document.getElementById('fabric-name').textContent=name;currentFabric=name;
+  currentFabricPrice=(el._fab&&Number(el._fab.price)>0)?Number(el._fab.price):0;
+  document.getElementById('pdp-price').textContent='$'+Number(finishModePrice()).toLocaleString();
   oosState.fabric=isOosEl(el);
   if(photos&&photos.length)loadFinishImages(photos);
   updateBuyState();
@@ -789,6 +798,7 @@ function buildFabricSwatchEl(fab,isActive){
   if(thumb)sw.style.backgroundImage='url(\''+thumb+'\')';
   var lb=document.createElement('span');lb.className='fab-name';lb.textContent=fab.name+(fab.outOfStock?' — Out of Stock':'');
   div.appendChild(sw);div.appendChild(lb);
+  div._fab=fab;
   div.addEventListener('click',function(){selectFabric(div,fab.name||'',fab.photos||[]);});
   if(thumb){
     div.addEventListener('mouseenter',function(){showFabPreview(div,thumb,fab.name||'');});
@@ -807,6 +817,7 @@ function groupFabricsByType(fabrics){
 }
 function renderFabrics(fabrics){
   var row=document.getElementById('fabric-row');var wrap=document.getElementById('fabric-grid-wrap');var toggleWrap=document.getElementById('fabric-toggle-wrap');var toggleBtn=document.getElementById('fabric-toggle-btn');
+  currentFabricPrice=0;
   if(!fabrics||!fabrics.length){if(row)row.style.display='none';currentFabric='';document.getElementById('fabric-name').textContent='';oosState.fabric=false;return;}
   wrap.innerHTML='';
   fabricGridExpanded=false;
@@ -837,6 +848,8 @@ function renderFabrics(fabrics){
   oosState.fabric=!!(firstFab&&firstFab.outOfStock);
   if(firstFab){
     currentFabric=firstFab.name||'';
+    currentFabricPrice=Number(firstFab.price)>0?Number(firstFab.price):0;
+    if(currentFabricPrice)document.getElementById('pdp-price').textContent='$'+Number(currentFabricPrice).toLocaleString();
     document.getElementById('fabric-name').textContent=currentFabric;
     if(firstFab.photos&&firstFab.photos.length)loadFinishImages(firstFab.photos);
   }
@@ -848,11 +861,32 @@ function renderFabrics(fabrics){
 var currentTopSize=null;
 var currentTopSizePrice=0;   // price of the selected size
 var currentTopFinishPrice=0; // optional price of the selected finish (overrides the size price)
+var currentTopFabricPrice=0; // optional price of the selected fabric color (overrides finish and size price)
+var currentFabricPrice=0;    // same, for finish-first products
 // Lowest price a customer can pay for a size (finish prices can override the size price)
 function sizeFromPrice(sz){
-  var fins=sz.finishes||[];
-  var prices=fins.map(function(f){return Number(f.price)>0?Number(f.price):(Number(sz.price)||0);}).filter(function(x){return x>0;});
+  var prices=[];
+  (sz.finishes||[]).forEach(function(f){
+    var finP=Number(f.price)>0?Number(f.price):(Number(sz.price)||0);
+    var fabs=(f.fabrics||[]).filter(function(b){return b&&typeof b==='object';});
+    if(fabs.length)fabs.forEach(function(b){prices.push(Number(b.price)>0?Number(b.price):finP);});
+    else prices.push(finP);
+  });
+  prices=prices.filter(function(x){return x>0;});
   return prices.length?Math.min.apply(null,prices):(Number(sz.price)||0);
+}
+function sizeAllPrices(sz){
+  var prices=[];
+  (sz.finishes||[]).forEach(function(f){
+    var finP=Number(f.price)>0?Number(f.price):(Number(sz.price)||0);
+    var fabs=(f.fabrics||[]).filter(function(b){return b&&typeof b==='object';});
+    if(fabs.length)fabs.forEach(function(b){prices.push(Number(b.price)>0?Number(b.price):finP);});
+    else prices.push(finP);
+  });
+  return prices;
+}
+function showTopPrice(){
+  document.getElementById('pdp-price').textContent='$'+Number(currentTopFabricPrice||currentTopFinishPrice||currentTopSizePrice||basePrice).toLocaleString();
 }
 function renderTopSizeMode(topSizes,fallbackImg){
   var sizes=(topSizes||[]).map(function(s){
@@ -863,7 +897,7 @@ function renderTopSizeMode(topSizes,fallbackImg){
   sizes.forEach(function(sz,j){
     var div=document.createElement('div');div.className='sz-opt'+(j===0&&!sz.outOfStock?' active':'')+(sz.outOfStock?' oos':'');
     var fromP=sizeFromPrice(sz);
-    var variesP=(sz.finishes||[]).some(function(f){var fp=Number(f.price)>0?Number(f.price):(Number(sz.price)||0);return fp!==fromP;});
+    var variesP=sizeAllPrices(sz).some(function(x){return x!==fromP;});
     div.innerHTML=sz.name+(fromP?'<span class="sz-price">'+(variesP?'from ':'')+'$'+Number(fromP).toLocaleString()+'</span>':'');
     div._sz=sz;
     div.addEventListener('click',function(){selectTopSize(this,this._sz);});
@@ -902,6 +936,7 @@ function selectTopSize(el,sz,fallbackImg){
   currentTopSize=sz.name||'';
   currentTopSizePrice=Number(sz.price)||Number(basePrice)||0;
   currentTopFinishPrice=0;
+  currentTopFabricPrice=0;
   document.getElementById('top-size-name').textContent=currentTopSize;
   document.getElementById('pdp-price').textContent='$'+Number(sz.price||basePrice).toLocaleString();
   if(sz.dims)updateSizeDims(sz.dims);
@@ -949,7 +984,8 @@ function selectTopSizeFinish(el,f){
   document.getElementById('top-size-finish-name').textContent=f.name||'';
   // A finish can have its own price; otherwise the size price applies
   currentTopFinishPrice=Number(f.price)>0?Number(f.price):0;
-  document.getElementById('pdp-price').textContent='$'+Number(currentTopFinishPrice||currentTopSizePrice||basePrice).toLocaleString();
+  currentTopFabricPrice=0;
+  showTopPrice();
   if(f.fabrics&&f.fabrics.length){
     renderTopSizeFabrics(f.fabrics);
   } else {
@@ -1007,6 +1043,9 @@ function renderTopSizeFabrics(fabrics){
 function selectTopSizeFabric(el,name,photos){
   document.querySelectorAll('#top-size-fabric-grid-wrap .fab-opt').forEach(function(o){o.classList.remove('active');});
   if(el)el.classList.add('active');
+  // A fabric color can have its own price
+  currentTopFabricPrice=(el&&el._fab&&Number(el._fab.price)>0)?Number(el._fab.price):0;
+  showTopPrice();
   oosState.topFabric=isOosEl(el);
   document.getElementById('top-size-fabric-name').textContent=name;
   currentFabric=name;currentSize=currentTopSize;
@@ -1083,13 +1122,13 @@ function addToCart(){
     fn=document.getElementById('top-size-finish-name').textContent||'';
     fab=(currentFabric&&currentFabric!==fn)?currentFabric:'';
     var activeTopSzEl=document.querySelector('#top-size-grid .sz-opt.active');
-    cartPrice=currentTopFinishPrice>0?currentTopFinishPrice:(activeTopSzEl&&activeTopSzEl._sz&&activeTopSzEl._sz.price?activeTopSzEl._sz.price:currentProduct.price);
+    cartPrice=currentTopFabricPrice>0?currentTopFabricPrice:(currentTopFinishPrice>0?currentTopFinishPrice:(activeTopSzEl&&activeTopSzEl._sz&&activeTopSzEl._sz.price?activeTopSzEl._sz.price:currentProduct.price));
   } else {
     fn=document.getElementById('finish-name').textContent;
     fab=currentFabric||'';
     sz=currentSize||'';
     var activeSzEl=document.querySelector('.sz-opt.active');
-    cartPrice=activeSzEl&&activeSzEl._szPrice?activeSzEl._szPrice:currentProduct.price;
+    cartPrice=currentFabricPrice>0?currentFabricPrice:(activeSzEl&&activeSzEl._szPrice?activeSzEl._szPrice:currentProduct.price);
   }
   if(fn&&fn.trim().toLowerCase()==='fabric only')fn='';
   var key='p'+currentProduct.id+fn+(fab&&fab!==fn?'-'+fab:'')+(sz?'-'+sz:'');
