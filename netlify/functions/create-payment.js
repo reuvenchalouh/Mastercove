@@ -61,6 +61,38 @@ function findUnitPrice(p, item) {
   return null; // size doesn't exist on this product
 }
 
+// ---------------------------------------------------------------------------
+// PROMO CODES (percentage off the product subtotal; shipping is never discounted)
+// Codes live in the Supabase table promo_codes and can only be read by the server.
+// Tax is charged on the discounted subtotal.
+// ---------------------------------------------------------------------------
+function computeTotals(subCents, shipCents, state, percentOff) {
+  const pct = Number(percentOff) || 0;
+  const discountCents = pct > 0 ? Math.round(subCents * pct / 100) : 0;
+  const taxable = subCents - discountCents;
+  const isNY = NY_STATE_NAMES.indexOf(String(state || '').trim().toUpperCase()) >= 0;
+  const taxCents = isNY ? Math.round(taxable * NY_TAX_RATE) : 0;
+  return { discountCents, taxCents, totalCents: taxable + shipCents + taxCents };
+}
+
+function todayNY() {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' }); // YYYY-MM-DD
+}
+
+async function lookupPromo(rawCode, subCents) {
+  const code = String(rawCode || '').trim().toUpperCase();
+  if (!code) return null;
+  if (code.length > 40) return { error: "That promo code isn't valid." };
+  const { data, error } = await supabase.from('promo_codes').select('*').eq('code', code).maybeSingle();
+  if (error || !data || !data.active) return { error: "That promo code isn't valid." };
+  if (data.expires_at && todayNY() > String(data.expires_at)) return { error: 'That promo code has expired.' };
+  const minCents = toCents(data.min_order);
+  if (subCents < minCents) {
+    return { error: 'This code requires a minimum order of $' + (minCents / 100).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + '.' };
+  }
+  return { code, percent: Number(data.percent_off), minOrder: Number(data.min_order) };
+}
+
 async function priceCart(supabase, items, state) {
   if (!Array.isArray(items) || !items.length) return { error: 'Your cart is empty.' };
   if (items.length > 50) return { error: 'Too many items in cart.' };
@@ -114,11 +146,8 @@ async function priceCart(supabase, items, state) {
     });
   }
 
-  const isNY = NY_STATE_NAMES.indexOf(String(state || '').trim().toUpperCase()) >= 0;
-  const taxCents = isNY ? Math.round(subCents * NY_TAX_RATE) : 0;
-  const totalCents = subCents + shipCents + taxCents;
-
-  return { totalCents, subCents, shipCents, taxCents, verifiedItems, updatedItems };
+  const totals = computeTotals(subCents, shipCents, state, 0);
+  return Object.assign({ subCents, shipCents, verifiedItems, updatedItems }, totals);
 }
 // ---------------------------------------------------------------------------
 
@@ -135,6 +164,16 @@ exports.handler = async function(event) {
     // Work out the real total from Supabase — ignore any price the browser sent.
     const priced = await priceCart(supabase, body.items, state);
     if (priced.error) return { statusCode: 400, body: JSON.stringify({ error: priced.error }) };
+
+    // Promo code: re-checked here so an expired/invalid/tampered code can never be charged
+    let promo = null;
+    if (body.promoCode) {
+      promo = await lookupPromo(body.promoCode, priced.subCents);
+      if (promo && promo.error) {
+        return { statusCode: 400, body: JSON.stringify({ error: promo.error, promoInvalid: true }) };
+      }
+      if (promo) Object.assign(priced, computeTotals(priced.subCents, priced.shipCents, state, promo.percent));
+    }
 
     const clientAmount = Math.round(Number(body.amount) || 0);
     if (priced.updatedItems.length || Math.abs(clientAmount - priced.totalCents) > 1) {
@@ -158,7 +197,7 @@ exports.handler = async function(event) {
       receipt_email: email,
       description: 'Master Cove Order',
       shipping: { name, phone: phone || undefined, address: { line1: address, city, state, postal_code: zip, country: 'US' } },
-      metadata: { customer_name: name, customer_email: email, customer_phone: phone, verified_subtotal_cents: String(priced.subCents), verified_shipping_cents: String(priced.shipCents), verified_tax_cents: String(priced.taxCents) },
+      metadata: { customer_name: name, customer_email: email, customer_phone: phone, verified_subtotal_cents: String(priced.subCents), verified_shipping_cents: String(priced.shipCents), verified_tax_cents: String(priced.taxCents), promo_code: promo ? promo.code : '', promo_percent: promo ? String(promo.percent) : '', discount_cents: String(priced.discountCents || 0) },
       return_url: 'https://mastercove.com/order-confirmed.html'
     }, idempotencyKey ? { idempotencyKey: idempotencyKey } : undefined);
 
@@ -177,9 +216,11 @@ exports.handler = async function(event) {
       if (existing && existing.length) {
         orderNumber = existing[0].order_number;
       } else {
-        orderNumber = await saveOrder({ email, name, phone, address, city, state, zip, items, amount, stripeId: paymentIntent.id });
+        const promoText = promo ? (promo.code + ' (' + promo.percent + '% off, -$' + (priced.discountCents / 100).toFixed(2) + ')') : '';
+        orderNumber = await saveOrder({ email, name, phone, address, city, state, zip, items, amount, stripeId: paymentIntent.id, promoText });
+        if (promo) { try { await supabase.rpc('increment_promo_use', { c: promo.code }); } catch (e) { console.error('Promo count error:', e.message); } }
         // Notify YOU (the store owner) of the new order
-        await sendOwnerNotification({ orderNumber, customerName: name, customerEmail: email, customerPhone: phone, items, address: fullAddress, revenue });
+        await sendOwnerNotification({ orderNumber, customerName: name, customerEmail: email, customerPhone: phone, items, address: fullAddress, revenue, promoText });
       }
 
       return { statusCode: 200, body: JSON.stringify({ success: true, orderId: paymentIntent.id, orderNumber }) };
@@ -192,7 +233,7 @@ exports.handler = async function(event) {
   }
 };
 
-async function sendOwnerNotification({ orderNumber, customerName, customerEmail, customerPhone, items, address, revenue }) {
+async function sendOwnerNotification({ orderNumber, customerName, customerEmail, customerPhone, items, address, revenue, promoText }) {
   try {
     // Build item rows with qty and supplier link
     const itemRows = (items || []).map(function(i) {
@@ -222,6 +263,7 @@ async function sendOwnerNotification({ orderNumber, customerName, customerEmail,
             <tr><td style="padding:8px 0;color:#888;font-size:13px;border-bottom:1px solid #eee;">Customer</td><td colspan="2" style="padding:8px 0;font-size:13px;border-bottom:1px solid #eee;">${customerName} (${customerEmail})</td></tr>
             <tr><td style="padding:8px 0;color:#888;font-size:13px;border-bottom:1px solid #eee;">Phone</td><td colspan="2" style="padding:8px 0;font-size:13px;border-bottom:1px solid #eee;">${customerPhone || 'Not provided'}</td></tr>
             <tr><td style="padding:8px 0;color:#888;font-size:13px;border-bottom:1px solid #eee;">Ship To</td><td colspan="2" style="padding:8px 0;font-size:13px;border-bottom:1px solid #eee;">${address}</td></tr>
+            ${promoText ? `<tr><td style="padding:8px 0;color:#888;font-size:13px;border-bottom:1px solid #eee;">Promo</td><td colspan="2" style="padding:8px 0;font-size:13px;border-bottom:1px solid #eee;">${promoText}</td></tr>` : ''}
             <tr><td style="padding:8px 0;color:#888;font-size:13px;border-bottom:1px solid #eee;">Total</td><td colspan="2" style="padding:8px 0;font-weight:700;font-size:15px;color:#6B4C35;border-bottom:1px solid #eee;">$${revenue}</td></tr>
           </table>
           <div style="margin-top:20px;">
@@ -249,7 +291,7 @@ async function sendOwnerNotification({ orderNumber, customerName, customerEmail,
   }
 }
 
-async function saveOrder({ email, name, phone, address, city, state, zip, items, amount, stripeId }) {
+async function saveOrder({ email, name, phone, address, city, state, zip, items, amount, stripeId, promoText }) {
   try {
     const { count } = await supabase.from('orders').select('*', { count: 'exact', head: true });
     const orderNumber = 'MC-' + String((count || 0) + 1).padStart(4, '0');
@@ -272,7 +314,7 @@ async function saveOrder({ email, name, phone, address, city, state, zip, items,
       revenue: revenue,
       cost: 0,
       link: (items && items[0] && items[0].supplierLink) ? items[0].supplierLink : '',
-      notes: phone ? ('Phone: ' + phone) : '',
+      notes: [phone ? ('Phone: ' + phone) : '', promoText ? ('Promo: ' + promoText) : ''].filter(Boolean).join(' · '),
       status: 'new',
       timestamps: {},
       stripe_id: stripeId,
