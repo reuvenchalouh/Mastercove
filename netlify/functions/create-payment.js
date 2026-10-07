@@ -79,9 +79,12 @@ function findUnitPrice(p, item) {
     const fab = fin && Array.isArray(fin.fabrics) ? fin.fabrics.find(b => b && norm(b.name) === norm(item.fabric)) : null;
     if (fab && Number(fab.price) > 0) return Number(fab.price);
   }
-  if (!wantSize) return base;
+  // A finish can carry its own price (finish-first products)
+  const chosenFin = finishes.find(f => norm(f.name) === norm(item.finish)) || (finishes.length === 1 ? finishes[0] : null);
+  const finBase = (chosenFin && Number(chosenFin.price) > 0) ? Number(chosenFin.price) : base;
+  if (!wantSize) return finBase;
   const anySizes = finishes.some(f => Array.isArray(f.sizes) && f.sizes.length);
-  if (!anySizes) return base;
+  if (!anySizes) return finBase;
 
   const wantFinish = norm(item.finish);
   const finishName = f => norm(f.name) || 'default';
@@ -90,7 +93,7 @@ function findUnitPrice(p, item) {
   for (const f of ordered) {
     const sz = (f.sizes || []).find(s => String(s.name || '') === String(item.size || ''))
             || (f.sizes || []).find(s => norm(s.name) === wantSize);
-    if (sz) return Number(sz.price) > 0 ? Number(sz.price) : base;
+    if (sz) return Number(sz.price) > 0 ? Number(sz.price) : finBase;
   }
   return null; // size doesn't exist on this product
 }
