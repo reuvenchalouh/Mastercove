@@ -59,12 +59,12 @@ function firstSize(p) {
 }
 
 // Price the customer sees first on the product page. Mirrors the page's own first selection:
-// first in-stock size, finishes sorted by name, first in-stock finish / fabric / size.
+// first in-stock size, then the first in-stock finish / fabric / size in admin order.
 function landingPrice(p) {
   const num = x => (Number(x) > 0 ? Number(x) : 0);
   const objs = a => (Array.isArray(a) ? a : []).filter(x => x && typeof x === 'object');
   const pick = a => a.find(x => !x.outOfStock) || a[0];
-  const byName = a => a.slice().sort((x, y) => String(x.name || '').localeCompare(String(y.name || '')));
+  const byName = a => a.slice(); // admin order
   const ts = objs(p.top_sizes);
   if (p.variant_mode === 'size' && ts.length) {
     const sz = pick(ts); const f = pick(byName(objs(sz.finishes))); const b = f ? pick(objs(f.fabrics)) : null;
