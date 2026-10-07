@@ -676,8 +676,8 @@ function updateOOS(id,checked){
   var head=document.getElementById('ft'+id);if(head){if(checked){if(!head.textContent.includes(' (Out of Stock)'))head.textContent+=' (Out of Stock)';}else{head.textContent=head.textContent.replace(' (Out of Stock)','');}}
 }
 
-function addFinish(color,name,photos,sku,outOfStock,finLink,fabrics){
-  color=color||'';name=name||'';photos=photos||[];sku=sku||'';outOfStock=outOfStock||false;finLink=finLink||'';fabrics=fabrics||[];
+function addFinish(color,name,photos,sku,outOfStock,finLink,fabrics,price){
+  color=color||'';name=name||'';photos=photos||[];sku=sku||'';outOfStock=outOfStock||false;finLink=finLink||'';fabrics=fabrics||[];price=price||'';
   var id='f'+Date.now()+Math.floor(Math.random()*9999);
   var opts=buildPresetOpts();
   var card=document.createElement('div');card.className='finish-card';card.id=id;
@@ -701,6 +701,10 @@ function addFinish(color,name,photos,sku,outOfStock,finLink,fabrics){
     '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">'+
     '<span style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--mist);font-weight:500;white-space:nowrap;">Link</span>'+
     '<input type="text" class="fin-name-input" id="flink'+id+'" placeholder="Supplier link for this finish (optional)" value="'+(finLink||'')+'" style="flex:1;font-size:12px;"/>'+
+    '</div>'+
+    '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">'+
+    '<span style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--mist);font-weight:500;white-space:nowrap;">Price</span>'+
+    '<input type="number" step="0.01" min="0" class="fin-name-input" id="fprice'+id+'" placeholder="Finish price (optional, overrides the main price)" value="'+(price||'')+'" style="flex:1;font-size:12px;"/>'+
     '</div>'+
     '<div class="fin-photo-grid" id="pg'+id+'"></div>'+
     '<div class="fin-add" style="display:flex;gap:8px;align-items:center;margin-top:8px;">'+
@@ -768,6 +772,23 @@ function renderFinPhotos(id){
   }).join('');
 }
 
+function landingPriceOf(p){
+  var num=function(x){return Number(x)>0?Number(x):0;};
+  var objs=function(a){return (Array.isArray(a)?a:[]).filter(function(x){return x&&typeof x==='object';});};
+  var pick=function(a){return a.find(function(x){return !x.outOfStock;})||a[0];};
+  var byName=function(a){return a.slice().sort(function(x,y){return String(x.name||'').localeCompare(String(y.name||''));});};
+  var ts=objs(p.top_sizes||p.topSizes);
+  if((p.variant_mode||p.variantMode)==='size'&&ts.length){
+    var sz=pick(ts);var f=pick(byName(objs(sz.finishes)));var b=f?pick(objs(f.fabrics)):null;
+    return num(b&&b.price)||num(f&&f.price)||num(sz.price)||num(p.price);
+  }
+  var fins=byName(objs(p.finishes));
+  if(fins.length){
+    var f2=pick(fins);var b2=pick(objs(f2.fabrics));var s2=pick(objs(f2.sizes));
+    return num(b2&&b2.price)||num(s2&&s2.price)||num(f2.price)||num(p.price);
+  }
+  return num(p.price);
+}
 function getFinishes(){
   var result=[];
   document.querySelectorAll('#finish-builder > .finish-card').forEach(function(card){
@@ -778,6 +799,7 @@ function getFinishes(){
     var sku=document.getElementById('sku'+id)?document.getElementById('sku'+id).value.trim():'';
     var outOfStock=document.getElementById('oos'+id)?document.getElementById('oos'+id).checked:false;
     var finLink=document.getElementById('flink'+id)?document.getElementById('flink'+id).value.trim():'';
+    var finPrice=document.getElementById('fprice'+id)?parseFloat(document.getElementById('fprice'+id).value)||0:0;
     var fabrics=[];
     var fabBuilder=document.getElementById('fab-builder-'+id);
     if(fabBuilder){
@@ -794,7 +816,7 @@ function getFinishes(){
         if(fname){var fbo={name:fname,outOfStock:foos,photos:fphotos,swatch:fswatch,sku:fsku,link:flink,type:ftype};if(fbprice>0)fbo.price=fbprice;fabrics.push(fbo);}
       });
     }
-    if(name||color)result.push({color:color,name:name,photos:photos,sku:sku,outOfStock:outOfStock,link:finLink,fabrics:fabrics});
+    if(name||color){var fobj={color:color,name:name,photos:photos,sku:sku,outOfStock:outOfStock,link:finLink,fabrics:fabrics};if(finPrice>0)fobj.price=finPrice;result.push(fobj);}
   });
   return result;
 }
@@ -861,7 +883,7 @@ function convertSizeToFinish(){
   if(first.desc)document.getElementById('f-desc').value=first.desc;
   if(first.features)document.getElementById('f-features').value=first.features;
   if(first.finishes&&first.finishes.length){
-    first.finishes.forEach(function(f){addFinish(f.color||'',f.name||'',f.photos||[],f.sku||'',f.outOfStock||false,f.link||'',f.fabrics||[]);});
+    first.finishes.forEach(function(f){addFinish(f.color||'',f.name||'',f.photos||[],f.sku||'',f.outOfStock||false,f.link||'',f.fabrics||[],f.price||'');});
   } else {
     addFinish();
   }
@@ -1225,6 +1247,8 @@ function submitProduct(){
       if(fsz===firstValidSize&&ffin&&ffin.price>0)price=ffin.price;
       var ffabs=(ffin&&ffin.fabrics)||[];var ffab=ffabs.find(function(b){return !b.outOfStock;})||ffabs[0];
       if(fsz===firstValidSize&&ffab&&ffab.price>0)price=ffab.price;
+      // Match exactly what shoppers see first on the product page
+      var lpS=landingPriceOf({variant_mode:'size',top_sizes:topSizes,price:price});if(lpS>0)price=lpS;
     } else if(!price||price<=0){
       showToast('Enter a price — either in Retail Price above, or on at least one size','error');return;
     }
@@ -1242,6 +1266,8 @@ function submitProduct(){
   } else {
     if(!price||price<=0){showToast('Please enter a valid price','error');return;}
     finishes=getFinishes();
+    // If finishes have their own prices, list the price shoppers see first
+    var lpF=landingPriceOf({variant_mode:'finish',finishes:finishes,price:price});if(lpF>0)price=lpF;
     for(var fx=0;fx<finishes.length;fx++){
       if(finishes[fx].photos&&finishes[fx].photos.length){img=finishes[fx].photos[0];break;}
       if(finishes[fx].fabrics&&finishes[fx].fabrics.length){
@@ -1288,7 +1314,7 @@ function editProduct(id){
     if(p.topSizes&&p.topSizes.length){p.topSizes.forEach(function(s){addTopSize(s.name||'',s.price||'',s.dims||{},s.outOfStock||false,s.finishes||[],s.componentDims||[],s.sku||'',s.link||'',s.desc||'',s.features||'');});}
     else{addTopSize();}
   } else {
-    if(p.finishes&&p.finishes.length){p.finishes.forEach(function(f){addFinish(f.color||'',f.name||'',f.photos||[],f.sku||'',f.outOfStock||false,f.link||'',f.fabrics||[]);});}
+    if(p.finishes&&p.finishes.length){p.finishes.forEach(function(f){addFinish(f.color||'',f.name||'',f.photos||[],f.sku||'',f.outOfStock||false,f.link||'',f.fabrics||[],f.price||'');});}
     else{addFinish();}
   }
   selectedBadge=p.badge||'';
