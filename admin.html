@@ -1278,6 +1278,7 @@ function submitProduct(){
   }
 
   var dims=(w||d||h)?(w||'—')+' x '+(d||'—')+' x '+(h||'—'):'';
+  if(!dims&&variantMode==='size')dims=sizeRangeDims(topSizes);
   var tagline=document.getElementById('f-tagline')?document.getElementById('f-tagline').value.trim():'';
   var collection=document.getElementById('f-collection')?document.getElementById('f-collection').value.trim():'';
   var collectionCover=document.getElementById('f-collection-cover-url')?document.getElementById('f-collection-cover-url').value.trim():'';
@@ -1521,9 +1522,27 @@ function clearForm(){
   document.getElementById('f-supplier-go').style.display='none';
 }
 
-async function save(){
-  try{
-    var rows=products.map(function(p){
+// Card dimensions for size-based products: smallest–largest of each size's
+// "Overall" measurement (or its first measurement), e.g. "48.5-86.5 x 81.5-87.5 x 46"
+function sizeRangeDims(topSizes){
+  var W=[],D=[],H=[];
+  var num=function(v){var n=parseFloat(String(v||'').replace(/[^0-9.]/g,''));return isNaN(n)?null:n;};
+  (topSizes||[]).forEach(function(s){
+    var cds=(s.componentDims||[]).filter(function(c){return c&&num(c.w)!==null;});
+    var c=cds.find(function(x){return /overall/i.test(x.label||'');})||cds[0]||(s.dims&&num(s.dims.w)!==null?s.dims:null);
+    if(!c)return;
+    if(num(c.w)!==null)W.push(num(c.w));if(num(c.d)!==null)D.push(num(c.d));if(num(c.h)!==null)H.push(num(c.h));
+  });
+  if(!W.length||!D.length||!H.length)return '';
+  var r=function(a){var lo=Math.min.apply(null,a),hi=Math.max.apply(null,a);return lo===hi?String(lo):lo+'-'+hi;};
+  return r(W)+' x '+r(D)+' x '+r(H);
+}
+
+// Only products changed in this browser are written to the database, so changes made
+// elsewhere (daily stock sync, updates made directly in the database) are never
+// overwritten by an older copy of the catalog that was loaded when this page opened.
+var _savedSnap={};
+function productToRow(p){
       var cleanFinishes=(p.finishes||[]).map(function(f){
         var cleanPhotos=(f.photos||[]).filter(function(ph){return ph&&!ph.startsWith('data:');});
         var cleanFabrics=(f.fabrics||[]).map(function(fab){
@@ -1538,9 +1557,17 @@ async function save(){
       });
       var cleanImg=(p.img&&!p.img.startsWith('data:'))?p.img:'';
       return{id:p.id,name:p.name,brand:p.brand,cat:p.cat,price:p.price,was:p.was||null,shipping_cost:p.shippingCost||0,description:p.desc||'',tagline:p.tagline||'',features:p.features||'',wood:p.wood||'',status:p.status,img:cleanImg,finishes:cleanFinishes,top_sizes:cleanTopSizes,variant_mode:p.variantMode||'finish',dims:p.dims||'',badge:p.badge||'',supplier_link:p.supplierLink||'',collection:p.collection||'',collection_cover:p.collectionCover||'',created_at:p.createdAt||Date.now()};
-    });
+}
+function snapshotProducts(){_savedSnap={};products.forEach(function(p){try{_savedSnap[p.id]=JSON.stringify(productToRow(p));}catch(e){}});}
+async function save(){
+  try{
+    var allRows=products.map(productToRow);
+    var rows=allRows.filter(function(r){return JSON.stringify(r)!==_savedSnap[r.id];});
+    if(!rows.length)return;
     var upsertRes=await adminDb({action:'products_upsert',rows:rows});
     if(upsertRes.error){showToast('DB error: '+upsertRes.error.message,'error');console.error('Upsert error:',upsertRes.error);return;}
+    rows.forEach(function(r){_savedSnap[r.id]=JSON.stringify(r);});
+    var rows=allRows;
     try{localStorage.setItem('gw_products',JSON.stringify(rows.map(function(p){return{id:p.id,name:p.name,brand:p.brand,cat:p.cat,price:p.price,was:p.was,desc:p.description,wood:p.wood,status:p.status,img:p.img,finishes:p.finishes,dims:p.dims,badge:p.badge,supplierLink:p.supplier_link,collection:p.collection||'',createdAt:p.created_at};})));}catch(le){localStorage.removeItem('gw_products');}
   }catch(e){showToast('Save error: '+e.message,'error');}
 }
@@ -1551,6 +1578,7 @@ async function loadProductsFromSupabase(){
     if(res.error)throw res.error;
     if(res.data&&res.data.length){
       products=res.data.map(function(p){return{id:p.id,name:p.name,brand:p.brand,cat:p.cat,price:p.price,was:p.was,shippingCost:p.shipping_cost||0,desc:p.description||'',tagline:p.tagline||'',features:p.features||'',wood:p.wood||'',status:p.status,img:p.img||'',finishes:p.finishes||[],topSizes:p.top_sizes||[],variantMode:p.variant_mode||'finish',dims:p.dims||'',badge:p.badge||'',supplierLink:p.supplier_link||'',collection:p.collection||'',collectionCover:p.collection_cover||'',createdAt:p.created_at};});
+      snapshotProducts();
       renderTable();updateStats();renderOOSTable();
     }
   }catch(e){console.log('Supabase load error:',e);}
