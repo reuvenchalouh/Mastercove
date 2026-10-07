@@ -540,12 +540,12 @@ function isProductInStock(p){
   return false;
 }
 // Price shoppers see first on the product page. Mirrors the page's own first selection:
-// first in-stock size, finishes sorted by name, first in-stock finish / fabric / size.
+// first in-stock size, then the first in-stock finish / fabric / size in admin order.
 function landingPriceOf(p){
   var num=function(x){return Number(x)>0?Number(x):0;};
   var objs=function(a){return (Array.isArray(a)?a:[]).filter(function(x){return x&&typeof x==='object';});};
   var pick=function(a){return a.find(function(x){return !x.outOfStock;})||a[0];};
-  var byName=function(a){return a.slice().sort(function(x,y){return String(x.name||'').localeCompare(String(y.name||''));});};
+  var byName=function(a){return a.slice();}; // admin order
   var ts=objs(p.top_sizes||p.topSizes);
   if((p.variant_mode||p.variantMode)==='size'&&ts.length){
     var sz=pick(ts);var f=pick(byName(objs(sz.finishes)));var b=f?pick(objs(f.fabrics)):null;
@@ -674,7 +674,7 @@ function renderProduct(p){
         :{color:f.color||'#C4976A',name:(f.name&&String(f.name).trim())?String(f.name).trim():'Default',photos:f.photos||[],outOfStock:f.outOfStock||false,price:Number(f.price)||0,
           fabrics:(f.fabrics||[]).map(function(fab){return{name:fab.name||'',outOfStock:fab.outOfStock||false,photos:fab.photos||[],swatch:fab.swatch||'',type:fab.type||'',price:Number(fab.price)||0};}),
           sizes:(f.sizes||[]).map(function(sz){return{name:sz.name||'',price:sz.price||0,outOfStock:sz.outOfStock||false,photos:sz.photos||[],dims:sz.dims||{}};})};
-    }).sort(function(a,b){return a.name.localeCompare(b.name);});
+    }); // keep the order set in admin (the first finish is what the page opens on)
 
     var fgrid=document.getElementById('finish-grid');
     if(fins.length===1){
@@ -916,7 +916,7 @@ function showTopPrice(){
 function renderTopSizeMode(topSizes,fallbackImg){
   var sizes=(topSizes||[]).map(function(s){
     return{name:s.name||'',price:s.price||0,outOfStock:s.outOfStock||false,dims:s.dims||{},sku:s.sku||'',componentDims:s.componentDims||[],desc:s.desc||'',features:s.features||'',
-      finishes:(s.finishes||[]).map(function(f){return{color:f.color||'#C4976A',name:f.name||'',outOfStock:f.outOfStock||false,photos:f.photos||[],sku:f.sku||'',price:Number(f.price)||0,fabrics:(f.fabrics||[]).map(function(fab){return{name:fab.name||'',outOfStock:fab.outOfStock||false,photos:fab.photos||[],swatch:fab.swatch||'',type:fab.type||'',price:Number(fab.price)||0};})};}).sort(function(a,b){return a.name.localeCompare(b.name);})};
+      finishes:(s.finishes||[]).map(function(f){return{color:f.color||'#C4976A',name:f.name||'',outOfStock:f.outOfStock||false,photos:f.photos||[],sku:f.sku||'',price:Number(f.price)||0,fabrics:(f.fabrics||[]).map(function(fab){return{name:fab.name||'',outOfStock:fab.outOfStock||false,photos:fab.photos||[],swatch:fab.swatch||'',type:fab.type||'',price:Number(fab.price)||0};})};})};
   });
   var grid=document.getElementById('top-size-grid');grid.innerHTML='';
   sizes.forEach(function(sz,j){
