@@ -58,20 +58,24 @@ function firstSize(p) {
   return (p.variant_mode === 'size' && Array.isArray(p.top_sizes) && p.top_sizes.length) ? p.top_sizes[0] : null;
 }
 
-// Price the customer sees first on the product page (for size-based items, the first size).
+// Price the customer sees first on the product page. Mirrors the page's own first selection:
+// first in-stock size, finishes sorted by name, first in-stock finish / fabric / size.
 function landingPrice(p) {
-  const sz = firstSize(p);
-  if (sz) {
-    // A finish inside the first size can have its own price (shown first on the page)
-    const fins = (Array.isArray(sz.finishes) ? sz.finishes : []).filter(f => f && typeof f === 'object');
-    const f = fins.find(x => !x.outOfStock) || fins[0];
-    const fabs = f && Array.isArray(f.fabrics) ? f.fabrics.filter(b => b && typeof b === 'object') : [];
-    const b = fabs.find(x => !x.outOfStock) || fabs[0];
-    if (b && Number(b.price) > 0) return Number(b.price);
-    if (f && Number(f.price) > 0) return Number(f.price);
-    if (Number(sz.price) > 0) return Number(sz.price);
+  const num = x => (Number(x) > 0 ? Number(x) : 0);
+  const objs = a => (Array.isArray(a) ? a : []).filter(x => x && typeof x === 'object');
+  const pick = a => a.find(x => !x.outOfStock) || a[0];
+  const byName = a => a.slice().sort((x, y) => String(x.name || '').localeCompare(String(y.name || '')));
+  const ts = objs(p.top_sizes);
+  if (p.variant_mode === 'size' && ts.length) {
+    const sz = pick(ts); const f = pick(byName(objs(sz.finishes))); const b = f ? pick(objs(f.fabrics)) : null;
+    return num(b && b.price) || num(f && f.price) || num(sz.price) || num(p.price);
   }
-  return Number(p.price || 0);
+  const fins = byName(objs(p.finishes));
+  if (fins.length) {
+    const f = pick(fins); const b = pick(objs(f.fabrics)); const s = pick(objs(f.sizes));
+    return num(b && b.price) || num(s && s.price) || num(f.price) || num(p.price);
+  }
+  return num(p.price);
 }
 
 function getColors(p) {
