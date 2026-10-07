@@ -19,7 +19,7 @@ async function isAdmin(event) {
 // orders table doesn't need to be reachable by the public anon key at all.
 // Supports the same operations admin.html previously ran directly against
 // Supabase: listing all orders, creating/updating one (upsert), deleting
-// one, and generating the next MC-#### order number for manually-added orders.
+// one, and generating a random MC-###### order number for manually-added orders.
 
 // When an order is marked Delivered, queue review-request emails (day 3, 7 and 14).
 async function queueReviewRequest(order) {
@@ -45,6 +45,19 @@ async function queueReviewRequest(order) {
   } catch (e) {
     console.error('Review request error:', e.message);
   }
+}
+
+// Random, non-sequential order numbers (e.g. MC-482917) so customers can't tell
+// how many orders the store has had. Checks the database to avoid duplicates.
+async function generateOrderNumber() {
+  const crypto = require('crypto');
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const candidate = 'MC-' + String(crypto.randomInt(100000, 1000000));
+    const { data, error } = await supabase.from('orders').select('id').eq('order_number', candidate).limit(1);
+    if (!error && (!data || !data.length)) return candidate;
+  }
+  // Extremely unlikely fallback: longer number
+  return 'MC-' + String(crypto.randomInt(10000000, 100000000));
 }
 
 exports.handler = async function(event) {
@@ -79,9 +92,7 @@ exports.handler = async function(event) {
     }
 
     if (action === 'nextOrderNumber') {
-      const { count, error } = await supabase.from('orders').select('*', { count: 'exact', head: true });
-      if (error) throw error;
-      const orderNumber = 'MC-' + String((count || 0) + 1).padStart(4, '0');
+      const orderNumber = await generateOrderNumber();
       return { statusCode: 200, body: JSON.stringify({ orderNumber: orderNumber }) };
     }
 
