@@ -93,15 +93,15 @@ header{background:var(--white);border-bottom:1px solid var(--border);position:st
 
 /* PRODUCT GRID */
 .prod-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px;}
-.prod-card{border:1px solid var(--border);border-radius:4px;overflow:hidden;background:var(--white);cursor:pointer;transition:transform .2s,box-shadow .2s;}
+.prod-card{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:4px;overflow:hidden;background:var(--white);cursor:pointer;transition:transform .2s,box-shadow .2s;}
 .prod-card:hover{transform:translateY(-3px);box-shadow:0 8px 28px rgba(0,0,0,0.08);}
-.prod-img{aspect-ratio:4/3;background:var(--sand);position:relative;overflow:hidden;}
+.prod-img{flex-shrink:0;aspect-ratio:4/3;background:var(--sand);position:relative;overflow:hidden;}
 .prod-img img{width:100%;height:100%;object-fit:cover;display:block;}
 .badge{position:absolute;top:10px;left:10px;padding:3px 9px;border-radius:2px;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;}
 .badge-new{background:#EEF5F0;color:var(--green);}
 .badge-sale{background:#FBF0EE;color:var(--red);}
 .badge-best{background:#FBF4E8;color:var(--walnut);}
-.prod-info{padding:14px 16px;}
+.prod-info{flex:1;display:flex;flex-direction:column;padding:14px 16px;}
 .prod-name{font-size:14px;font-weight:500;line-height:1.35;margin-bottom:4px;}
 .prod-cat{font-size:11px;color:var(--mist);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.06em;}
 .prod-stars{font-size:11px;color:#B8895A;margin-bottom:8px;}
@@ -109,11 +109,11 @@ header{background:var(--white);border-bottom:1px solid var(--border);position:st
 .prod-dims{font-size:12px;color:var(--slate);margin-bottom:10px;font-weight:500;}
 .finishes{display:flex;gap:5px;margin-bottom:12px;flex-wrap:wrap;}
 .finish{width:16px;height:16px;border-radius:50%;border:2px solid white;outline:1px solid var(--border);background-size:cover;background-position:center;}
-.prod-footer{display:flex;align-items:center;justify-content:space-between;}
+.prod-footer{margin-top:auto;gap:12px;display:flex;align-items:center;justify-content:space-between;}
 .price{font-size:15px;font-weight:600;}
 .was{font-size:12px;color:var(--mist);text-decoration:line-through;margin-left:6px;}
 .unit-tag{font-size:10px;color:var(--green);margin-top:2px;}
-.add-btn{background:var(--ink);color:#fff;border:none;padding:8px 14px;border-radius:2px;font-size:11.5px;transition:background .15s;}
+.add-btn{white-space:nowrap;flex-shrink:0;background:var(--ink);color:#fff;border:none;padding:8px 14px;border-radius:2px;font-size:11.5px;transition:background .15s;}
 .add-btn:hover{background:#2E2A26;}
 
 /* EMPTY STATE */
