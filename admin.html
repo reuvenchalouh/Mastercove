@@ -776,7 +776,7 @@ function landingPriceOf(p){
   var num=function(x){return Number(x)>0?Number(x):0;};
   var objs=function(a){return (Array.isArray(a)?a:[]).filter(function(x){return x&&typeof x==='object';});};
   var pick=function(a){return a.find(function(x){return !x.outOfStock;})||a[0];};
-  var byName=function(a){return a.slice().sort(function(x,y){return String(x.name||'').localeCompare(String(y.name||''));});};
+  var byName=function(a){return a.slice();}; // admin order
   var ts=objs(p.top_sizes||p.topSizes);
   if((p.variant_mode||p.variantMode)==='size'&&ts.length){
     var sz=pick(ts);var f=pick(byName(objs(sz.finishes)));var b=f?pick(objs(f.fabrics)):null;
