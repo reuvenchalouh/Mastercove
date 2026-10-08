@@ -313,7 +313,7 @@ src="https://www.facebook.com/tr?id=2156219968568427&ev=PageView&noscript=1"
         <div id="top-size-sku" style="display:none;font-size:11px;color:var(--mist);margin-top:8px;letter-spacing:0.05em;"></div>
       </div>
       <div class="fabric-row" id="top-size-fabric-row" style="display:none;">
-        <div class="opt-label" style="margin-bottom:8px;">Fabric — <b id="top-size-fabric-name" style="font-size:13px;color:var(--walnut);font-weight:600;"></b></div>
+        <div class="opt-label" style="margin-bottom:8px;"><span id="top-size-fabric-label">Fabric</span> — <b id="top-size-fabric-name" style="font-size:13px;color:var(--walnut);font-weight:600;"></b></div>
         <div id="top-size-fabric-grid-wrap"></div>
         <div class="fabric-toggle-wrap" id="top-size-fabric-toggle-wrap" style="display:none;">
           <button class="fabric-toggle-btn" id="top-size-fabric-toggle-btn" onclick="toggleTopSizeFabricGrid()">Show all fabrics</button>
@@ -1030,6 +1030,9 @@ function renderTopSizeFabrics(fabrics){
   var row=document.getElementById('top-size-fabric-row');var wrap=document.getElementById('top-size-fabric-grid-wrap');var toggleWrap=document.getElementById('top-size-fabric-toggle-wrap');var toggleBtn=document.getElementById('top-size-fabric-toggle-btn');
   if(!fabrics||!fabrics.length){row.style.display='none';oosState.topFabric=false;return;}
   wrap.innerHTML='';
+  // Vanities use this row for the basin color instead of a fabric
+  var lblEl=document.getElementById('top-size-fabric-label');
+  if(lblEl)lblEl.textContent=fabrics.every(function(x){return /basin$/i.test(x.name||'');})?'Basin':'Fabric';
   topSizeFabricGridExpanded=false;
   wrap.classList.remove('fabric-grid-collapsed');
   var groups=groupFabricsByType(fabrics);
