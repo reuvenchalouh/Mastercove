@@ -12,18 +12,18 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 // and go OUT OF STOCK if the restock date is further away (or unknown).
 const PREORDER_CUTOFF_DAYS = 30;
 const OWNER_EMAIL = 'mastercovestore@gmail.com';
-const PARALLEL = 3;           // pages checked at the same time (Modway rate-limits faster checks)
+const PARALLEL = 2;           // pages checked at the same time (Modway rate-limits faster checks)
 const PAGE_TIMEOUT_MS = 5000; // give up on one page after 5 seconds
-const PAUSE_MS = 250;         // short pause between pages, per worker
+const PAUSE_MS = 600;         // pause between pages, per worker
 const TIME_BUDGET_MS = 18000; // Netlify scheduled functions stop at 30s; stay well under
-// The catalog is split into 4 parts, one per run at 7:00, 7:15, 7:30 and 7:45am NY
+// The catalog is split into 12 parts, one per run every 4 minutes from 7:00 to 7:44am NY
 // (schedule in netlify.toml). Each run checks one part, picked by the minute it runs.
-const SLICES = 4;
+const SLICES = 12;
 // Lighter version of Modway's product page. If Modway changes its theme this
 // stops working and the function quietly falls back to the full page.
 const SECTION_ID = 'template--20039205847212__main';
 // If too many checks fail (Modway down, blocking us, etc.) change nothing.
-const MAX_FAILURE_RATE = 0.25;
+const MAX_FAILURE_RATE = 0.6; // pages that fail are simply skipped and rechecked tomorrow
 // ────────────────────────────────────────────────────────────
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -102,7 +102,7 @@ async function fetchPolitely(url) {
     try {
       return await fetchText(url);
     } catch (e) {
-      if (e && e.message === 'HTTP 429' && attempt < 1) { await sleep(1500); continue; }
+      if (e && e.message === 'HTTP 429' && attempt < 1) { await sleep(2500); continue; }
       throw e;
     }
   }
@@ -201,7 +201,7 @@ exports.handler = async function() {
 
 async function runSync() {
   const started = Date.now();
-  const slice = Math.floor(new Date().getUTCMinutes() / 15) % SLICES;
+  const slice = Math.floor(new Date().getUTCMinutes() / 4) % SLICES;
   const { data: products, error } = await supabase.from('products').select('id,name,finishes,top_sizes');
   if (error) {
     console.error(error);
@@ -222,7 +222,14 @@ async function runSync() {
 
   // This run's quarter of the catalog
   const allKeys = Object.keys(pages).sort();
-  const sliceKeys = allKeys.filter((_, i) => i % SLICES === slice);
+  let sliceKeys = allKeys.filter((_, i) => i % SLICES === slice);
+  // Start at a different page each day, so if a run ever runs out of time,
+  // it's never the same pages that get skipped two days in a row
+  if (sliceKeys.length) {
+    const day = Math.floor(Date.now() / 86400000);
+    const off = day % sliceKeys.length;
+    sliceKeys = sliceKeys.slice(off).concat(sliceKeys.slice(0, off));
+  }
   const results = {};
   let failed = 0;
   const errorTypes = {};
