@@ -95,6 +95,8 @@ header{background:var(--white);border-bottom:1px solid var(--border);padding:0 3
 #wallet-wrap.show{display:block;}
 #payment-request-button{min-height:44px;}
 .wallet-note{font-size:11px;color:var(--mist);text-align:center;margin-top:8px;}
+.pay-accept{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+.pay-accept span{font-size:11px;padding:3px 8px;border:1px solid var(--border);border-radius:3px;background:var(--white);color:var(--slate);font-weight:500;}
 @media(max-width:768px){.checkout-wrap{grid-template-columns:1fr;}}
 </style>
 <script src="https://js.stripe.com/v3/"></script>
@@ -136,6 +138,9 @@ header{background:var(--white);border-bottom:1px solid var(--border);padding:0 3
     <div class="panel-head">
       <h2>Payment Details</h2>
       <p>All transactions are secure and encrypted</p>
+      <div class="pay-accept" aria-label="Accepted payment methods: Apple Pay, Google Pay, Visa, Mastercard, American Express, Discover">
+        <span>Apple Pay</span><span>Google Pay</span><span>Visa</span><span>Mastercard</span><span>American Express</span><span>Discover</span>
+      </div>
     </div>
     <div class="form-body">
       <!-- Express checkout: Apple Pay / Google Pay (only shows on devices that support it) -->
