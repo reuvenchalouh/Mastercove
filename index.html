@@ -840,6 +840,7 @@ function buildCard(p, i) {
       (sz.finishes||[]).forEach(function(f){
         (f.fabrics||[]).forEach(function(fab){
           var fkey=fab.name||'';
+          if(/basin$/i.test(fkey))return; // vanity basin colors: show the wood finish dots instead
           if(fkey&&!seenFabNames[fkey]){seenFabNames[fkey]=true;sizeFabs.push(fab);}
         });
       });
