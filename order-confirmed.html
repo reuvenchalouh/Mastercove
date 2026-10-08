@@ -159,5 +159,34 @@ if(order && typeof gtag === 'function'){
   }
 }
 </script>
+<!-- Google Customer Reviews: offers the customer Google's optional delivery survey.
+     Ratings collected here become the seller stars on Google Shopping. -->
+<script>
+(function(){
+  var d; try { d = JSON.parse(sessionStorage.getItem('mc_gcr') || 'null'); } catch(e){ d = null; }
+  if(!d || !d.order || !d.email) return;
+  // Estimated delivery: 12 business days from today (matches the shipping policy)
+  var dt = new Date(), n = 0;
+  while(n < 12){ dt.setDate(dt.getDate() + 1); var w = dt.getDay(); if(w !== 0 && w !== 6) n++; }
+  var eta = dt.getFullYear() + '-' + String(dt.getMonth()+1).padStart(2,'0') + '-' + String(dt.getDate()).padStart(2,'0');
+  window.renderOptIn = function(){
+    window.gapi.load('surveyoptin', function(){
+      window.gapi.surveyoptin.render({
+        merchant_id: 5784147549,
+        order_id: String(d.order),
+        email: String(d.email),
+        delivery_country: 'US',
+        estimated_delivery_date: eta,
+        opt_in_style: 'CENTER_DIALOG'
+      });
+    });
+  };
+  var s = document.createElement('script');
+  s.src = 'https://apis.google.com/js/platform.js?onload=renderOptIn';
+  s.async = true; s.defer = true;
+  document.body.appendChild(s);
+  try { sessionStorage.removeItem('mc_gcr'); } catch(e){}
+})();
+</script>
 </body>
 </html>
