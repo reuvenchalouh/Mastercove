@@ -533,6 +533,8 @@ function onSuccess(orderNumber, name, email, address, city, state, zip) {
   var itemNames = cart.map(function(i){ return i.name + (i.finish ? ' (' + i.finish + ')' : '') + (i.fabric ? ' - ' + i.fabric : '') + ' x' + i.qty; }).join(', ');
   var gaItemsJSON = JSON.stringify(gaItemsFromCart());
   localStorage.removeItem('mc_cart');
+  // For the Google Customer Reviews survey on the confirmation page (kept out of the URL)
+  try { sessionStorage.setItem('mc_gcr', JSON.stringify({ order: orderNumber, email: email })); } catch(e){}
 
   var fullAddress = address + ', ' + city + ', ' + state + ' ' + zip;
   window.location.href = 'order-confirmed.html'
