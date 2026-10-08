@@ -289,6 +289,7 @@ function getDisplaySwatches(p){
       (sz.finishes||[]).forEach(function(f){
         (f.fabrics||[]).forEach(function(fab){
           var key=fab.name||'';
+          if(/basin$/i.test(key))return; // vanity basin colors: show the wood finish dots instead
           if(key&&!seenFab[key]){seenFab[key]=true;fabs.push({name:fab.name,swatch:fab.swatch||(fab.photos&&fab.photos[0])||'',color:''});}
         });
       });
