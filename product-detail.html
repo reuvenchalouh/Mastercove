@@ -456,7 +456,7 @@ function toggleTopSizeFabricGrid(){
   if(btn)btn.textContent=topSizeFabricGridExpanded?'Show fewer fabrics':'Show all fabrics';
 }
 
-var CAT_LABELS={dresser:'Dressers',chest:'Chests',sideboard:'Sideboards',tv:'TV Consoles',coffeetable:'Coffee Tables',diningtable:'Dining Tables',sidetable:'Side Tables',nightstand:'Nightstands',shoe:'Shoe Storage',bookcase:'Bookcases',desk:'Desks',chair:'Chairs',accentchair:'Accent Chairs',sofa:'Sofas',sectional:'Sectionals',armchair:'Lounge & Armchairs',bar:'Bars',bed:'Beds',bench:'Benches',vanity:'Vanities',outdoor:'Outdoor Furniture',other:'Shop'};
+var CAT_LABELS={dresser:'Dressers',chest:'Chests',sideboard:'Sideboards',tv:'TV Consoles',coffeetable:'Coffee Tables',diningtable:'Dining Tables',sidetable:'Side Tables',nightstand:'Nightstands',shoe:'Shoe Storage',bookcase:'Bookcases',desk:'Desks',chair:'Chairs',accentchair:'Accent Chairs',sofa:'Sofas',sectional:'Sectionals',armchair:'Lounge & Armchairs',bar:'Bars',bed:'Beds',bench:'Benches',vanity:'Vanities',outdoor:'Outdoor Furniture',island:'Kitchen Islands',wardrobe:'Wardrobes',other:'Shop'};
 function getCatLabelStandalone(cat){return CAT_LABELS[cat]||'';}
 
 function buildCarousel(products){
@@ -623,7 +623,7 @@ function renderProduct(p){
   currentProduct=p;basePrice=p.price||0;
   try{loadReviews(p);}catch(e){console.log('Reviews error:',e);}
   document.title=p.name+' — Master Cove';
-  var catLabels={dresser:'Dressers',chest:'Chests',sideboard:'Sideboards',tv:'TV Consoles',coffeetable:'Coffee Tables',diningtable:'Dining Tables',sidetable:'Side Tables',nightstand:'Nightstands',shoe:'Shoe Storage',bookcase:'Bookcases',desk:'Desks',chair:'Chairs',accentchair:'Accent Chairs',sofa:'Sofas',sectional:'Sectionals',armchair:'Lounge & Armchairs',bar:'Bars',bed:'Beds',bench:'Benches',vanity:'Vanities',outdoor:'Outdoor Furniture',other:'Shop'};
+  var catLabels={dresser:'Dressers',chest:'Chests',sideboard:'Sideboards',tv:'TV Consoles',coffeetable:'Coffee Tables',diningtable:'Dining Tables',sidetable:'Side Tables',nightstand:'Nightstands',shoe:'Shoe Storage',bookcase:'Bookcases',desk:'Desks',chair:'Chairs',accentchair:'Accent Chairs',sofa:'Sofas',sectional:'Sectionals',armchair:'Lounge & Armchairs',bar:'Bars',bed:'Beds',bench:'Benches',vanity:'Vanities',outdoor:'Outdoor Furniture',island:'Kitchen Islands',wardrobe:'Wardrobes',other:'Shop'};
   var catLabel=catLabels[p.cat]||'Shop';
   document.getElementById('bc-cat').textContent=catLabel;document.getElementById('bc-cat').href='index.html?cat='+encodeURIComponent(p.cat);
   document.getElementById('bc-name').textContent=p.name;document.getElementById('pdp-title').textContent=p.name;
