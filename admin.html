@@ -358,7 +358,7 @@ async function adminUpload(path, file){
           <div><h3>All Listings</h3><p>Manage your product catalog</p></div>
           <div class="search-bar">
             <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin:0 8px;color:var(--mist)"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input type="text" id="search-input" placeholder="Search products…" oninput="renderTable()"/>
+            <input type="text" id="search-input" placeholder="Search products…" oninput="if(this.value.trim())currentFilterCat='';renderTable()"/>
           </div>
         </div>
         <table class="prod-table">
@@ -1420,11 +1420,18 @@ function getDisplaySwatches(p){
 }
 
 function renderTable(){
-  var q=document.getElementById('search-input').value.toLowerCase();
+  var q=document.getElementById('search-input').value.trim().toLowerCase();
+  function has(v){return String(v==null?'':v).toLowerCase().includes(q);}
   var filtered=products.filter(function(p){
-    if(currentFilterCat&&p.cat!==currentFilterCat)return false;
-    var skuMatch=getAllFinishes(p).some(function(f){return(f.sku||'').toLowerCase().includes(q);});
-    return p.name.toLowerCase().includes(q)||p.brand.toLowerCase().includes(q)||(p.cat||'').toLowerCase().includes(q)||skuMatch;
+    // Typing a search looks across ALL products, even if a category box was clicked earlier
+    if(currentFilterCat&&!q&&p.cat!==currentFilterCat)return false;
+    if(!q)return true;
+    var skuMatch=false;
+    try{
+      skuMatch=getAllFinishes(p).some(function(f){return has(f.sku)||has(f.name)||(f.fabrics||[]).some(function(x){return has(x.sku)||has(x.name);});})
+        ||(p.topSizes||[]).some(function(s){return has(s.sku)||has(s.name)||(s.finishes||[]).some(function(f){return has(f.sku)||(f.fabrics||[]).some(function(x){return has(x.sku);});});});
+    }catch(e){}
+    return has(p.name)||has(p.brand)||has(p.cat)||has(p.collection)||skuMatch;
   });
   if(sortCol){filtered.sort(function(a,b){var av=sortCol==='price'?(a.price||0):(a[sortCol]||'').toString().toLowerCase();var bv=sortCol==='price'?(b.price||0):(b[sortCol]||'').toString().toLowerCase();if(av<bv)return -1*sortDir;if(av>bv)return 1*sortDir;return 0;});}
   var tbody=document.getElementById('prod-tbody');
