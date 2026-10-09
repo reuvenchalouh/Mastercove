@@ -121,6 +121,9 @@ header{background:var(--white);border-bottom:1px solid var(--border);position:st
 .mega-dropdown a:hover{background:var(--sand);color:var(--ink);}
 .mega-dropdown .mega-all{font-weight:600;color:var(--walnut);}
 .mega-dropdown .mega-divider{height:1px;background:var(--border);margin:6px 0;}
+.mega-dropdown .mega-cols{column-count:3;column-gap:0;}
+.mega-dropdown .mega-cols a{break-inside:avoid;padding:8px 20px;}
+@media(max-width:700px){.mega-dropdown .mega-cols{column-count:2;}}
 .main{max-width:1380px;margin:0 auto;padding:0 32px;}
 .section{padding:48px 0;}
 .sec-head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:28px;}
@@ -432,28 +435,20 @@ var allProducts = [];
 var PAGE_SIZE = 24;
 var visibleCount = PAGE_SIZE;
 
-var ROOM_MAP = {
-  bedroom:  ['dresser','chest','nightstand','bookcase','bed'],
-  living:   ['tv','sideboard','chair','accentchair','bench','sofa','sectional','armchair','coffeetable'],
-  entryway: ['shoe','sidetable','bench'],
-  storage:  ['shoe','sideboard'],
-  dining:   ['sideboard','bar','diningtable'],
-  kitchen:  ['bar','sideboard','chair'],
-  bathroom: ['vanity'],
-  office:   ['sideboard','other','desk'],
-  outdoor:  ['outdoor']
-};
-
 var NAV_ROOMS = [
-  {key:'bedroom',  label:'Bedroom',     cats:['dresser','chest','nightstand','bookcase','bed']},
-  {key:'living',   label:'Living Room', cats:['sofa','sectional','armchair','sideboard','tv','chair','accentchair','bench','coffeetable']},
+  {key:'bedroom',  label:'Bedroom',     cats:['dresser','chest','nightstand','bookcase','bed','wardrobe']},
+  {key:'living',   label:'Living Room', cats:['sofa','sectional','armchair','sideboard','tv','chair','accentchair','bench','coffeetable','sidetable']},
   {key:'entryway', label:'Entryway',    cats:['shoe','sidetable','bench']},
   {key:'dining',   label:'Dining',      cats:['sideboard','bar','diningtable','chair']},
-  {key:'kitchen',  label:'Kitchen',     cats:['bar','sideboard','chair']},
+  {key:'kitchen',  label:'Kitchen',     cats:['island','bar','sideboard','chair']},
   {key:'bathroom', label:'Bathroom',    cats:['vanity']},
   {key:'office',   label:'Office',      cats:['desk','bookcase','chair','sideboard']},
   {key:'outdoor',  label:'Outdoor',     cats:['outdoor']}
 ];
+
+// Room pages show exactly the same categories as the room menus (one source of truth)
+var ROOM_MAP = {storage:['shoe','sideboard']};
+NAV_ROOMS.forEach(function(r){ ROOM_MAP[r.key] = r.cats; });
 
 function buildRoomNav(){
   var wrap = document.getElementById('room-nav');
@@ -504,11 +499,14 @@ function toggleCollectionsDropdown(btn){
   panel.style.left = rect.left + 'px';
   var names = getCollectionNames();
   var html = '<a href="collections.html" class="mega-all">Shop All Collections</a><div class="mega-divider"></div>';
-  html += names.map(function(name){
+  html += '<div class="mega-cols">' + names.map(function(name){
     return '<a href="#" data-collection="'+name.replace(/"/g,'&quot;')+'">'+name+'</a>';
-  }).join('');
+  }).join('') + '</div>';
   panel.innerHTML = html;
   panel.classList.add('open');
+  // Keep the 3-column panel fully on screen
+  var pw = panel.offsetWidth, vw = window.innerWidth;
+  if(rect.left + pw > vw - 16) panel.style.left = Math.max(16, vw - 16 - pw) + 'px';
   panel.querySelectorAll('a[data-collection]').forEach(function(a){
     a.addEventListener('click', function(e){ e.preventDefault(); window.location.href = 'collections.html?collection=' + encodeURIComponent(a.dataset.collection); });
   });
@@ -986,7 +984,7 @@ function onSearch(){
   }
 }
 function scrollToProducts(){ setTimeout(function(){ var el=document.getElementById('products'); if(el)el.scrollIntoView({behavior:'smooth'}); },50); }
-function getCatLabel(cat){ var map={dresser:'Dresser',chest:'Chest',sideboard:'Sideboard',tv:'TV Console',coffeetable:'Coffee Table',diningtable:'Dining Table',sidetable:'Side Table',nightstand:'Nightstand',shoe:'Shoe Storage',bookcase:'Bookcase',desk:'Desk',chair:'Chair',accentchair:'Accent Chair',sofa:'Sofa',sectional:'Sectional',armchair:'Lounge & Armchairs',bar:'Bar',bed:'Bed',bench:'Bench',vanity:'Vanity',outdoor:'Outdoor Furniture'}; return map[cat]||cat; }
+function getCatLabel(cat){ var map={dresser:'Dresser',chest:'Chest',sideboard:'Sideboard',tv:'TV Console',coffeetable:'Coffee Table',diningtable:'Dining Table',sidetable:'Side Table',nightstand:'Nightstand',shoe:'Shoe Storage',bookcase:'Bookcase',desk:'Desk',chair:'Chair',accentchair:'Accent Chair',sofa:'Sofa',sectional:'Sectional',armchair:'Lounge & Armchairs',bar:'Bar',bed:'Bed',bench:'Bench',vanity:'Vanity',outdoor:'Outdoor Furniture',island:'Kitchen Island',wardrobe:'Wardrobe',other:'Other'}; return map[cat]||cat; }
 function openProduct(id){
   var p = allProducts.find(function(x){ return String(x.id)===String(id); });
   window.location.href = (p && p.slug) ? ('/products/' + p.slug) : ('product-detail.html?id=' + id);
