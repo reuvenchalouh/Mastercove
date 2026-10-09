@@ -28,6 +28,8 @@ const CATEGORY_MAP = {
   vanity:     { google: 'Furniture > Cabinets & Storage > Bathroom Cabinets', type: 'Bathroom Furniture > Bathroom Vanities' },
   bench:      { google: 'Furniture > Benches', type: 'Entryway Furniture > Benches' },
   outdoor:    { google: 'Furniture > Outdoor Furniture', type: 'Outdoor Furniture' },
+  island:     { google: 'Furniture > Tables > Kitchen & Dining Room Tables', type: 'Kitchen Furniture > Kitchen Islands' },
+  wardrobe:   { google: 'Furniture > Cabinets & Storage > Armoires & Wardrobes', type: 'Bedroom Furniture > Wardrobes' },
   other:      { google: 'Furniture', type: 'Furniture' }
 };
 
@@ -41,7 +43,8 @@ const CATEGORY_NOUN = {
   sofa:['Sofa',['sofa','loveseat','couch']], sectional:['Sectional Sofa',['sectional']], bed:['Bed',['bed']],
   coffeetable:['Coffee Table',['coffee table','cocktail table']], diningtable:['Dining Table',['dining table','kitchen table']],
   sidetable:['Side Table',['table']], bar:['Bar Cabinet',['bar','wine']], vanity:['Bathroom Vanity',['vanity']],
-  shoe:['Shoe Cabinet',['shoe']], bench:['Bench',['bench']], outdoor:['Outdoor Patio Furniture',['outdoor','patio']]
+  shoe:['Shoe Cabinet',['shoe']], bench:['Bench',['bench']], outdoor:['Outdoor Patio Furniture',['outdoor','patio']],
+  island:['Kitchen Island',['island']], wardrobe:['Wardrobe',['wardrobe','armoire']]
 };
 
 // Materials people search for — picked up only from the product's own name and tagline (so titles stay accurate).
