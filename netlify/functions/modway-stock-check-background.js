@@ -139,6 +139,21 @@ function shouldBeOut(status) {
   return null; // unknown badge: leave alone
 }
 
+// Delivery estimate shown on the product page (never touches prices).
+// In stock: the page shows "7-12 business days" from today. Preorder: restock date + 5-12 days.
+function deliveryFor(status) {
+  if (!status) return null;
+  if (status.code === 'in_stock' || status.code === 'low') return { instock: true, src: 'modway' };
+  if (status.code === 'preorder') {
+    const m = status.text.match(/expected ([A-Z][a-z]+ \d{1,2}, \d{4})/);
+    const when = m ? Date.parse(m[1] + ' UTC') : NaN;
+    if (isNaN(when)) return null;
+    const iso = (t) => new Date(t).toISOString().slice(0, 10);
+    return { start: iso(when + 5 * DAY), end: iso(when + 12 * DAY), src: 'modway' };
+  }
+  return null;
+}
+
 // Works through items a few at a time; stops starting new ones when time runs low.
 async function runPool(items, worker, deadline) {
   let i = 0;
@@ -297,6 +312,11 @@ async function runSync() {
     if (s && s.closeout && o.product.status === 'active') closeouts.push({ product: o.product.name, label: o.label, why: 'Closeout at Modway' });
     const decision = s && shouldBeOut(s);
     if (!decision) { unchecked++; continue; }
+    const est = decision.out ? null : deliveryFor(s);
+    if (JSON.stringify(o.obj.delivery || null) !== JSON.stringify(est)) {
+      if (est) o.obj.delivery = est; else delete o.obj.delivery;
+      changed.set(o.product.id, o.product);
+    }
     const now = o.obj.outOfStock === true;
     if (decision.out !== now) {
       o.obj.outOfStock = decision.out;
