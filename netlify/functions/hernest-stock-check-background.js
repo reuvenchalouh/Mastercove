@@ -123,7 +123,10 @@ function readDelivery(html) {
   let start = new Date(Date.UTC(now.getUTCFullYear(), mon, parseInt(m[2], 10)));
   if (start.getTime() < now.getTime() - 60 * 86400000) start = new Date(Date.UTC(now.getUTCFullYear() + 1, mon, parseInt(m[2], 10)));
   const days = Math.ceil((start.getTime() - now.getTime()) / 86400000);
-  return { text: m[0].slice(-40), days, start: start.toISOString().slice(0, 10) };
+  const endMon = m[3] ? MONTHS[m[3].toLowerCase()] : mon;
+  let end = new Date(Date.UTC(start.getUTCFullYear(), endMon, parseInt(m[4], 10)));
+  if (end < start) end = new Date(Date.UTC(start.getUTCFullYear() + 1, endMon, parseInt(m[4], 10)));
+  return { text: m[0].slice(-40), days, start: start.toISOString().slice(0, 10), end: end.toISOString().slice(0, 10) };
 }
 
 // Reads every stock-related signal from one HerNest product page
@@ -172,6 +175,14 @@ function decide(sig, inCategory, useDelivery) {
   if (useDelivery && sig.delivery && sig.delivery.days >= DELIVERY_CUTOFF_DAYS) return { out: true, why: 'Delivery not until ' + sig.delivery.start + ' (preorder)' };
   // The product page opened normally
   return { out: false, why: 'Product page is live on HerNest' + (sig.delivery ? ', delivery from ' + sig.delivery.start : '') };
+}
+
+const ORDER_BUFFER_DAYS = 2; // time for us to place the order with HerNest
+const addDays = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+// Delivery estimate shown on the product page for one option
+function deliveryFor(sig) {
+  if (!sig || !sig.delivery || !sig.delivery.start) return null;
+  return { start: addDays(sig.delivery.start, ORDER_BUFFER_DAYS), end: addDays(sig.delivery.end || sig.delivery.start, ORDER_BUFFER_DAYS), src: 'hernest' };
 }
 
 async function runPool(items, worker, deadline) {
@@ -281,6 +292,12 @@ exports.handler = async function(event) {
           continue;
         }
         if (!r || !r.sig || r.verdict === '?') continue;
+        // Delivery estimate for the product page (never touches prices)
+        const est = r.verdict === 'OUT' ? null : deliveryFor(r.sig);
+        if (JSON.stringify(o.obj.delivery || null) !== JSON.stringify(est)) {
+          if (est) o.obj.delivery = est; else delete o.obj.delivery;
+          changed.set(o.product.id, o.product);
+        }
         if (o.obj.stockLocked === true) continue; // set by hand: leave it alone
         const out = r.verdict === 'OUT';
         if ((o.obj.outOfStock === true) !== out) {
