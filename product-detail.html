@@ -342,14 +342,14 @@ src="https://www.facebook.com/tr?id=2156219968568427&ev=PageView&noscript=1"
     </div>
     <div class="oos-note" id="oos-note">This option is currently out of stock. Choose another finish or fabric to order.</div>
     <div style="margin-top:12px;padding:10px 14px;background:var(--sand);border-radius:2px;font-size:13px;color:var(--slate);display:flex;align-items:center;gap:8px;">
-      🚛 <span>Ships within <strong>7–12 business days</strong></span>
+      🚛 <span id="delivery-text">Ships within <strong>7–12 business days</strong></span>
     </div>
     <div style="margin-top:8px;padding:10px 14px;background:var(--sand);border-radius:2px;font-size:13px;color:var(--slate);display:flex;align-items:center;gap:8px;" id="shipping-cost-note">
       💵 <span id="shipping-cost-text">Free shipping</span>
     </div>
     <div class="trust-mini">
       <div class="tmini"><span>🌲</span> Sustainably Sourced</div>
-      <div class="tmini"><span>✓</span> In Stock</div>
+      <div class="tmini" id="stock-mini"><span>✓</span> In Stock</div>
       <div class="tmini"><span>🔒</span> Secure Checkout</div>
     </div>
     <div id="pdp-features-wrap" style="display:none;">
@@ -675,8 +675,8 @@ function renderProduct(p){
     var fins=(p.finishes||[]).map(function(f){
       return typeof f==='string'
         ?{color:f,name:'Default',photos:[],outOfStock:false,fabrics:[],sizes:[]}
-        :{color:f.color||'#C4976A',name:(f.name&&String(f.name).trim())?String(f.name).trim():'Default',photos:f.photos||[],outOfStock:f.outOfStock||false,price:Number(f.price)||0,
-          fabrics:(f.fabrics||[]).map(function(fab){return{name:fab.name||'',outOfStock:fab.outOfStock||false,photos:fab.photos||[],swatch:fab.swatch||'',type:fab.type||'',price:Number(fab.price)||0};}),
+        :{color:f.color||'#C4976A',name:(f.name&&String(f.name).trim())?String(f.name).trim():'Default',photos:f.photos||[],outOfStock:f.outOfStock||false,price:Number(f.price)||0,delivery:f.delivery||null,
+          fabrics:(f.fabrics||[]).map(function(fab){return{name:fab.name||'',outOfStock:fab.outOfStock||false,photos:fab.photos||[],swatch:fab.swatch||'',type:fab.type||'',price:Number(fab.price)||0,delivery:fab.delivery||null};}),
           sizes:(f.sizes||[]).map(function(sz){return{name:sz.name||'',price:sz.price||0,outOfStock:sz.outOfStock||false,photos:sz.photos||[],dims:sz.dims||{}};})};
     }); // keep the order set in admin (the first finish is what the page opens on)
 
@@ -695,7 +695,7 @@ function renderProduct(p){
         var sw=document.createElement('div');sw.className='fin-swatch';sw.style.background=f.color;
         var lb=document.createElement('span');lb.className='fin-name';lb.textContent=f.name+(f.outOfStock?' — Out of Stock':'');
         div.appendChild(sw);div.appendChild(lb);
-        div._photos=f.photos;div._name=f.name;div._color=f.color;div._fabrics=f.fabrics||[];div._sizes=f.sizes||[];div._price=Number(f.price)||0;
+        div._fobj=f;div._photos=f.photos;div._name=f.name;div._color=f.color;div._fabrics=f.fabrics||[];div._sizes=f.sizes||[];div._price=Number(f.price)||0;
         div.addEventListener('click',function(){selectFinish(this,this._name,this._color,this._photos,this._fabrics,this._sizes);});
         fgrid.appendChild(div);
       });
@@ -736,6 +736,7 @@ function renderProduct(p){
   fetch('https://slaffkwfwmudvernzjua.supabase.co/rest/v1/products?cat=eq.'+encodeURIComponent(p.cat)+'&status=eq.active&id=neq.'+encodeURIComponent(p.id)+'&select=id,name,cat,price,img,finishes&limit=12',{
     headers:{'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsYWZma3dmd211ZHZlcm56anVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMzU4MDksImV4cCI6MjA5MTYxMTgwOX0.BEz8_GNKPTQB90LJBJTZFyJYFF-9ypdfbEsLAfEESqY'}
   }).then(function(r){return r.json();}).then(function(data){buildCarousel(data&&data.length?data:[]);}).catch(function(){buildCarousel([]);});
+  try{updateDelivery(isSelectionOutOfStock());}catch(e){}
 }
 
 function escapeHTML(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
@@ -767,9 +768,44 @@ function isSelectionOutOfStock(){
   var isSizeMode=currentProduct&&(currentProduct.variantMode==='size')&&currentProduct.topSizes&&currentProduct.topSizes.length;
   return isSizeMode?(oosState.topSize||oosState.topFinish||oosState.topFabric):(oosState.finish||oosState.fabric||oosState.size);
 }
+/* ── DELIVERY ESTIMATE for the selected option (filled in daily by the stock checks) ── */
+function addBusinessDays(d,n){var x=new Date(d.getTime());while(n>0){x.setDate(x.getDate()+1);var w=x.getDay();if(w!==0&&w!==6)n--;}return x;}
+function fmtDay(d){return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});}
+function isoToDate(s){var p=String(s).split('-');return new Date(+p[0],+p[1]-1,+p[2]);}
+function activeEl(sel){return document.querySelector(sel);}
+function selectedDelivery(){
+  var isSizeMode=currentProduct&&(currentProduct.variantMode==='size')&&currentProduct.topSizes&&currentProduct.topSizes.length;
+  var picks=[];
+  if(isSizeMode){
+    var fb=activeEl('#top-size-fabric-grid-wrap .active');if(fb&&fb._fab)picks.push(fb._fab);
+    var tf=activeEl('#top-size-finish-grid .active');if(tf&&tf._f)picks.push(tf._f);
+    var ts=activeEl('#top-size-grid .active');
+    if(!tf&&ts&&ts._sz&&ts._sz.finishes&&ts._sz.finishes.length){var ff=ts._sz.finishes.filter(function(x){return !x.outOfStock;})[0]||ts._sz.finishes[0];if(ff)picks.push(ff);}
+    if(ts&&ts._sz)picks.push(ts._sz);
+  }else{
+    var fa=activeEl('#fabric-grid-wrap .fab-opt.active');if(fa&&fa._fab)picks.push(fa._fab);
+    var fi=activeEl('#finish-grid .active');if(fi&&fi._fobj)picks.push(fi._fobj);
+  }
+  for(var i=0;i<picks.length;i++){if(picks[i]&&picks[i].delivery)return picks[i].delivery;}
+  return null;
+}
+function updateDelivery(out){
+  var el=document.getElementById('delivery-text');var mini=document.getElementById('stock-mini');if(!el)return;
+  var today=new Date();today.setHours(0,0,0,0);
+  var d=selectedDelivery();var start,end;
+  if(d&&d.start&&d.end){start=isoToDate(d.start);end=isoToDate(d.end);if(end<today){start=null;}}
+  if(!start){start=addBusinessDays(today,7);end=addBusinessDays(today,12);}
+  if(start<today)start=today;
+  var preorder=(start-today)/86400000>21;
+  if(out){el.innerHTML='This option is <strong>out of stock</strong>';}
+  else el.innerHTML='Estimated delivery: <strong>'+fmtDay(start)+' – '+fmtDay(end)+'</strong>'+(preorder?' <span style="color:var(--walnut);">(pre-order)</span>':'');
+  if(mini)mini.innerHTML=out?'<span>✕</span> Out of Stock':(preorder?'<span>⏳</span> Pre-order':'<span>✓</span> In Stock');
+}
+
 function updateBuyState(){
   var btn=document.getElementById('atc-btn');var note=document.getElementById('oos-note');
   if(!btn)return;
+  try{updateDelivery(isSelectionOutOfStock());}catch(e){}
   var out=isSelectionOutOfStock();
   btn.disabled=out;
   btn.textContent=out?'Out of Stock':'Add to Cart';
@@ -920,7 +956,7 @@ function showTopPrice(){
 function renderTopSizeMode(topSizes,fallbackImg){
   var sizes=(topSizes||[]).map(function(s){
     return{name:s.name||'',price:s.price||0,outOfStock:s.outOfStock||false,dims:s.dims||{},sku:s.sku||'',componentDims:s.componentDims||[],desc:s.desc||'',features:s.features||'',
-      finishes:(s.finishes||[]).map(function(f){return{color:f.color||'#C4976A',name:f.name||'',outOfStock:f.outOfStock||false,photos:f.photos||[],sku:f.sku||'',price:Number(f.price)||0,fabrics:(f.fabrics||[]).map(function(fab){return{name:fab.name||'',outOfStock:fab.outOfStock||false,photos:fab.photos||[],swatch:fab.swatch||'',type:fab.type||'',price:Number(fab.price)||0};})};})};
+      delivery:s.delivery||null,finishes:(s.finishes||[]).map(function(f){return{color:f.color||'#C4976A',name:f.name||'',outOfStock:f.outOfStock||false,photos:f.photos||[],sku:f.sku||'',price:Number(f.price)||0,delivery:f.delivery||null,fabrics:(f.fabrics||[]).map(function(fab){return{name:fab.name||'',outOfStock:fab.outOfStock||false,photos:fab.photos||[],swatch:fab.swatch||'',type:fab.type||'',price:Number(fab.price)||0,delivery:fab.delivery||null};})};})};
   });
   var grid=document.getElementById('top-size-grid');grid.innerHTML='';
   sizes.forEach(function(sz,j){
