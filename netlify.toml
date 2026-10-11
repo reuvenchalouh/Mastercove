@@ -17,11 +17,10 @@
 [functions."review-reminders"]
   schedule = "0 15 * * *"
 
-# Modway stock sync: checks Modway products each morning in 12 parts
-# (every 4 minutes from 7:00 to 7:44am New York time) and marks finishes/fabrics/sizes
-# in or out of stock automatically. Split up so Modway doesn't rate-limit us.
+# Modway stock check: every morning at 7:00am New York time. Starts modway-stock-check-background,
+# which checks every Modway variant in one run and marks finishes/fabrics/sizes in or out of stock.
 [functions."modway-stock-sync"]
-  schedule = "0,4,8,12,16,20,24,28,32,36,40,44 11 * * *"
+  schedule = "0 11 * * *"
 
 # HerNest stock check: every morning at 7:50am New York time (after the Modway sync).
 # Starts hernest-stock-check-background, which checks every HerNest product page.
