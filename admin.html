@@ -535,7 +535,7 @@ async function adminUpload(path, file){
     <div class="panel">
       <div class="panel-head">
         <div><h3>Out of Stock</h3><p>Finishes, fabrics, and sizes currently hidden from customers</p></div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><button type="button" class="go-btn" id="hn-check-btn" onclick="runHernestCheck()" style="white-space:nowrap;">Check HerNest stock now</button><div class="search-bar">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><button type="button" class="go-btn" id="hn-check-btn" onclick="runHernestCheck()" style="white-space:nowrap;">Check stock now</button><div class="search-bar">
           <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin:0 8px;color:var(--mist)"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input type="text" id="oos-search" placeholder="Search out of stock…" oninput="renderOOSTable()"/>
         </div></div>
@@ -1506,12 +1506,16 @@ async function markInStock(productId,kind,sizeIdx,finIdx,fabIdx){
 
 async function runHernestCheck(){
   var b=document.getElementById('hn-check-btn');if(b){b.disabled=true;b.textContent='Checking…';}
-  try{
-    var r=await fetch('/.netlify/functions/hernest-stock-check-background',{method:'POST',headers:{'Content-Type':'application/json','x-admin-password':ADMIN_PW},body:'{}'});
-    if(r.status===202||r.ok)showToast('HerNest check started. Takes about 10 minutes; you\'ll get an email if anything changes.','success');
-    else showToast('Could not start the check ('+r.status+')','error');
-  }catch(e){showToast('Could not start the check','error');}
-  setTimeout(function(){if(b){b.disabled=false;b.textContent='Check HerNest stock now';}},15000);
+  var started=[];
+  for(var sup of [['hernest','HerNest'],['modway','Modway']]){
+    try{
+      var r=await fetch('/.netlify/functions/'+sup[0]+'-stock-check-background',{method:'POST',headers:{'Content-Type':'application/json','x-admin-password':ADMIN_PW},body:'{}'});
+      if(r.status===202||r.ok)started.push(sup[1]);
+    }catch(e){}
+  }
+  if(started.length)showToast('Stock check started for '+started.join(' & ')+'. Takes about 10 minutes; you\'ll get an email with any changes.','success');
+  else showToast('Could not start the stock check','error');
+  setTimeout(function(){if(b){b.disabled=false;b.textContent='Check stock now';}},15000);
 }
 function renderOOSTable(){
   var tbody=document.getElementById('oos-tbody');if(!tbody)return;
