@@ -22,3 +22,8 @@
 # in or out of stock automatically. Split up so Modway doesn't rate-limit us.
 [functions."modway-stock-sync"]
   schedule = "0,4,8,12,16,20,24,28,32,36,40,44 11 * * *"
+
+# HerNest stock check: every morning at 7:50am New York time (after the Modway sync).
+# Starts hernest-stock-check-background, which checks every HerNest product page.
+[functions."hernest-stock-sync"]
+  schedule = "50 11 * * *"
