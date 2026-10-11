@@ -25,6 +25,7 @@ const PAGE_TIMEOUT_MS = 12000; // give up on one page after 12 seconds
 const TIME_BUDGET_MS = 13 * 60 * 1000; // background functions stop at 15 minutes
 const MAX_FAILURE_RATE = 0.5;  // if more than half the pages fail, change nothing
 const MAX_OUT_RATE = 0.5;      // if more than half come back sold out, assume something is wrong and change nothing
+const DELIVERY_CUTOFF_DAYS = 35; // delivery starting this many days out (or more) = treated as sold out / preorder
 const WATCH_IDS = ['8742'];    // known sold-out item used to verify the signals (Casimir Side Table)
 // Category pages that always get scanned (others are discovered from HerNest's menus)
 const SEED_CATEGORIES = [
@@ -110,6 +111,21 @@ function around(html, re, max, width) {
   return out;
 }
 
+const MONTHS = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, sept: 8, oct: 9, nov: 10, dec: 11 };
+// Finds HerNest's delivery estimate (e.g. "Free Threshold Delivery ... Oct 18-Oct 25") and returns days until it starts
+function readDelivery(html) {
+  const text = html.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ');
+  const re = /delivery[^.]{0,80}?\b(jan|feb|mar|apr|may|jun|jul|aug|sept?|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})\s*(?:-|–|to)\s*(?:(jan|feb|mar|apr|may|jun|jul|aug|sept?|oct|nov|dec)[a-z]*\.?\s+)?(\d{1,2})/i;
+  const m = text.match(re);
+  if (!m) return null;
+  const now = new Date();
+  const mon = MONTHS[m[1].toLowerCase()];
+  let start = new Date(Date.UTC(now.getUTCFullYear(), mon, parseInt(m[2], 10)));
+  if (start.getTime() < now.getTime() - 60 * 86400000) start = new Date(Date.UTC(now.getUTCFullYear() + 1, mon, parseInt(m[2], 10)));
+  const days = Math.ceil((start.getTime() - now.getTime()) / 86400000);
+  return { text: m[0].slice(-40), days, start: start.toISOString().slice(0, 10) };
+}
+
 // Reads every stock-related signal from one HerNest product page
 function readSignals(pid, page, detailed) {
   const html = page.html || '';
@@ -135,6 +151,7 @@ function readSignals(pid, page, detailed) {
     preorderText: (html.match(/pre[\s-]*order/gi) || []).length,
     notifyText: (html.match(/notify\s+me/gi) || []).length,
     stockNums: [...html.matchAll(/"(?:stock|stocks|quantity|qty|inventory|inventory_quantity|stockNum|stock_num|availableStock|available_stock)"\s*:\s*"?(-?\d+)/gi)].slice(0, 10).map(m => m[0]),
+    delivery: readDelivery(html),
     flags: [...html.matchAll(/"(?:soldOut|sold_out|isSoldOut|is_sold_out|outOfStock|out_of_stock|available|isAvailable|in_stock|inStock)"\s*:\s*(true|false|0|1|"[^"]{0,20}")/gi)].slice(0, 10).map(m => m[0])
   };
   if (detailed) {
@@ -146,14 +163,15 @@ function readSignals(pid, page, detailed) {
 }
 
 // Turns signals into a decision. null = not sure, leave it alone.
-function decide(sig, inCategory) {
+function decide(sig, inCategory, useDelivery) {
   if (!sig) return null;
   if (sig.gone) return { out: true, why: 'Link goes to HerNest homepage (sold out)' };
   if (sig.otherProduct) return { out: true, why: 'Link now opens a different HerNest product' };
   const ld = sig.ld.map(x => x.toLowerCase());
   if (ld.length && ld.every(x => /outofstock|soldout|discontinued/.test(x))) return { out: true, why: 'Marked sold out on HerNest page' };
+  if (useDelivery && sig.delivery && sig.delivery.days >= DELIVERY_CUTOFF_DAYS) return { out: true, why: 'Delivery not until ' + sig.delivery.start + ' (preorder)' };
   // The product page opened normally
-  return { out: false, why: 'Product page is live on HerNest' };
+  return { out: false, why: 'Product page is live on HerNest' + (sig.delivery ? ', delivery from ' + sig.delivery.start : '') };
 }
 
 async function runPool(items, worker, deadline) {
@@ -200,6 +218,11 @@ exports.handler = async function(event) {
   const deadline = started + TIME_BUDGET_MS;
   const { data: setting } = await supabase.from('sync_settings').select('value').eq('key', 'hernest_mode').maybeSingle();
   const mode = (setting && setting.value) === 'apply' ? 'apply' : 'report';
+  const { data: dSetting } = await supabase.from('sync_settings').select('value').eq('key', 'hernest_delivery_rule').maybeSingle();
+  const useDelivery = !!(dSetting && dSetting.value === 'on');
+  // Options the owner set by hand (table stock_locks, by HerNest product ID) are forced to that state
+  const { data: lockRows } = await supabase.from('stock_locks').select('supplier_pid,locked_out');
+  const locks = Object.fromEntries((lockRows || []).map(r => [String(r.supplier_pid), r.locked_out !== false]));
   const { data: run } = await supabase.from('stock_check_runs').insert({ supplier: 'hernest', mode, summary: 'running' }).select('id').single();
   const runId = run && run.id;
 
@@ -238,7 +261,7 @@ exports.handler = async function(event) {
     const checked = Object.keys(sigs).length + failed;
     const pagesOut = pids.map(pid => {
       const inCat = catUsable ? cat.listed.has(pid) : null;
-      const d = decide(sigs[pid], inCat);
+      const d = decide(sigs[pid], inCat, useDelivery);
       return { pid, url: pages[pid], inCategory: inCat, verdict: d ? (d.out ? 'OUT' : 'IN') : '?', why: d && d.why, sig: sigs[pid] || null };
     });
 
@@ -252,7 +275,13 @@ exports.handler = async function(event) {
       const changed = new Map();
       for (const o of options) {
         const r = byPid[o.pid];
+        if (o.pid in locks) {
+          const want = locks[o.pid];
+          if ((o.obj.outOfStock === true) !== want) { o.obj.outOfStock = want; changed.set(o.product.id, o.product); (want ? applied.wentOut : applied.cameBack).push({ product: o.product.name, label: o.label, why: 'Locked by owner' }); }
+          continue;
+        }
         if (!r || !r.sig || r.verdict === '?') continue;
+        if (o.obj.stockLocked === true) continue; // set by hand: leave it alone
         const out = r.verdict === 'OUT';
         if ((o.obj.outOfStock === true) !== out) {
           o.obj.outOfStock = out;
