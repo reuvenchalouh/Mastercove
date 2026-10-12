@@ -235,7 +235,7 @@ var urlCollection = urlParams.get('collection');
 
 document.addEventListener('DOMContentLoaded', async function(){
   try {
-    var res = await _sb.from('products').select('id,name,cat,price,was,img,finishes,dims,badge,collection,collection_cover,tagline,top_sizes,variant_mode,shipping_cost').eq('status','active');
+    var res = await _sb.from('products').select('id,name,slug,cat,price,was,img,finishes,dims,badge,collection,collection_cover,tagline,top_sizes,variant_mode,shipping_cost,rating,review_count').eq('status','active');
     if(res.data && res.data.length){
       allProducts = res.data.map(function(p){
         return {
