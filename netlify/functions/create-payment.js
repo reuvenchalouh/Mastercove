@@ -288,7 +288,7 @@ async function sendOwnerNotification({ orderNumber, customerName, customerEmail,
     }).join('');
 
     await resend.emails.send({
-      from: 'Master Cove <orders@mastercove.com>',
+      from: 'New Order <orders@mastercove.com>',
       reply_to: 'mastercovestore@gmail.com',
       to: 'mastercovestore@gmail.com',
       subject: '🛋️ New Order ' + orderNumber + ' — $' + revenue,
