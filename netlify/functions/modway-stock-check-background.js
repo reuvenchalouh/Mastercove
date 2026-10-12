@@ -27,6 +27,10 @@ const TIME_BUDGET_MS = 13 * 60 * 1000; // background functions stop at 15 minute
 const SECTION_ID = 'template--20039205847212__main';
 // If too many checks fail (Modway down, blocking us, etc.) change nothing.
 const MAX_FAILURE_RATE = 0.6; // pages that fail are simply skipped and rechecked tomorrow
+// Shipping method (table modway_shipping). Modway shows "Ships via Freight" (3-4 weeks in transit)
+// or "Ships via FedEx" on the full product page, only while a color is in stock.
+const SHIP_LOOKUPS_PER_RUN = 25;  // new / unknown / old products looked up per run
+const SHIP_REFRESH_DAYS = 30;     // re-confirm each product's shipping method about once a month
 // ────────────────────────────────────────────────────────────
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -139,17 +143,30 @@ function shouldBeOut(status) {
   return null; // unknown badge: leave alone
 }
 
+// Reads "Ships via Freight" / "Ships via FedEx" from a full Modway product page.
+function readShipMethod(html) {
+  const m = String(html || '').match(/callout-text">\s*Ships via (\w+)/i);
+  return m ? m[1].toLowerCase() : null; // 'freight', 'fedex', or null (not shown)
+}
+
 // Delivery estimate shown on the product page (never touches prices).
-// In stock: the page shows "7-12 business days" from today. Preorder: restock date + 5-12 days.
-function deliveryFor(status) {
+// In stock: the page counts from today (FedEx/unknown: 7-12 business days, freight: 24-32 days).
+// Preorder: restock date + 5-12 days (FedEx) or + 24-32 days (freight).
+function deliveryFor(status, ship) {
   if (!status) return null;
-  if (status.code === 'in_stock' || status.code === 'low') return { instock: true, src: 'modway' };
+  const freight = ship === 'freight';
+  if (status.code === 'in_stock' || status.code === 'low') {
+    return freight ? { instock: true, ship: 'freight', src: 'modway' } : { instock: true, src: 'modway' };
+  }
   if (status.code === 'preorder') {
     const m = status.text.match(/expected ([A-Z][a-z]+ \d{1,2}, \d{4})/);
     const when = m ? Date.parse(m[1] + ' UTC') : NaN;
     if (isNaN(when)) return null;
     const iso = (t) => new Date(t).toISOString().slice(0, 10);
-    return { start: iso(when + 5 * DAY), end: iso(when + 12 * DAY), src: 'modway' };
+    const [a, b] = freight ? [24, 32] : [5, 12];
+    const d = { start: iso(when + a * DAY), end: iso(when + b * DAY), pre: true, src: 'modway' };
+    if (freight) d.ship = 'freight';
+    return d;
   }
   return null;
 }
@@ -185,7 +202,7 @@ async function emailOwner(wentOut, cameBack, failed, closeouts) {
   </div>`;
   try {
     await resend.emails.send({
-      from: 'Master Cove <orders@mastercove.com>',
+      from: 'Modway Stock Update <orders@mastercove.com>',
       to: OWNER_EMAIL,
       subject: `Modway stock: ${wentOut.length} out, ${cameBack.length} back in` + (closeouts.length ? `, ${closeouts.length} closeout` : ''),
       html
@@ -196,7 +213,7 @@ async function emailOwner(wentOut, cameBack, failed, closeouts) {
 async function emailFailure(reason, details) {
   try {
     await resend.emails.send({
-      from: 'Master Cove <orders@mastercove.com>',
+      from: 'Modway Stock Update <orders@mastercove.com>',
       to: OWNER_EMAIL,
       subject: 'Modway stock sync FAILED: nothing was changed',
       html: `<div style="font-family:Arial,sans-serif;font-size:14px;color:#1C1A17;max-width:600px;">
@@ -296,6 +313,46 @@ async function runSync() {
     return { statusCode: 502, body: 'Too many failed checks; nothing changed' };
   }
 
+  // Shipping method per Modway product page (freight vs FedEx)
+  const ship = {};      // handle -> 'freight' | 'fedex' | null
+  const shipAge = {};   // handle -> last checked (ms)
+  const { data: shipRows } = await supabase.from('modway_shipping').select('handle,method,checked_at');
+  for (const r of shipRows || []) { ship[r.handle] = r.method || null; shipAge[r.handle] = Date.parse(r.checked_at) || 0; }
+  // Look up new products first, then unknown ones, then ones not confirmed in SHIP_REFRESH_DAYS.
+  // Modway only shows the method while the color is in stock, so use a variant that just came back in stock.
+  const inStockVariant = {};
+  for (const key of Object.keys(results)) {
+    const s = results[key];
+    if (s && (s.code === 'in_stock' || s.code === 'low') && !inStockVariant[pages[key].handle]) inStockVariant[pages[key].handle] = pages[key].variant;
+  }
+  const handles = [...new Set(Object.values(pages).map(p => p.handle))];
+  const prio = (h) => !(h in ship) ? 0 : (ship[h] === null ? 1 : 2);
+  const toLookup = handles
+    .filter(h => !(h in ship) || ship[h] === null || (Date.now() - (shipAge[h] || 0)) > SHIP_REFRESH_DAYS * DAY)
+    .filter(h => !(h in ship) || inStockVariant[h]) // known-but-sold-out pages won't show the method
+    .sort((a, b) => prio(a) - prio(b) || (shipAge[a] || 0) - (shipAge[b] || 0))
+    .slice(0, SHIP_LOOKUPS_PER_RUN);
+  for (const h of toLookup) {
+    if (Date.now() > started + TIME_BUDGET_MS + 60 * 1000) break;
+    try {
+      const v = inStockVariant[h];
+      const method = readShipMethod(await fetchPolitely('https://modway.com/products/' + h + (v ? '?variant=' + v : '')));
+      if (method || !(h in ship)) {
+        const keep = method || ship[h] || null;
+        ship[h] = keep;
+        await supabase.from('modway_shipping').upsert({ handle: h, method: keep, checked_at: new Date().toISOString() });
+      }
+    } catch (e) { /* try again next run */ }
+    await sleep(PAUSE_MS);
+  }
+  // A product page with an unknown method borrows it from its sister options on the same
+  // mastercove product (e.g. a sold-out sectional size inherits "freight" from the other sizes).
+  const shipFor = (o) => {
+    if (ship[o.handle]) return ship[o.handle];
+    const sib = new Set(collectOptions(o.product).map(x => (parseLink(x.link) || {}).handle).filter(h => h && ship[h]).map(h => ship[h]));
+    return sib.size === 1 ? [...sib][0] : null;
+  };
+
   // Apply results
   const changed = new Map();
   const wentOut = [], cameBack = [], closeouts = [];
@@ -312,7 +369,7 @@ async function runSync() {
     if (s && s.closeout && o.product.status === 'active') closeouts.push({ product: o.product.name, label: o.label, why: 'Closeout at Modway' });
     const decision = s && shouldBeOut(s);
     if (!decision) { unchecked++; continue; }
-    const est = decision.out ? null : deliveryFor(s);
+    const est = decision.out ? null : deliveryFor(s, shipFor(o));
     if (JSON.stringify(o.obj.delivery || null) !== JSON.stringify(est)) {
       if (est) o.obj.delivery = est; else delete o.obj.delivery;
       changed.set(o.product.id, o.product);
