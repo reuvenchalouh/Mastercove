@@ -793,12 +793,15 @@ function updateDelivery(out){
   var el=document.getElementById('delivery-text');var mini=document.getElementById('stock-mini');if(!el)return;
   var today=new Date();today.setHours(0,0,0,0);
   var d=selectedDelivery();var start,end;
+  var freight=!!(d&&d.ship==='freight');
   if(d&&d.start&&d.end){start=isoToDate(d.start);end=isoToDate(d.end);if(end<today){start=null;}}
+  if(!start&&freight){start=new Date(today.getTime());start.setDate(start.getDate()+24);end=new Date(today.getTime());end.setDate(end.getDate()+32);}
   if(!start){start=addBusinessDays(today,7);end=addBusinessDays(today,12);}
   if(start<today)start=today;
-  var preorder=(start-today)/86400000>21;
+  // Pre-order when the stock check says so; freight items are naturally 3-4 weeks out and are NOT pre-orders.
+  var preorder=(d&&d.pre===true)||(!freight&&(start-today)/86400000>21);
   if(out){el.innerHTML='This option is <strong>out of stock</strong>';}
-  else el.innerHTML='Estimated delivery: <strong>'+fmtDay(start)+' – '+fmtDay(end)+'</strong>'+(preorder?' <span style="color:var(--walnut);">(pre-order)</span>':'');
+  else el.innerHTML='Estimated delivery: <strong>'+fmtDay(start)+' – '+fmtDay(end)+'</strong>'+(preorder?' <span style="color:var(--walnut);">(pre-order)</span>':'')+(freight?'<br><span style="font-size:12px;color:var(--slate);">Large item: ships by freight carrier</span>':'');
   if(mini)mini.innerHTML=out?'<span>✕</span> Out of Stock':(preorder?'<span>⏳</span> Pre-order':'<span>✓</span> In Stock');
 }
 
