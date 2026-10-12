@@ -125,6 +125,14 @@ header{background:var(--white);border-bottom:1px solid var(--border);position:st
 .sz-opt.active .sz-price{color:var(--walnut);}
 /* CAROUSEL */
 .related-section{max-width:1380px;margin:0 auto;padding:0 24px 80px;}
+.coll-section{max-width:1380px;margin:0 auto;padding:0 24px 56px;}
+.coll-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:6px;}
+.coll-head h2{font-family:'Playfair Display',serif;font-size:24px;font-weight:400;}
+.coll-head h2 em{color:var(--walnut);font-style:italic;}
+.coll-link{font-size:13px;color:var(--walnut);text-decoration:none;border-bottom:1px solid currentColor;}
+.coll-sub{font-size:13.5px;color:var(--slate);font-weight:300;margin-bottom:18px;}
+.coll-track{display:flex;gap:18px;overflow-x:auto;padding-bottom:6px;scrollbar-width:thin;}
+.coll-track .rel-card{flex:0 0 calc(25% - 14px);}
 .related-section h2{font-family:'Playfair Display',serif;font-size:24px;font-weight:400;margin-bottom:20px;}
 .related-section h2 em{color:var(--walnut);font-style:italic;}
 .carousel-wrap{position:relative;}
@@ -196,6 +204,9 @@ footer{background:var(--ink);color:rgba(255,255,255,.5);padding:52px 40px 28px;}
   .tabs-section{padding:0 16px 40px;}
   .related-section{padding:0 16px 60px;}
   .rel-card{flex:0 0 calc(50% - 9px)!important;}
+  .coll-section{padding:0 16px 44px;}
+  .coll-track .rel-card{flex:0 0 calc(50% - 9px)!important;}
+  .coll-track{-webkit-overflow-scrolling:touch;scrollbar-width:none;}
   .carousel-arrow{display:none!important;}
   .carousel-track-outer{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
   .carousel-track-outer::-webkit-scrollbar{display:none;}
@@ -340,7 +351,7 @@ src="https://www.facebook.com/tr?id=2156219968568427&ev=PageView&noscript=1"
       <button class="atc-btn" id="atc-btn" onclick="addToCart()">Add to Cart</button>
       <button class="save-btn" id="wish-btn" onclick="toggleWish()">♡</button>
     </div>
-    <div class="oos-note" id="oos-note">This option is currently out of stock. Choose another finish or fabric to order.</div>
+    <div class="oos-note" id="oos-note"></div>
     <div style="margin-top:12px;padding:10px 14px;background:var(--sand);border-radius:2px;font-size:13px;color:var(--slate);display:flex;align-items:center;gap:8px;">
       🚛 <span id="delivery-text">Ships within <strong>7–12 business days</strong></span>
     </div>
@@ -388,6 +399,16 @@ src="https://www.facebook.com/tr?id=2156219968568427&ev=PageView&noscript=1"
       <p style="font-size:12.5px;font-weight:300;">Customers are invited to review their furniture after it's delivered.</p>
     </div>
   </div>
+</div>
+
+<!-- COMPLETE THE COLLECTION (matching pieces from the same collection) -->
+<div class="coll-section" id="coll-section" style="display:none;">
+  <div class="coll-head">
+    <h2>Complete the <em>Collection</em></h2>
+    <a class="coll-link" id="coll-link" href="collections.html">View the full collection →</a>
+  </div>
+  <div class="coll-sub" id="coll-sub"></div>
+  <div class="coll-track" id="coll-track"></div>
 </div>
 
 <!-- YOU MAY ALSO LIKE -->
@@ -476,6 +497,35 @@ function buildCarousel(products){
     track.appendChild(card);
   });
   carouselIndex=0;updateCarouselArrows();
+}
+
+// ── COMPLETE THE COLLECTION: other active pieces with the same collection name ──
+function collEsc(s){return String(s||'').replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function loadCollectionRow(p){
+  var name=(p.collection||'').trim();if(!name)return;
+  var key='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsYWZma3dmd211ZHZlcm56anVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMzU4MDksImV4cCI6MjA5MTYxMTgwOX0.BEz8_GNKPTQB90LJBJTZFyJYFF-9ypdfbEsLAfEESqY';
+  fetch('https://slaffkwfwmudvernzjua.supabase.co/rest/v1/products?collection=eq.'+encodeURIComponent(name)+'&status=eq.active&id=neq.'+encodeURIComponent(p.id)+'&select=id,name,slug,cat,price,img,finishes,top_sizes,variant_mode&order=price.desc&limit=24',{headers:{'apikey':key}})
+  .then(function(r){return r.json();}).then(function(list){
+    if(!Array.isArray(list)||!list.length)return;
+    var sec=document.getElementById('coll-section');var track=document.getElementById('coll-track');if(!sec||!track)return;
+    var short=name.replace(/^the\s+/i,'').replace(/\s+collection$/i,'');
+    document.getElementById('coll-sub').textContent='Pieces from the '+short+' Collection, designed to work together with the '+p.name.replace(/^The\s+/i,'')+'.';
+    var link=document.getElementById('coll-link');link.href='collections.html?collection='+encodeURIComponent(name);link.textContent='View the full '+short+' collection →';
+    track.innerHTML='';
+    list.forEach(function(rp){
+      var img=rp.img||'';
+      if(!img){var fl=(rp.variant_mode==='size'&&rp.top_sizes&&rp.top_sizes[0])?(rp.top_sizes[0].finishes||[]):(rp.finishes||[]);
+        for(var i=0;i<fl.length&&!img;i++){if(fl[i]&&fl[i].photos&&fl[i].photos[0])img=fl[i].photos[0];else if(fl[i]&&fl[i].fabrics&&fl[i].fabrics[0]&&fl[i].fabrics[0].photos)img=fl[i].fabrics[0].photos[0]||'';}}
+      var price=0;try{price=landingPriceOf(rp);}catch(e){}if(!price)price=Number(rp.price)||0;
+      var href=rp.slug?('/products/'+rp.slug):('/product-detail.html?id='+rp.id);
+      var card=document.createElement('a');card.className='rel-card';card.href=href;card.style.textDecoration='none';card.style.color='inherit';
+      card.innerHTML='<div class="rel-img">'+(img?'<img src="'+collEsc(img)+'" alt="'+collEsc(rp.name)+'" loading="lazy" onerror="this.style.display=\'none\'"/>':'')+'</div>'
+        +'<div class="rel-info"><div class="rel-brand">'+collEsc(getCatLabelStandalone(rp.cat))+'</div><div class="rel-name">'+collEsc(rp.name)+'</div>'
+        +'<div class="rel-foot"><div class="rel-price">$'+Number(price).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+'</div><span class="rel-add">View</span></div></div>';
+      track.appendChild(card);
+    });
+    sec.style.display='block';
+  }).catch(function(){});
 }
 
 function slideCarousel(dir){
@@ -733,7 +783,8 @@ function renderProduct(p){
   if(p.dims&&p.dims.trim()){var parts=p.dims.split(/[×xX]/).map(function(s){return s.trim();});document.getElementById('dim-w').textContent=(parts[0]||'—')+(parts[0]?'"':'');document.getElementById('dim-d').textContent=(parts[1]||'—')+(parts[1]?'"':'');document.getElementById('dim-h').textContent=(parts[2]||'—')+(parts[2]?'"':'');}
   if(!isSizeMode)renderDescFeatures(p.desc,p.features);
 
-  fetch('https://slaffkwfwmudvernzjua.supabase.co/rest/v1/products?cat=eq.'+encodeURIComponent(p.cat)+'&status=eq.active&id=neq.'+encodeURIComponent(p.id)+'&select=id,name,cat,price,img,finishes&limit=12',{
+  try{loadCollectionRow(p);}catch(e){}
+  fetch('https://slaffkwfwmudvernzjua.supabase.co/rest/v1/products?cat=eq.'+encodeURIComponent(p.cat)+'&status=eq.active&id=neq.'+encodeURIComponent(p.id)+'&select=id,name,slug,cat,price,img,finishes&limit=12',{
     headers:{'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsYWZma3dmd211ZHZlcm56anVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMzU4MDksImV4cCI6MjA5MTYxMTgwOX0.BEz8_GNKPTQB90LJBJTZFyJYFF-9ypdfbEsLAfEESqY'}
   }).then(function(r){return r.json();}).then(function(data){buildCarousel(data&&data.length?data:[]);}).catch(function(){buildCarousel([]);});
   try{updateDelivery(isSelectionOutOfStock());}catch(e){}
@@ -812,7 +863,7 @@ function updateBuyState(){
   var out=isSelectionOutOfStock();
   btn.disabled=out;
   btn.textContent=out?'Out of Stock':'Add to Cart';
-  if(note)note.classList.toggle('show',out);
+  if(note){note.textContent=out?'This option is currently out of stock. Choose another finish or fabric to order.':'';note.classList.toggle('show',out);}
 }
 
 function selectFinish(el,name,color,photos,fabrics,sizes){
@@ -1278,7 +1329,7 @@ document.addEventListener('DOMContentLoaded',function(){
   fetch('https://slaffkwfwmudvernzjua.supabase.co/rest/v1/products?'+lookup+'&select=*',{
     headers:{'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsYWZma3dmd211ZHZlcm56anVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMzU4MDksImV4cCI6MjA5MTYxMTgwOX0.BEz8_GNKPTQB90LJBJTZFyJYFF-9ypdfbEsLAfEESqY','Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsYWZma3dmd211ZHZlcm56anVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMzU4MDksImV4cCI6MjA5MTYxMTgwOX0.BEz8_GNKPTQB90LJBJTZFyJYFF-9ypdfbEsLAfEESqY'}
   }).then(function(r){return r.json();}).then(function(data){
-    if(data&&data.length){var row=data[0];renderProduct({id:row.id,name:row.name,brand:row.brand,cat:row.cat,price:row.price,was:row.was,shippingCost:row.shipping_cost||0,desc:row.description,tagline:row.tagline||'',features:row.features||'',wood:row.wood,status:row.status,img:row.img,finishes:row.finishes||[],topSizes:row.top_sizes||[],variantMode:row.variant_mode||'finish',dims:row.dims,badge:row.badge,supplierLink:row.supplier_link,createdAt:row.created_at,rating:Number(row.rating)||0,reviewCount:Number(row.review_count)||0,slug:row.slug||''});
+    if(data&&data.length){var row=data[0];renderProduct({id:row.id,name:row.name,brand:row.brand,cat:row.cat,price:row.price,was:row.was,shippingCost:row.shipping_cost||0,desc:row.description,tagline:row.tagline||'',features:row.features||'',wood:row.wood,status:row.status,img:row.img,finishes:row.finishes||[],topSizes:row.top_sizes||[],variantMode:row.variant_mode||'finish',dims:row.dims,badge:row.badge,supplierLink:row.supplier_link,createdAt:row.created_at,rating:Number(row.rating)||0,reviewCount:Number(row.review_count)||0,slug:row.slug||'',collection:(row.collection||'').trim()});
       if(row.slug){
         var clean='/products/'+row.slug;
         if(window.location.pathname!==clean){try{history.replaceState(null,'',clean+window.location.hash);}catch(e){}}
