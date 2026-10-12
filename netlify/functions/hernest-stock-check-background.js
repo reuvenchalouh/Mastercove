@@ -218,7 +218,7 @@ function escapeHtml(s) {
 
 async function emailOwner(subject, bodyHtml) {
   try {
-    await resend.emails.send({ from: 'Master Cove <orders@mastercove.com>', to: OWNER_EMAIL, subject, html:
+    await resend.emails.send({ from: 'HerNest Stock Update <orders@mastercove.com>', to: OWNER_EMAIL, subject, html:
       `<div style="font-family:Arial,sans-serif;font-size:14px;color:#1C1A17;max-width:600px;">${bodyHtml}</div>` });
   } catch (e) { console.error('Email failed:', e.message); }
 }
