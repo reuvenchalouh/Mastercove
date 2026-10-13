@@ -52,6 +52,24 @@ function findVariantLink(p, item) {
   return (s && s.link) || (fab && fab.link) || f.link || '';
 }
 
+// The exact SKU for the chosen size / finish / fabric (most specific wins).
+function findVariantSku(p, item) {
+  const pick = (arr, name) => (Array.isArray(arr) ? arr : []).find(x => x && typeof x === 'object' && norm(x.name) === norm(name));
+  const only = arr => (Array.isArray(arr) && arr.length === 1) ? arr[0] : null;
+  if (p.variant_mode === 'size' && Array.isArray(p.top_sizes) && p.top_sizes.length) {
+    const sz = pick(p.top_sizes, item.size);
+    if (!sz) return '';
+    const f = pick(sz.finishes, item.finish) || only(sz.finishes);
+    const fab = f ? pick(f.fabrics, item.fabric) : null;
+    return String((fab && fab.sku) || (f && f.sku) || sz.sku || '').trim();
+  }
+  const f = pick(p.finishes, item.finish) || only(p.finishes);
+  if (!f) return '';
+  const s = pick(f.sizes, item.size);
+  const fab = pick(f.fabrics, item.fabric);
+  return String((fab && fab.sku) || (s && s.sku) || f.sku || '').trim();
+}
+
 function findUnitPrice(p, item) {
   const base = Number(p.price) || 0;
   const wantSize = norm(item.size);
@@ -137,7 +155,7 @@ async function priceCart(supabase, items, state) {
   const ids = [...new Set(items.map(i => i && i.id).filter(id => id !== undefined && id !== null))];
   const { data: products, error } = await supabase
     .from('products')
-    .select('id,name,price,shipping_cost,status,finishes,top_sizes,variant_mode,supplier_link')
+    .select('id,name,slug,price,shipping_cost,status,finishes,top_sizes,variant_mode,supplier_link')
     .in('id', ids);
   if (error) return { error: 'Could not verify prices. Please try again.' };
 
@@ -179,6 +197,8 @@ async function priceCart(supabase, items, state) {
       size: String(item.size || ''),
       qty: qty,
       price: unit,
+      sku: findVariantSku(p, item),
+      slug: p.slug || '',
       supplierLink: findVariantLink(p, item) || p.supplier_link || ''
     });
   }
@@ -250,7 +270,7 @@ exports.handler = async function(event) {
 async function sendOwnerNotification({ orderNumber, customerName, customerEmail, customerPhone, items, address, revenue, promoText }) {
   try {
     const itemRows = (items || []).map(function(i) {
-      var variantParts = []; if (i.finish) variantParts.push(i.finish); if (i.fabric) variantParts.push(i.fabric); var label = i.name + (variantParts.length ? ' (' + variantParts.join(' / ') + ')' : '');
+      var variantParts = []; if (i.size) variantParts.push(i.size); if (i.finish) variantParts.push(i.finish); if (i.fabric) variantParts.push(i.fabric); var label = i.name + (variantParts.length ? ' (' + variantParts.join(' / ') + ')' : '') + (i.sku ? '<br><span style="color:#555;font-size:12px;">SKU: ' + i.sku + '</span>' : '');
       var qty = i.qty || i.quantity || 1;
       var supplierLink = i.supplierLink || i.link || '';
       var linkHtml = supplierLink
@@ -339,6 +359,11 @@ async function saveOrder({ email, name, phone, address, city, state, zip, items,
       revenue: revenue,
       cost: 0,
       link: (items && items[0] && items[0].supplierLink) ? items[0].supplierLink : '',
+      items: (items || []).map(i => ({
+        product_id: i.id, name: i.name || '', slug: i.slug || '', qty: i.qty || i.quantity || 1,
+        size: i.size || '', finish: i.finish || '', fabric: i.fabric || '', sku: i.sku || '',
+        link: i.supplierLink || '', price: Number(i.price) || 0
+      })),
       phone: phone || '',
       notes: promoText ? ('Promo: ' + promoText) : '',
       status: 'new',
