@@ -179,6 +179,17 @@ textarea.o-input{resize:vertical;min-height:56px;line-height:1.6;}
 .order-field label{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--mist);font-weight:500;display:block;margin-bottom:4px;}
 .order-field .val{font-size:13px;color:var(--ink);line-height:1.5;}
 .order-field.full{grid-column:1/-1;}
+.oi-line{border:1px solid var(--border);border-radius:4px;padding:12px 14px;margin-bottom:10px;background:#FDFBF8;}
+.oi-title{display:flex;justify-content:space-between;gap:10px;align-items:baseline;margin-bottom:10px;font-size:13.5px;}
+.oi-title b{font-weight:600;color:var(--ink);}
+.oi-grid{display:grid;grid-template-columns:70px 1fr 1fr 1fr 1.2fr;gap:8px;margin-bottom:8px;}
+.oi-grid label,.oi-link label{font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mist);display:block;margin-bottom:3px;}
+.oi-grid .sup-link-input,.oi-link .sup-link-input{width:100%;box-sizing:border-box;}
+.oi-sku{font-family:ui-monospace,Menlo,Consolas,monospace;}
+.oi-btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.oi-btns .go-btn{font-size:11.5px;}
+.oi-del{background:none;border:none;color:#b33a3a;font-size:11.5px;cursor:pointer;}
+@media(max-width:760px){.oi-grid{grid-template-columns:1fr 1fr;}}
 .sup-link-wrap{display:flex;gap:8px;align-items:center;}
 .sup-link-input{flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:2px;font-family:'Outfit',sans-serif;font-size:12.5px;color:var(--ink);outline:none;}
 .sup-link-input:focus{border-color:var(--walnut);}
@@ -504,8 +515,12 @@ async function adminUpload(path, file){
           <div><label class="o-label">Customer Email</label><input class="o-input" id="o-email" type="email" placeholder="sarah@email.com"/></div>
           <div><label class="o-label">Customer Phone</label><input class="o-input" id="o-phone" type="tel" placeholder="(347) 206-0372"/></div>
           <div class="full"><label class="o-label">Shipping Address *</label><textarea class="o-input" id="o-address" placeholder="123 Main St, Austin, TX 78701"></textarea></div>
-          <div><label class="o-label">Product Name *</label><input class="o-input" id="o-product" placeholder="6-Drawer Walnut Dresser"/></div>
-          <div><label class="o-label">Finish / Variant</label><input class="o-input" id="o-variant" placeholder="Natural Walnut"/></div>
+          <div class="full"><label class="o-label">Product * <span style="text-transform:none;letter-spacing:0;color:var(--mist);">(type to look it up in your catalog)</span></label><input class="o-input" id="o-product" list="oi-products" onfocus="oiDatalist()" onchange="fillManualFromCatalog()" placeholder="Start typing a product name"/></div>
+          <div><label class="o-label">Quantity</label><input class="o-input" id="o-qty" type="number" min="1" value="1"/></div>
+          <div><label class="o-label">Size</label><input class="o-input" id="o-size" placeholder="e.g. 60&quot;" onchange="fillManualFromCatalog()"/></div>
+          <div><label class="o-label">Finish</label><input class="o-input" id="o-finish" placeholder="e.g. Natural Walnut" onchange="fillManualFromCatalog()"/></div>
+          <div><label class="o-label">Fabric</label><input class="o-input" id="o-fabric" placeholder="e.g. Ivory Boucle" onchange="fillManualFromCatalog()"/></div>
+          <div class="full"><label class="o-label">SKU</label><input class="o-input" id="o-sku" placeholder="Fills in automatically when the product and options match your catalog"/></div>
           <div><label class="o-label">Customer Paid You ($)</label><input class="o-input" id="o-revenue" type="number" placeholder="849"/></div>
           <div><label class="o-label">You Pay Supplier ($)</label><input class="o-input" id="o-cost" type="number" placeholder="520"/></div>
           <div class="full"><label class="o-label">Supplier Purchase Link (private)</label><input class="o-input" id="o-link" type="url" placeholder="https://faire.com/product/..."/></div>
@@ -1605,7 +1620,7 @@ async function loadProductsFromSupabase(){
     var res=await adminDb({action:'products_list'});
     if(res.error)throw res.error;
     if(res.data&&res.data.length){
-      products=res.data.map(function(p){return{id:p.id,name:p.name,brand:p.brand,cat:p.cat,price:p.price,was:p.was,shippingCost:p.shipping_cost||0,desc:p.description||'',tagline:p.tagline||'',features:p.features||'',wood:p.wood||'',status:p.status,img:p.img||'',finishes:p.finishes||[],topSizes:p.top_sizes||[],variantMode:p.variant_mode||'finish',dims:p.dims||'',badge:p.badge||'',supplierLink:p.supplier_link||'',collection:p.collection||'',collectionCover:p.collection_cover||'',createdAt:p.created_at};});
+      products=res.data.map(function(p){return{id:p.id,name:p.name,brand:p.brand,cat:p.cat,price:p.price,was:p.was,shippingCost:p.shipping_cost||0,desc:p.description||'',tagline:p.tagline||'',features:p.features||'',wood:p.wood||'',status:p.status,img:p.img||'',finishes:p.finishes||[],topSizes:p.top_sizes||[],variantMode:p.variant_mode||'finish',dims:p.dims||'',badge:p.badge||'',supplierLink:p.supplier_link||'',collection:p.collection||'',collectionCover:p.collection_cover||'',slug:p.slug||'',createdAt:p.created_at};});
       snapshotProducts();
       renderTable();updateStats();renderOOSTable();
     }
@@ -1660,23 +1675,31 @@ async function loadOrdersFromSupabase(){
     var res=await fetch('/.netlify/functions/admin-orders',{method:'POST',headers:{'Content-Type':'application/json','x-admin-password':ADMIN_PW},body:JSON.stringify({action:'list'})});
     var result=await res.json();
     if(!res.ok)throw new Error(result.error||'Load failed');
-    orders=(result.orders||[]).map(function(o){return{id:o.id,orderNumber:o.order_number,customer:o.customer,email:o.email||'',phone:o.phone||'',address:o.address||'',product:o.product||'',variant:o.variant||'',revenue:Number(o.revenue)||0,cost:Number(o.cost)||0,link:o.link||'',notes:o.notes||'',status:o.status||'new',timestamps:o.timestamps||{},stripeId:o.stripe_id||'',supplierOrderNum:o.supplier_order_num||'',trackingNumber:o.tracking_number||'',proofPhotos:o.proof_photos||[],createdAt:o.created_at||''};});
+    orders=(result.orders||[]).map(function(o){return{id:o.id,orderNumber:o.order_number,customer:o.customer,email:o.email||'',phone:o.phone||'',address:o.address||'',product:o.product||'',variant:o.variant||'',revenue:Number(o.revenue)||0,cost:Number(o.cost)||0,link:o.link||'',notes:o.notes||'',status:o.status||'new',timestamps:o.timestamps||{},stripeId:o.stripe_id||'',supplierOrderNum:o.supplier_order_num||'',trackingNumber:o.tracking_number||'',proofPhotos:o.proof_photos||[],createdAt:o.created_at||'',items:Array.isArray(o.items)?o.items:[],productIds:Array.isArray(o.product_ids)?o.product_ids:[]};});
     renderOrders();
   }catch(e){document.getElementById('orders-list').innerHTML='<div class="empty-state"><div class="ei">⚠️</div><p>Could not load orders.</p></div>';}
 }
 
-async function syncOrderToSupabase(o){try{await fetch('/.netlify/functions/admin-orders',{method:'POST',headers:{'Content-Type':'application/json','x-admin-password':ADMIN_PW},body:JSON.stringify({action:'upsert',order:{id:o.id,order_number:o.orderNumber,customer:o.customer,email:o.email||'',phone:o.phone||'',address:o.address||'',product:o.product||'',variant:o.variant||'',revenue:o.revenue||0,cost:o.cost||0,link:o.link||'',notes:o.notes||'',status:o.status||'new',timestamps:o.timestamps||{},stripe_id:o.stripeId||'',supplier_order_num:o.supplierOrderNum||'',tracking_number:o.trackingNumber||'',proof_photos:o.proofPhotos||[],created_at:o.createdAt}})});}catch(e){console.error('Order sync error:',e);}}
+async function syncOrderToSupabase(o){try{await fetch('/.netlify/functions/admin-orders',{method:'POST',headers:{'Content-Type':'application/json','x-admin-password':ADMIN_PW},body:JSON.stringify({action:'upsert',order:{id:o.id,order_number:o.orderNumber,customer:o.customer,email:o.email||'',phone:o.phone||'',address:o.address||'',product:o.product||'',variant:o.variant||'',revenue:o.revenue||0,cost:o.cost||0,link:o.link||'',notes:o.notes||'',status:o.status||'new',timestamps:o.timestamps||{},stripe_id:o.stripeId||'',supplier_order_num:o.supplierOrderNum||'',tracking_number:o.trackingNumber||'',proof_photos:o.proofPhotos||[],created_at:o.createdAt,items:o.items||[]}})});}catch(e){console.error('Order sync error:',e);}}
 function toggleAddOrder(){var b=document.getElementById('add-order-body');var a=document.getElementById('add-order-arrow');b.classList.toggle('open');a.textContent=b.classList.contains('open')?'▴':'▾';}
 
+function fillManualFromCatalog(){
+  var g=function(id){return (document.getElementById(id)||{value:''}).value.trim();};
+  var p=oiProduct({name:g('o-product')});if(!p)return;
+  var r=oiResolve(p,g('o-size'),g('o-finish'),g('o-fabric'));
+  if(r.sku)document.getElementById('o-sku').value=r.sku;
+  if(r.link)document.getElementById('o-link').value=r.link;
+}
 async function saveOrder(){
-  var customer=document.getElementById('o-customer').value.trim();var email=document.getElementById('o-email').value.trim();var phone=(document.getElementById('o-phone')||{value:''}).value.trim();var address=document.getElementById('o-address').value.trim();var product=document.getElementById('o-product').value.trim();var variant=document.getElementById('o-variant').value.trim();var revenue=parseFloat(document.getElementById('o-revenue').value)||0;var cost=parseFloat(document.getElementById('o-cost').value)||0;var link=document.getElementById('o-link').value.trim();var notes=document.getElementById('o-notes').value.trim();
+  var customer=document.getElementById('o-customer').value.trim();var email=document.getElementById('o-email').value.trim();var phone=(document.getElementById('o-phone')||{value:''}).value.trim();var address=document.getElementById('o-address').value.trim();var product=document.getElementById('o-product').value.trim();var oq=parseInt(document.getElementById('o-qty').value,10);oq=oq>0?oq:1;var osz=document.getElementById('o-size').value.trim(),ofn=document.getElementById('o-finish').value.trim(),ofb=document.getElementById('o-fabric').value.trim(),osku=document.getElementById('o-sku').value.trim();var variant=[osz,ofn,ofb].filter(Boolean).join(' / ');var revenue=parseFloat(document.getElementById('o-revenue').value)||0;var cost=parseFloat(document.getElementById('o-cost').value)||0;var link=document.getElementById('o-link').value.trim();var notes=document.getElementById('o-notes').value.trim();
   if(!customer){showToast('Customer name required','error');return;}if(!address){showToast('Address required','error');return;}if(!product){showToast('Product name required','error');return;}
   var numRes=await fetch('/.netlify/functions/admin-orders',{method:'POST',headers:{'Content-Type':'application/json','x-admin-password':ADMIN_PW},body:JSON.stringify({action:'nextOrderNumber'})});
   var numData=await numRes.json();var num=numData.orderNumber||'MC-????';
   var now=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'});
-  var o={id:Date.now(),orderNumber:num,customer:customer,email:email,phone:phone,address:address,product:product,variant:variant,revenue:revenue,cost:cost,link:link,notes:notes,status:'new',timestamps:{},stripeId:'',supplierOrderNum:'',trackingNumber:'',proofPhotos:[],createdAt:now};
+  var mp=oiProduct({name:product});var item={product_id:mp?mp.id:null,name:product,slug:mp?(mp.slug||''):'',qty:oq,size:osz,finish:ofn,fabric:ofb,sku:osku,link:link,price:0};
+  var o={id:Date.now(),orderNumber:num,customer:customer,email:email,phone:phone,address:address,product:product+(oq>1?' x'+oq:''),variant:variant,items:[item],productIds:mp?[mp.id]:[],revenue:revenue,cost:cost,link:link,notes:notes,status:'new',timestamps:{},stripeId:'',supplierOrderNum:'',trackingNumber:'',proofPhotos:[],createdAt:now};
   orders.unshift(o);await syncOrderToSupabase(o);
-  ['o-customer','o-email','o-phone','o-address','o-product','o-variant','o-revenue','o-cost','o-link','o-notes'].forEach(function(id){document.getElementById(id).value='';});
+  ['o-customer','o-email','o-phone','o-address','o-product','o-size','o-finish','o-fabric','o-sku','o-revenue','o-cost','o-link','o-notes'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('o-qty').value='1';
   document.getElementById('add-order-body').classList.remove('open');document.getElementById('add-order-arrow').textContent='▾';
   renderOrders();showToast('Order saved!','success');
 }
@@ -1699,10 +1722,112 @@ async function saveOrderCost(id){var o=orders.find(function(x){return x.id===id;
 async function saveOrderNotes(id){var o=orders.find(function(x){return x.id===id;});if(!o)return;var inp=document.getElementById('notes'+id);if(inp)o.notes=inp.value.trim();await syncOrderToSupabase(o);renderOrders();showToast('Notes saved','success');}
 async function deleteOrder(id){try{var res=await fetch('/.netlify/functions/admin-orders',{method:'POST',headers:{'Content-Type':'application/json','x-admin-password':ADMIN_PW},body:JSON.stringify({action:'delete',id:id})});if(!res.ok)throw new Error('Delete failed');orders=orders.filter(function(x){return x.id!==id;});renderOrders();showToast('Order deleted','error');}catch(e){showToast('Delete failed','error');}}
 
+/* ── ORDER LINE ITEMS: product, quantity, size, finish, fabric, SKU, supplier link + lookup ── */
+function oiEsc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function oiNorm(v){return String(v||'').trim().toLowerCase();}
+function oiProduct(it){
+  if(it&&it.product_id!=null){var p=products.find(function(x){return String(x.id)===String(it.product_id);});if(p)return p;}
+  if(it&&it.name){var n=oiNorm(it.name);return products.find(function(x){return oiNorm(x.name)===n;})||null;}
+  return null;
+}
+// Finds the SKU + supplier link for a size/finish/fabric choice (same rules as checkout)
+function oiResolve(p,size,finish,fabric){
+  var out={sku:'',link:''};if(!p)return out;
+  var pick=function(a,n){return (Array.isArray(a)?a:[]).find(function(x){return x&&typeof x==='object'&&oiNorm(x.name)===oiNorm(n);});};
+  var only=function(a){return(Array.isArray(a)&&a.length===1)?a[0]:null;};
+  if(p.variantMode==='size'&&p.topSizes&&p.topSizes.length){
+    var sz=pick(p.topSizes,size)||only(p.topSizes);if(!sz)return {sku:'',link:p.supplierLink||''};
+    var f=pick(sz.finishes,finish)||pick(sz.finishes,'Fabric Only')||only(sz.finishes);var b=f?pick(f.fabrics,fabric):null;
+    return {sku:String((b&&b.sku)||(f&&f.sku)||sz.sku||'').trim(),link:(b&&b.link)||(f&&f.link)||sz.link||p.supplierLink||''};
+  }
+  var f2=pick(p.finishes,finish)||pick(p.finishes,'Fabric Only')||only(p.finishes);if(!f2)return {sku:'',link:p.supplierLink||''};
+  var s2=pick(f2.sizes,size),b2=pick(f2.fabrics,fabric);
+  return {sku:String((b2&&b2.sku)||(s2&&s2.sku)||f2.sku||'').trim(),link:(s2&&s2.link)||(b2&&b2.link)||f2.link||p.supplierLink||''};
+}
+// Older orders (before line items were saved) are turned into lines from the product/variant text
+function orderLines(o){
+  if(o.items&&o.items.length)return o.items;
+  var names=String(o.product||'').split(', ').filter(Boolean);if(!names.length)return [];
+  var vparts=String(o.variant||'').split(' / ');
+  return names.map(function(nm,i){
+    var m=nm.match(/^(.*?)\s+x(\d+)$/);var name=m?m[1]:nm,qty=m?parseInt(m[2],10):1;
+    var it={product_id:(o.productIds||[])[i]!=null?(o.productIds||[])[i]:null,name:name,slug:'',qty:qty,size:'',finish:i===0?(vparts[0]||''):'',fabric:i===0?(vparts[1]||''):'',sku:'',link:i===0?(o.link||''):'',price:0};
+    var p=oiProduct(it);if(p){it.product_id=p.id;it.slug=p.slug||'';var r=oiResolve(p,it.size,it.finish,it.fabric);it.sku=r.sku;if(!it.link)it.link=r.link;}
+    return it;
+  });
+}
+function oiSiteUrl(it,p){var slug=it.slug||(p&&p.slug)||'';if(slug)return 'https://mastercove.com/products/'+slug;var id=it.product_id!=null?it.product_id:(p&&p.id);return id!=null?'https://mastercove.com/product-detail.html?id='+id:'';}
+function oiSupplierSearch(it,p){
+  var link=String(it.link||'').toLowerCase();var brand=String((p&&p.brand)||'').toLowerCase();
+  var short=String(it.name||'').replace(/^the\s+/i,'').trim();
+  if(link.indexOf('modway')>=0||brand==='modway')return {label:'Search Modway',url:'https://modway.com/search?q='+encodeURIComponent(it.sku?String(it.sku).split(/\s*\/\s*/)[0]:short)};
+  if(link.indexOf('hernest')>=0||brand==='hernest')return {label:'Search HerNest',url:'https://www.hernest.com/search?keywords='+encodeURIComponent(short.split(/\s+/)[0]||short)};
+  return {label:'Search Google',url:'https://www.google.com/search?q='+encodeURIComponent((it.sku?it.sku+' ':'')+short)};
+}
+function oiDatalist(){
+  if(document.getElementById('oi-products'))return;
+  var dl=document.createElement('datalist');dl.id='oi-products';
+  dl.innerHTML=products.slice().sort(function(a,b){return String(a.name).localeCompare(String(b.name));}).map(function(p){return '<option value="'+oiEsc(p.name)+'"></option>';}).join('');
+  document.body.appendChild(dl);
+}
+function renderOrderItems(o){
+  oiDatalist();
+  var lines=orderLines(o);if(!o._lines)o._lines=lines;else lines=o._lines;
+  var html=lines.map(function(it,i){
+    var p=oiProduct(it);var site=oiSiteUrl(it,p);var sup=oiSupplierSearch(it,p);var pre='oi-'+o.id+'-'+i+'-';
+    var g='https://www.google.com/search?q='+encodeURIComponent((it.sku||'')+' '+String(it.name||'').replace(/^the\s+/i,''));
+    return '<div class="oi-line">'
+      +'<div class="oi-title"><b>Item '+(i+1)+(it.price?' · $'+Number(it.price).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+' each':'')+'</b>'+(lines.length>1?'<button class="oi-del" onclick="removeOrderItem('+o.id+','+i+')">Remove</button>':'')+'</div>'
+      +'<div class="oi-link" style="margin-bottom:8px;"><label>Product (type to look it up in your catalog)</label><input class="sup-link-input" list="oi-products" id="'+pre+'name" value="'+oiEsc(it.name)+'" onchange="pickOrderProduct('+o.id+','+i+')" placeholder="Start typing a product name"/></div>'
+      +'<div class="oi-grid">'
+        +'<div><label>Qty</label><input class="sup-link-input" id="'+pre+'qty" type="number" min="1" value="'+oiEsc(it.qty||1)+'"/></div>'
+        +'<div><label>Size</label><input class="sup-link-input" id="'+pre+'size" value="'+oiEsc(it.size)+'" placeholder="—"/></div>'
+        +'<div><label>Finish</label><input class="sup-link-input" id="'+pre+'finish" value="'+oiEsc(it.finish)+'" placeholder="—"/></div>'
+        +'<div><label>Fabric</label><input class="sup-link-input" id="'+pre+'fabric" value="'+oiEsc(it.fabric)+'" placeholder="—"/></div>'
+        +'<div><label>SKU</label><input class="sup-link-input oi-sku" id="'+pre+'sku" value="'+oiEsc(it.sku)+'" placeholder="Supplier SKU"/></div>'
+      +'</div>'
+      +'<div class="oi-link"><label>Supplier link</label><input class="sup-link-input" id="'+pre+'link" type="url" value="'+oiEsc(it.link)+'" placeholder="Supplier URL"/></div>'
+      +'<div class="oi-btns">'
+        +(it.link?'<a href="'+oiEsc(it.link)+'" target="_blank" class="go-btn">Buy Now</a>':'')
+        +'<a href="'+oiEsc(sup.url)+'" target="_blank" class="go-btn grey">'+sup.label+'</a>'
+        +(it.sku?'<a href="'+oiEsc(g)+'" target="_blank" class="go-btn grey">Google the SKU</a>':'')
+        +(site?'<a href="'+oiEsc(site)+'" target="_blank" class="go-btn grey">View on my site</a>':'')
+        +(p?'<button class="go-btn grey" onclick="showView(\'products\');editProduct('+JSON.stringify(p.id)+')">Open in admin</button>':'')
+      +'</div></div>';
+  }).join('');
+  return '<div class="order-field full"><label>Items ('+lines.length+')</label>'+html
+    +'<div style="display:flex;gap:8px;"><button class="go-btn" onclick="saveOrderItems('+o.id+')">Save items</button><button class="go-btn grey" onclick="addOrderItem('+o.id+')">+ Add item</button></div></div>';
+}
+function readOrderItems(o){
+  return (o._lines||orderLines(o)).map(function(it,i){
+    var pre='oi-'+o.id+'-'+i+'-';var v=function(k){var el=document.getElementById(pre+k);return el?el.value.trim():(it[k]||'');};
+    var q=parseInt(v('qty'),10);
+    return Object.assign({},it,{name:v('name'),qty:(q>0?q:1),size:v('size'),finish:v('finish'),fabric:v('fabric'),sku:v('sku'),link:v('link')});
+  });
+}
+function pickOrderProduct(id,i){
+  var o=orders.find(function(x){return x.id===id;});if(!o)return;
+  var lines=readOrderItems(o);var it=lines[i];var p=oiProduct({name:it.name});
+  if(p){it.product_id=p.id;it.slug=p.slug||'';var r=oiResolve(p,it.size,it.finish,it.fabric);if(r.sku)it.sku=r.sku;if(r.link)it.link=r.link;}
+  o._lines=lines;renderOrders();
+}
+function addOrderItem(id){var o=orders.find(function(x){return x.id===id;});if(!o)return;var lines=readOrderItems(o);lines.push({product_id:null,name:'',slug:'',qty:1,size:'',finish:'',fabric:'',sku:'',link:'',price:0});o._lines=lines;renderOrders();}
+function removeOrderItem(id,i){var o=orders.find(function(x){return x.id===id;});if(!o)return;var lines=readOrderItems(o);lines.splice(i,1);o._lines=lines;renderOrders();}
+async function saveOrderItems(id){
+  var o=orders.find(function(x){return x.id===id;});if(!o)return;
+  var lines=readOrderItems(o).filter(function(it){return it.name||it.sku||it.link;});
+  lines.forEach(function(it){var p=oiProduct(it);if(p){it.product_id=p.id;it.slug=it.slug||p.slug||'';if(!it.sku){var r=oiResolve(p,it.size,it.finish,it.fabric);it.sku=r.sku;if(!it.link)it.link=r.link;}}});
+  o.items=lines;o._lines=null;
+  // Keep the summary fields in step (used by emails, search and older screens)
+  o.product=lines.map(function(it){return it.name+(it.qty>1?' x'+it.qty:'');}).join(', ');
+  var f=lines[0]||{};o.variant=[f.size,f.finish,f.fabric].filter(Boolean).join(' / ');o.link=f.link||o.link||'';
+  await syncOrderToSupabase(o);renderOrders();showToast('Items saved','success');
+}
+
 function renderOrders(){
   var list=document.getElementById('orders-list');if(!list)return;
   var q=(document.getElementById('order-search')||{value:''}).value.toLowerCase();var statusFilter=(document.getElementById('order-status-filter')||{value:''}).value;
-  var filtered=orders.filter(function(o){var m=!q||(o.orderNumber||'').toLowerCase().includes(q)||(o.customer||'').toLowerCase().includes(q)||(o.phone||'').toLowerCase().includes(q)||(o.email||'').toLowerCase().includes(q)||(o.product||'').toLowerCase().includes(q)||(o.address||'').toLowerCase().includes(q)||(o.trackingNumber||'').toLowerCase().includes(q)||(o.variant||'').toLowerCase().includes(q);return m&&(!statusFilter||o.status===statusFilter);});
+  var filtered=orders.filter(function(o){var m=!q||(o.orderNumber||'').toLowerCase().includes(q)||(o.customer||'').toLowerCase().includes(q)||(o.phone||'').toLowerCase().includes(q)||(o.email||'').toLowerCase().includes(q)||(o.product||'').toLowerCase().includes(q)||(o.address||'').toLowerCase().includes(q)||(o.trackingNumber||'').toLowerCase().includes(q)||(o.variant||'').toLowerCase().includes(q)||(o.items||[]).some(function(it){return [it.sku,it.name,it.finish,it.fabric,it.size].join(' ').toLowerCase().includes(q);});return m&&(!statusFilter||o.status===statusFilter);});
   if(!filtered.length){list.innerHTML='<div class="empty-state"><div class="ei">'+(orders.length?'search':'clipboard')+'</div><p>'+(orders.length?'No orders match.':'No orders yet.')+'</p></div>';return;}
   list.innerHTML=filtered.map(function(o){
     var hasCost=Number(o.cost)>0;var profit=Math.round(((Number(o.revenue)||0)-(Number(o.cost)||0))*100)/100;var curIdx=SF.indexOf(o.status);var nextS=SF[curIdx+1];var addr=(o.address||'').split('\n').join(', ');
@@ -1717,8 +1842,8 @@ function renderOrders(){
       +'<div class="order-field"><label>Ship To</label><div class="val">'+addr+'</div></div>'
       +'<div class="order-field"><label>Customer</label><div class="val">'+(o.customer||'')+(o.email?'<br/><a href="mailto:'+o.email+'" style="color:var(--walnut);">'+o.email+'</a>':'')+'</div></div>'
       +'<div class="order-field"><label>Phone</label><div style="display:flex;gap:8px;"><input class="sup-link-input" id="phone'+o.id+'" type="tel" value="'+(o.phone||'')+'" placeholder="Customer phone"/>'+(o.phone?'<a href="tel:'+String(o.phone).replace(/[^0-9+]/g,'')+'" class="go-btn">Call</a>':'')+'<button class="go-btn grey" onclick="saveOrderPhone('+o.id+')">Save</button></div></div>'
+      +renderOrderItems(o)
       +'<div class="order-field full"><label>Financials</label><div class="val">'+(o.revenue?'Customer paid: <b>$'+Number(o.revenue).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+'</b>':'')+'<div style="display:flex;gap:8px;align-items:center;margin-top:8px;"><span style="font-size:12px;color:var(--mist);white-space:nowrap;">I paid supplier $</span><input class="sup-link-input" id="cost'+o.id+'" type="number" step="0.01" min="0" value="'+(hasCost?o.cost:'')+'" placeholder="Enter after you purchase" style="max-width:180px;"/><button class="go-btn grey" onclick="saveOrderCost('+o.id+')">Save</button></div>'+(hasCost?'<div style="margin-top:8px;"><b style="color:'+(profit>=0?'var(--green)':'#b33a3a')+'">Profit: '+(profit<0?'-':'')+'$'+Math.abs(profit).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+'</b></div>':'<div style="margin-top:6px;font-size:11.5px;color:var(--mist);">Profit shows after you enter what you paid the supplier.</div>')+'</div></div>'
-      +'<div class="order-field full"><label>Supplier Link</label><div class="sup-link-wrap"><input class="sup-link-input" id="link'+o.id+'" type="url" value="'+dL+'" placeholder="Supplier URL"/>'+(dL?'<a href="'+dL+'" target="_blank" class="go-btn">Buy Now</a>':'<button class="go-btn grey" onclick="saveOrderLink('+o.id+')">Save</button>')+'</div></div>'
       +'<div class="order-field full"><label>Notes</label><div style="display:flex;gap:8px;"><textarea class="sup-link-input" id="notes'+o.id+'" rows="2">'+(o.notes||'')+'</textarea><button class="go-btn grey" onclick="saveOrderNotes('+o.id+')" style="align-self:flex-start;">Save</button></div></div>'
       +(SF.indexOf(o.status)>=SF.indexOf('ordered')?'<div class="order-field full"><label>Supplier Order #</label><div style="display:flex;gap:8px;"><input class="sup-link-input" id="supordernum'+o.id+'" value="'+(o.supplierOrderNum||'')+'" placeholder="Supplier order number"/><button class="go-btn grey" onclick="saveSupplierOrderNum('+o.id+')">Save</button></div></div>':'')
       +trackHtml
