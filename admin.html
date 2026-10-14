@@ -1708,7 +1708,7 @@ async function advanceStatus(id){
   var o=orders.find(function(x){return x.id===id;});if(!o)return;var i=SF.indexOf(o.status);if(i>=SF.length-1)return;var nextStatus=SF[i+1];
   if(nextStatus==='ordered'){var n=prompt('Enter the supplier order number:',o.supplierOrderNum||'');if(n!==null)o.supplierOrderNum=n.trim();}
   if(nextStatus==='shipped'){var t=prompt('Enter the tracking number:',o.trackingNumber||'');if(t!==null)o.trackingNumber=t.trim();}
-  o.status=nextStatus;if(!o.timestamps)o.timestamps={};o.timestamps[o.status]=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  o.status=nextStatus;if(!o.timestamps)o.timestamps={};o.timestamps[o.status]=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'});if(o.status==='delivered')o.timestamps.delivered_iso=new Date().toISOString();
   await syncOrderToSupabase(o);renderOrders();showToast('Updated: '+SL[o.status],'success');
   if(o.email&&(nextStatus==='ordered'||nextStatus==='shipped'||nextStatus==='delivered')){try{await fetch('/.netlify/functions/send-email',{method:'POST',headers:{'Content-Type':'application/json','x-admin-password':ADMIN_PW},body:JSON.stringify({to:o.email,customerName:o.customer,orderNumber:o.orderNumber,status:nextStatus,product:o.product,address:o.address,trackingNumber:o.trackingNumber||''})});showToast('Email sent to '+o.email,'success');}catch(e){console.log('Email error:',e);}}
 }
@@ -1824,6 +1824,35 @@ async function saveOrderItems(id){
   await syncOrderToSupabase(o);renderOrders();showToast('Items saved','success');
 }
 
+/* ── RETURN WINDOW: starts the day you click "Delivered" ── */
+var RETURN_DAYS=30; // matches the 30-day return policy on the site
+function deliveredDate(o){
+  var t=o.timestamps||{};
+  if(t.delivered_iso){var d=new Date(t.delivered_iso);if(!isNaN(d))return d;}
+  if(t.delivered){var s=String(t.delivered).replace(/,?\s+(\d{1,2}:\d{2}\s*[AP]M)$/i,'');var d2=new Date(s);if(!isNaN(d2))return d2;}
+  return null;
+}
+function returnWindowHtml(o){
+  if(o.status!=='delivered')return '';
+  var d=deliveredDate(o);
+  if(!d)return '<div class="order-field full"><label>Return Window</label><div class="val" style="color:var(--mist);">Delivery date unknown. The '+RETURN_DAYS+'-day window starts when an order is marked Delivered.</div></div>';
+  var start=new Date(d.getFullYear(),d.getMonth(),d.getDate());
+  var end=new Date(start.getTime());end.setDate(end.getDate()+RETURN_DAYS);
+  var today=new Date();today.setHours(0,0,0,0);
+  var left=Math.round((end-today)/86400000);
+  var fmt=function(x){return x.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});};
+  var msg,color;
+  if(left<0){msg='<b>Expired</b> on '+fmt(end)+' ('+(-left)+' day'+(left===-1?'':'s')+' ago). This order can no longer be returned.';color='#b33a3a';}
+  else if(left===0){msg='<b>Last day to return: today</b> ('+fmt(end)+')';color='#b8742e';}
+  else{msg='Returns accepted until <b>'+fmt(end)+'</b> · <b>'+left+' day'+(left===1?'':'s')+' left</b>';color=left<=7?'#b8742e':'var(--green)';}
+  return '<div class="order-field full"><label>Return Window ('+RETURN_DAYS+' days from delivery)</label><div class="val" style="color:'+color+';">'+msg+'<div style="font-size:11.5px;color:var(--mist);margin-top:3px;">Delivered '+fmt(start)+'</div></div></div>';
+}
+function returnBadge(o){
+  if(o.status!=='delivered')return '';var d=deliveredDate(o);if(!d)return '';
+  var end=new Date(d.getFullYear(),d.getMonth(),d.getDate()+RETURN_DAYS);var today=new Date();today.setHours(0,0,0,0);var left=Math.round((end-today)/86400000);
+  return left<0?'<span class="order-status" style="background:#f3e3e1;color:#b33a3a;margin-left:6px;">Return window expired</span>':'<span class="order-status" style="background:#eef4ea;color:#3E7B4F;margin-left:6px;">Returns: '+left+'d left</span>';
+}
+
 function renderOrders(){
   var list=document.getElementById('orders-list');if(!list)return;
   var q=(document.getElementById('order-search')||{value:''}).value.toLowerCase();var statusFilter=(document.getElementById('order-status-filter')||{value:''}).value;
@@ -1836,12 +1865,13 @@ function renderOrders(){
     var dL=finL||o.link||'';
     var trackHtml='';if(SF.indexOf(o.status)>=SF.indexOf('shipped')){trackHtml='<div class="order-field full"><label>Tracking</label><div style="display:flex;gap:8px;"><input class="sup-link-input" id="tracking'+o.id+'" value="'+(o.trackingNumber||'')+'" placeholder="Tracking number"/><button class="go-btn grey" onclick="saveTrackingNumber('+o.id+')">Save</button></div>'+(o.trackingNumber?'<div style="margin-top:6px;"><a href="https://www.google.com/search?q='+encodeURIComponent(o.trackingNumber)+'" target="_blank" style="font-size:11.5px;color:var(--walnut);">Track Package</a></div>':'')+'</div>';}
     return '<div class="order-card">'
-      +'<div class="order-card-head"><div style="display:flex;align-items:center;gap:10px;flex:1;"><span class="order-num">'+(o.orderNumber||'MC-????')+'</span><div><div class="order-customer">'+o.customer+' -- '+o.product+(o.variant?' ('+o.variant+')':'')+'</div><div class="order-date">Placed: '+o.createdAt+'</div></div></div><span class="order-status '+SC[o.status]+'">'+SL[o.status]+'</span></div>'
+      +'<div class="order-card-head"><div style="display:flex;align-items:center;gap:10px;flex:1;"><span class="order-num">'+(o.orderNumber||'MC-????')+'</span><div><div class="order-customer">'+o.customer+' -- '+o.product+(o.variant?' ('+o.variant+')':'')+'</div><div class="order-date">Placed: '+o.createdAt+'</div></div></div><span><span class="order-status '+SC[o.status]+'">'+SL[o.status]+'</span>'+returnBadge(o)+'</span></div>'
       +'<div class="order-timeline">'+tl+'</div>'
       +'<div class="order-body">'
       +'<div class="order-field"><label>Ship To</label><div class="val">'+addr+'</div></div>'
       +'<div class="order-field"><label>Customer</label><div class="val">'+(o.customer||'')+(o.email?'<br/><a href="mailto:'+o.email+'" style="color:var(--walnut);">'+o.email+'</a>':'')+'</div></div>'
       +'<div class="order-field"><label>Phone</label><div style="display:flex;gap:8px;"><input class="sup-link-input" id="phone'+o.id+'" type="tel" value="'+(o.phone||'')+'" placeholder="Customer phone"/>'+(o.phone?'<a href="tel:'+String(o.phone).replace(/[^0-9+]/g,'')+'" class="go-btn">Call</a>':'')+'<button class="go-btn grey" onclick="saveOrderPhone('+o.id+')">Save</button></div></div>'
+      +returnWindowHtml(o)
       +renderOrderItems(o)
       +'<div class="order-field full"><label>Financials</label><div class="val">'+(o.revenue?'Customer paid: <b>$'+Number(o.revenue).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+'</b>':'')+'<div style="display:flex;gap:8px;align-items:center;margin-top:8px;"><span style="font-size:12px;color:var(--mist);white-space:nowrap;">I paid supplier $</span><input class="sup-link-input" id="cost'+o.id+'" type="number" step="0.01" min="0" value="'+(hasCost?o.cost:'')+'" placeholder="Enter after you purchase" style="max-width:180px;"/><button class="go-btn grey" onclick="saveOrderCost('+o.id+')">Save</button></div>'+(hasCost?'<div style="margin-top:8px;"><b style="color:'+(profit>=0?'var(--green)':'#b33a3a')+'">Profit: '+(profit<0?'-':'')+'$'+Math.abs(profit).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+'</b></div>':'<div style="margin-top:6px;font-size:11.5px;color:var(--mist);">Profit shows after you enter what you paid the supplier.</div>')+'</div></div>'
       +'<div class="order-field full"><label>Notes</label><div style="display:flex;gap:8px;"><textarea class="sup-link-input" id="notes'+o.id+'" rows="2">'+(o.notes||'')+'</textarea><button class="go-btn grey" onclick="saveOrderNotes('+o.id+')" style="align-self:flex-start;">Save</button></div></div>'
