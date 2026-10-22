@@ -62,7 +62,7 @@ header{background:var(--white);border-bottom:1px solid var(--border);padding:0 3
 .total-row.final{font-size:15px;font-weight:600;color:var(--ink);margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
 .form-body{padding:22px;}
 .frow{margin-bottom:16px;}
-.frow label{display:block;font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;color:var(--slate);font-weight:500;margin-bottom:6px;}
+.frow label,.frow-2 label,.frow-3 label{display:block;font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;color:var(--slate);font-weight:500;margin-bottom:6px;}
 .finput{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:2px;font-family:'Outfit',sans-serif;font-size:13.5px;color:var(--ink);background:var(--white);outline:none;transition:border-color .15s;}
 .finput:focus{border-color:var(--walnut);}
 .finput::placeholder{color:var(--mist);}
@@ -77,8 +77,12 @@ header{background:var(--white);border-bottom:1px solid var(--border);padding:0 3
 .divider{text-align:center;position:relative;margin:20px 0;}
 .divider::before{content:'';position:absolute;top:50%;left:0;right:0;height:1px;background:var(--border);}
 .divider span{position:relative;background:var(--white);padding:0 12px;font-size:11px;color:var(--mist);letter-spacing:0.06em;text-transform:uppercase;}
-#card-element{padding:10px 12px;border:1px solid var(--border);border-radius:2px;background:var(--white);transition:border-color .15s;}
-#card-element.focused{border-color:var(--walnut);}
+.stripe-field{padding:10px 12px;border:1px solid var(--border);border-radius:2px;background:var(--white);transition:border-color .15s;height:40px;box-sizing:border-box;}
+.frow-3 .finput{height:40px;box-sizing:border-box;}
+.stripe-field.focused{border-color:var(--walnut);}
+.stripe-field.invalid{border-color:var(--red);}
+.frow-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px;}
+@media(max-width:480px){.frow-3{grid-template-columns:1fr 1fr;}.frow-3 > div:last-child{grid-column:1 / -1;}}
 #wallet-wrap{display:none;}
 .promo-row{display:flex;gap:8px;margin-bottom:14px;}
 .promo-row .finput{flex:1;text-transform:uppercase;}
@@ -103,8 +107,8 @@ header{background:var(--white);border-bottom:1px solid var(--border);padding:0 3
 </head>
 <body>
 <header>
-  <a href="index.html" class="logo"><img src="https://slaffkwfwmudvernzjua.supabase.co/storage/v1/object/public/product-images/New%20wallpaper.jpeg" alt="Master Cove" style="height:40px;object-fit:contain;"/></a>
-  <a href="index.html" class="back-link">← Continue Shopping</a>
+  <a class='logo' href='/'><img src="https://slaffkwfwmudvernzjua.supabase.co/storage/v1/object/public/product-images/New%20wallpaper.jpeg" alt="Master Cove" style="height:40px;object-fit:contain;"/></a>
+  <a class='back-link' href='/'>← Continue Shopping</a>
 </header>
 
 <div class="checkout-wrap">
@@ -182,8 +186,22 @@ header{background:var(--white);border-bottom:1px solid var(--border);padding:0 3
       </div>
       <div class="divider"><span>Payment</span></div>
       <div class="frow">
-        <label>Card Details</label>
-        <div id="card-element"></div>
+        <label>Card Number *</label>
+        <div id="card-number" class="stripe-field"></div>
+      </div>
+      <div class="frow-3">
+        <div>
+          <label>Expiration *</label>
+          <div id="card-expiry" class="stripe-field"></div>
+        </div>
+        <div>
+          <label>CVC *</label>
+          <div id="card-cvc" class="stripe-field"></div>
+        </div>
+        <div>
+          <label>Billing ZIP *</label>
+          <input class="finput" id="f-billzip" type="text" inputmode="numeric" autocomplete="billing postal-code" placeholder="10001" maxlength="10" oninput="this.dataset.edited='1'"/>
+        </div>
       </div>
       <button class="pay-btn" id="pay-btn" onclick="submitPayment()">
         🔒 Pay <span id="pay-amount">$0</span>
@@ -197,15 +215,26 @@ header{background:var(--white);border-bottom:1px solid var(--border);padding:0 3
 <script>
 var stripe = Stripe('pk_live_51TFIOpH0QTaCZxMQFEI0za0XoAESlpp2Fq8sFx8xIWntvAINqwhqnHFtFvD3K2HYdFmpmexKUgXT3ka2mtdhXJOe00zyjfauBG');
 var elements = stripe.elements();
-var card = elements.create('card', {
-  style: {
-    base: { fontFamily: "'Outfit',sans-serif", fontSize: '14px', color: '#1C1A17', '::placeholder': { color: '#A8A09A' } },
-    invalid: { color: '#B5432A' }
-  }
+var cardStyle = {
+  base: { fontFamily: "'Outfit',sans-serif", fontSize: '14px', color: '#1C1A17', '::placeholder': { color: '#A8A09A' } },
+  invalid: { color: '#B5432A' }
+};
+// Card number, expiration and CVC are separate boxes so shoppers can see every field.
+var card       = elements.create('cardNumber', { style: cardStyle, showIcon: true, placeholder: '1234 1234 1234 1234' });
+var cardExpiry = elements.create('cardExpiry', { style: cardStyle, placeholder: 'MM / YY' });
+var cardCvc    = elements.create('cardCvc',    { style: cardStyle, placeholder: '123' });
+[[card,'card-number'],[cardExpiry,'card-expiry'],[cardCvc,'card-cvc']].forEach(function(pair){
+  var el = pair[0], id = pair[1];
+  el.mount('#' + id);
+  el.on('focus',  function(){ document.getElementById(id).classList.add('focused'); });
+  el.on('blur',   function(){ document.getElementById(id).classList.remove('focused'); });
+  el.on('change', function(e){ document.getElementById(id).classList.toggle('invalid', !!e.error); });
 });
-card.mount('#card-element');
-card.on('focus', function(){ document.getElementById('card-element').classList.add('focused'); });
-card.on('blur',  function(){ document.getElementById('card-element').classList.remove('focused'); });
+// Billing ZIP starts out matching the shipping ZIP until the shopper types their own.
+(function(){
+  var shipZip = document.getElementById('f-zip'), billZip = document.getElementById('f-billzip');
+  if (shipZip && billZip) shipZip.addEventListener('input', function(){ if (!billZip.dataset.edited) billZip.value = shipZip.value; });
+})();
 
 var cart = JSON.parse(localStorage.getItem('mc_cart') || '[]');
 var orderTotal = 0;
@@ -414,6 +443,7 @@ function submitPayment() {
   var city    = document.getElementById('f-city').value.trim();
   var state   = document.getElementById('f-state').value.trim();
   var zip     = document.getElementById('f-zip').value.trim();
+  var billZip = (document.getElementById('f-billzip').value.trim() || zip);
   var errEl   = document.getElementById('error-msg');
   errEl.style.display = 'none';
 
@@ -423,6 +453,7 @@ function submitPayment() {
   if (!address) { showErr('Please enter your shipping address.'); return; }
   if (!city)    { showErr('Please enter your city.'); return; }
   if (!zip)     { showErr('Please enter your ZIP code.'); return; }
+  if (!billZip) { showErr('Please enter the billing ZIP code for your card.'); return; }
   if (!cart.length) { showErr('Your cart is empty.'); return; }
 
   // Make sure the total being charged reflects the final state entered.
@@ -439,7 +470,7 @@ function submitPayment() {
   stripe.createPaymentMethod({
     type: 'card',
     card: card,
-    billing_details: { name: name, email: email, phone: phone, address: { line1: address, city: city, state: state, postal_code: zip, country: 'US' } }
+    billing_details: { name: name, email: email, phone: phone, address: { line1: address, city: city, state: state, postal_code: billZip, country: 'US' } }
   }).then(function(result) {
     if (result.error) {
       showErr(result.error.message);
