@@ -7,6 +7,25 @@
   status = 200
  
 
+# Old sectional pages that were split into separate listings: send visitors and Google to the new page
+[[redirects]]
+  from = "/products/restore-modular-sectional"
+  to = "/products/restore-l-shaped-sectional"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/products/roscoe-sectional-sofa-with-chaise"
+  to = "/products/roscoe-l-shaped-sectional-with-chaise"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/products/solace-modular-sectional"
+  to = "/products/solace-l-shaped-sectional"
+  status = 301
+  force = true
+
 # Readable product URLs: /products/orson-nightstand shows the product page
 [[redirects]]
   from = "/products/*"
