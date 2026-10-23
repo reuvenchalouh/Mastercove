@@ -159,6 +159,9 @@ header{background:var(--white);border-bottom:1px solid var(--border);position:st
 .wish-btn:hover{background:#fff;transform:scale(1.1);}
 .prod-info{flex:1;display:flex;flex-direction:column;padding:20px 22px;}
 .prod-name{font-size:19px;font-weight:500;line-height:1.35;margin-bottom:6px;}
+a.prod-name,a.prod-img-link{color:inherit;text-decoration:none;}
+a.prod-img-link{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
+a.prod-name{display:block;}
 .prod-stars{font-size:14px;color:#B8895A;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
 .prod-stars span{color:#A8A09A;font-size:14px;}
 .prod-dims{font-size:16px;color:var(--slate);margin-bottom:14px;font-weight:600;}
@@ -632,9 +635,9 @@ function toggleMegaDropdown(btn, room){
   var rect = btn.getBoundingClientRect();
   panel.style.top = (rect.bottom + 4) + 'px';
   panel.style.left = rect.left + 'px';
-  var html = '<a href="#" class="mega-all" data-room="'+room.key+'">Shop All '+room.label+'</a><div class="mega-divider"></div>';
+  var html = '<a href="index.html?room='+encodeURIComponent(room.key)+'" class="mega-all" data-room="'+room.key+'">Shop All '+room.label+'</a><div class="mega-divider"></div>';
   html += room.cats.map(function(c){
-    return '<a href="#" data-cat="'+c+'">'+getCatLabel(c)+'</a>';
+    return '<a href="index.html?cat='+encodeURIComponent(c)+'" data-cat="'+c+'">'+getCatLabel(c)+'</a>';
   }).join('');
   panel.innerHTML = html;
   panel.classList.add('open');
@@ -757,8 +760,9 @@ function renderProducts() {
     if (moreBtn) moreBtn.style.display = 'none';
     return;
   }
-  var visible = products.slice(0, visibleCount);
-  visible.forEach(function(p, i){ grid.appendChild(buildCard(p, i)); });
+  // Every matching product is added to the page so search engines can follow each product link;
+  // cards past the current page stay hidden until the shopper clicks "Show More"
+  products.forEach(function(p, i){ var c = buildCard(p, i); if (i >= visibleCount) c.style.display = 'none'; grid.appendChild(c); });
   if (moreBtn) {
     if (products.length > visibleCount) {
       moreBtn.style.display = 'inline-block';
@@ -789,15 +793,19 @@ function buildCard(p, i) {
   var card = document.createElement('div');
   card.className = 'prod-card fade-up';
   card.style.animationDelay = (i * 0.05) + 's';
-  card.onclick = function(){ openProduct(p.id); };
+  // Clicking a real link inside the card lets the browser follow it; anywhere else opens the product
+  card.onclick = function(e){ if(e.target.closest && e.target.closest('a')) return; openProduct(p.id); };
   var imgDiv = document.createElement('div');
   imgDiv.className = 'prod-img';
+  var imgLink = document.createElement('a');
+  imgLink.className = 'prod-img-link'; imgLink.href = productUrl(p); imgLink.setAttribute('aria-label', p.name);
+  imgDiv.appendChild(imgLink);
   var img = getActiveImg(p);
   if (img) {
     var imgEl = document.createElement('img');
-    imgEl.src = img; imgEl.alt = p.name;
+    imgEl.src = img; imgEl.alt = p.name; imgEl.loading = 'lazy';
     imgEl.onerror = function(){ this.style.display='none'; };
-    imgDiv.appendChild(imgEl);
+    imgLink.appendChild(imgEl);
   }
   if (p.badge) {
     var badgeEl = document.createElement('div');
@@ -816,8 +824,8 @@ function buildCard(p, i) {
   card.appendChild(imgDiv);
   var info = document.createElement('div');
   info.className = 'prod-info';
-  var nameEl = document.createElement('div');
-  nameEl.className = 'prod-name'; nameEl.textContent = p.name;
+  var nameEl = document.createElement('a');
+  nameEl.className = 'prod-name'; nameEl.textContent = p.name; nameEl.href = productUrl(p);
   info.appendChild(nameEl);
   // Star ratings only show once a product has real customer reviews.
   if (p.reviewCount > 0 && p.rating > 0) {
@@ -988,9 +996,10 @@ function onSearch(){
 }
 function scrollToProducts(){ setTimeout(function(){ var el=document.getElementById('products'); if(el)el.scrollIntoView({behavior:'smooth'}); },50); }
 function getCatLabel(cat){ var map={dresser:'Dresser',chest:'Chest',sideboard:'Sideboard',tv:'TV Console',coffeetable:'Coffee Table',diningtable:'Dining Table',sidetable:'Side Table',nightstand:'Nightstand',shoe:'Shoe Storage',bookcase:'Bookcase',desk:'Desk',chair:'Chair',accentchair:'Accent Chair',sofa:'Sofa',sectional:'Sectional',armchair:'Lounge & Armchairs',bar:'Bar',bed:'Bed',bench:'Bench',vanity:'Vanity',outdoor:'Outdoor Furniture',island:'Kitchen Island',wardrobe:'Wardrobe',other:'Other'}; return map[cat]||cat; }
+function productUrl(p){ return (p && p.slug) ? ('/products/' + p.slug) : ('product-detail.html?id=' + (p ? p.id : '')); }
 function openProduct(id){
   var p = allProducts.find(function(x){ return String(x.id)===String(id); });
-  window.location.href = (p && p.slug) ? ('/products/' + p.slug) : ('product-detail.html?id=' + id);
+  window.location.href = p ? productUrl(p) : ('product-detail.html?id=' + id);
 }
 
 function swapFinish(pid, ci) {
