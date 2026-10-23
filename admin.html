@@ -651,17 +651,35 @@ function buildPresetOpts(){
     +'<optgroup label="Wood Finish">'+WOOD_PRESETS.map(mk).join('')+'</optgroup>';
 }
 
-// Out-of-stock counts: sidebar badge, top badge and the Out of Stock panel heading
+// Out-of-stock counts, by product: a product is "sold out" when every option a customer
+// can pick (size / finish / fabric) is out of stock, "partly" when only some are
+function productStockCounts(p){
+  var n=0,o=0;
+  var leaf=function(parentOut,f){
+    var fabs=(f&&f.fabrics)||[];
+    if(fabs.length){fabs.forEach(function(b){n++;if(parentOut||f.outOfStock||b.outOfStock)o++;});}
+    else{n++;if(parentOut||(f&&f.outOfStock))o++;}
+  };
+  if(p.variantMode==='size'&&p.topSizes&&p.topSizes.length){
+    p.topSizes.forEach(function(sz){
+      var fins=sz.finishes||[];
+      if(fins.length)fins.forEach(function(f){leaf(sz.outOfStock,f);});else{n++;if(sz.outOfStock)o++;}
+    });
+  } else if(p.finishes&&p.finishes.length){
+    p.finishes.forEach(function(f){leaf(false,f);});
+  }
+  return {n:n,o:o};
+}
 function updateOOSCounts(){
   var items=collectOOSItems();
-  var prods={};items.forEach(function(it){prods[it.productId]=1;});
-  var nProd=Object.keys(prods).length;
+  var full=0,part=0;
+  products.forEach(function(p){if(p.status!=='active')return;var c=productStockCounts(p);if(!c.n||!c.o)return;if(c.o>=c.n)full++;else part++;});
   var set=function(id,v){var el=document.getElementById(id);if(el)el.textContent=v;};
-  set('nav-oos-count',items.length?items.length:'');
-  set('oos-top-count',items.length);
-  set('oos-count',items.length?'('+items.length+')':'');
+  set('nav-oos-count',full?full:'');
+  set('oos-top-count',full+' sold out · '+part+' partly');
+  set('oos-count',full?'('+full+' sold out)':'');
   set('oos-sub',items.length
-    ? items.length+' option'+(items.length===1?'':'s')+' across '+nProd+' product'+(nProd===1?'':'s')+' currently hidden from customers'
+    ? full+' product'+(full===1?'':'s')+' completely sold out · '+part+' with some options sold out · '+items.length+' option'+(items.length===1?'':'s')+' hidden from customers'
     : 'Finishes, fabrics, and sizes currently hidden from customers');
 }
 function updateStats(){
