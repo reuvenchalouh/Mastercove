@@ -38,6 +38,9 @@ body{font-family:'Outfit',sans-serif;background:#F0EBE3;color:var(--ink);font-si
 .topbar-badges{display:flex;gap:10px;}
 .tbadge{background:var(--linen);border:1px solid var(--border);padding:5px 12px;border-radius:2px;font-size:12px;color:var(--slate);}
 .tbadge b{color:var(--walnut);}
+.nav-count{margin-left:auto;background:#B5432A;color:#fff;font-size:10.5px;font-weight:500;line-height:1;padding:3px 7px;border-radius:9px;}
+.nav-count:empty{display:none;}
+.tbadge.oos b{color:#B5432A;}
 .view{display:none;padding:28px 32px;}
 .view.active{display:block;}
 .stats-summary{background:var(--white);border:1px solid var(--border);border-radius:6px;padding:18px 28px;margin-bottom:16px;display:flex;align-items:center;gap:40px;flex-wrap:wrap;}
@@ -324,7 +327,7 @@ async function adminUpload(path, file){
     </button>
     <button class="nav-btn" id="nav-oos" onclick="showView('oos')">
       <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="4.9" y1="4.9" x2="19.1" y2="19.1"/></svg>
-      Out of Stock
+      Out of Stock<span class="nav-count" id="nav-oos-count"></span>
     </button>
     <div class="nav-label">Marketing</div>
     <button class="nav-btn" id="nav-promos" onclick="showView('promos')">
@@ -343,6 +346,7 @@ async function adminUpload(path, file){
     </div>
     <div class="topbar-badges">
       <div class="tbadge">Total: <b id="total-count">0</b></div>
+      <div class="tbadge oos" style="cursor:pointer;" onclick="showView('oos')" title="See what's out of stock">Out of stock: <b id="oos-top-count">0</b></div>
       <div class="tbadge">Active: <b id="active-count" style="color:var(--green)">0</b></div>
     </div>
   </div>
@@ -549,7 +553,7 @@ async function adminUpload(path, file){
   <div class="view" id="view-oos">
     <div class="panel">
       <div class="panel-head">
-        <div><h3>Out of Stock</h3><p>Finishes, fabrics, and sizes currently hidden from customers</p></div>
+        <div><h3>Out of Stock <span id="oos-count" style="color:#B5432A;"></span></h3><p id="oos-sub">Finishes, fabrics, and sizes currently hidden from customers</p></div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><button type="button" class="go-btn" id="hn-check-btn" onclick="runHernestCheck()" style="white-space:nowrap;">Check stock now</button><div class="search-bar">
           <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin:0 8px;color:var(--mist)"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input type="text" id="oos-search" placeholder="Search out of stock…" oninput="renderOOSTable()"/>
@@ -647,7 +651,21 @@ function buildPresetOpts(){
     +'<optgroup label="Wood Finish">'+WOOD_PRESETS.map(mk).join('')+'</optgroup>';
 }
 
+// Out-of-stock counts: sidebar badge, top badge and the Out of Stock panel heading
+function updateOOSCounts(){
+  var items=collectOOSItems();
+  var prods={};items.forEach(function(it){prods[it.productId]=1;});
+  var nProd=Object.keys(prods).length;
+  var set=function(id,v){var el=document.getElementById(id);if(el)el.textContent=v;};
+  set('nav-oos-count',items.length?items.length:'');
+  set('oos-top-count',items.length);
+  set('oos-count',items.length?'('+items.length+')':'');
+  set('oos-sub',items.length
+    ? items.length+' option'+(items.length===1?'':'s')+' across '+nProd+' product'+(nProd===1?'':'s')+' currently hidden from customers'
+    : 'Finishes, fabrics, and sizes currently hidden from customers');
+}
 function updateStats(){
+  try{updateOOSCounts();}catch(e){}
   var active=products.filter(function(p){return p.status==='active';}).length;
   var prices=products.map(function(p){return p.price;}).filter(Boolean);
   document.getElementById('total-count').textContent=products.length;
@@ -1489,6 +1507,11 @@ function collectOOSItems(){
           if(f.outOfStock){
             items.push({productId:p.id,productName:p.name,img:(f.photos&&f.photos[0])||p.img||'',variant:(sz.name?sz.name+' — ':'')+(f.name||'Finish'),type:'Finish (Size)',sku:f.sku||'',kind:'sizeFinish',sizeIdx:si,finIdx:fi});
           }
+          (f.fabrics||[]).forEach(function(fab,fabi){
+            if(fab.outOfStock){
+              items.push({productId:p.id,productName:p.name,img:(fab.photos&&fab.photos[0])||(f.photos&&f.photos[0])||p.img||'',variant:(sz.name?sz.name+' — ':'')+(f.name&&f.name!=='Fabric Only'?f.name+' — ':'')+(fab.type?fab.type+' ':'')+(fab.name||'Fabric'),type:'Fabric (Size)',sku:fab.sku||'',kind:'sizeFabric',sizeIdx:si,finIdx:fi,fabIdx:fabi});
+            }
+          });
         });
       });
     } else {
@@ -1511,6 +1534,7 @@ async function markInStock(productId,kind,sizeIdx,finIdx,fabIdx){
   var p=products.find(function(x){return x.id===productId;});if(!p)return;
   if(kind==='size'&&p.topSizes&&p.topSizes[sizeIdx]){p.topSizes[sizeIdx].outOfStock=false;}
   else if(kind==='sizeFinish'&&p.topSizes&&p.topSizes[sizeIdx]&&p.topSizes[sizeIdx].finishes&&p.topSizes[sizeIdx].finishes[finIdx]){p.topSizes[sizeIdx].finishes[finIdx].outOfStock=false;}
+  else if(kind==='sizeFabric'&&p.topSizes&&p.topSizes[sizeIdx]&&p.topSizes[sizeIdx].finishes&&p.topSizes[sizeIdx].finishes[finIdx]&&p.topSizes[sizeIdx].finishes[finIdx].fabrics&&p.topSizes[sizeIdx].finishes[finIdx].fabrics[fabIdx]){p.topSizes[sizeIdx].finishes[finIdx].fabrics[fabIdx].outOfStock=false;}
   else if(kind==='finish'&&p.finishes&&p.finishes[finIdx]){p.finishes[finIdx].outOfStock=false;}
   else if(kind==='fabric'&&p.finishes&&p.finishes[finIdx]&&p.finishes[finIdx].fabrics&&p.finishes[finIdx].fabrics[fabIdx]){p.finishes[finIdx].fabrics[fabIdx].outOfStock=false;}
   else return;
