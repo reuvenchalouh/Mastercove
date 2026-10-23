@@ -107,6 +107,9 @@ header{background:var(--white);border-bottom:1px solid var(--border);position:st
 .badge-best{background:#FBF4E8;color:var(--walnut);}
 .prod-info{flex:1;display:flex;flex-direction:column;padding:14px 16px;}
 .prod-name{font-size:14px;font-weight:500;line-height:1.35;margin-bottom:4px;}
+a.prod-name,a.prod-img{color:inherit;text-decoration:none;}
+a.prod-img{display:block;}
+a.prod-name{display:block;}
 .prod-cat{font-size:11px;color:var(--mist);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.06em;}
 .prod-stars{font-size:11px;color:#B8895A;margin-bottom:8px;}
 .prod-stars span{color:#A8A09A;}
@@ -425,7 +428,8 @@ function showCollection(name){
     var card = document.createElement('div');
     card.className = 'prod-card fade-up';
     card.style.animationDelay = (i * 0.05) + 's';
-    card.onclick = function(){ window.location.href = p.slug ? ('/products/' + p.slug) : ('product-detail.html?id=' + p.id); };
+    var pUrl = p.slug ? ('/products/' + p.slug) : ('product-detail.html?id=' + p.id);
+    card.onclick = function(e){ if(e.target.closest && e.target.closest('a')) return; window.location.href = pUrl; };
 
     var img = getActiveImg(p);
     // Star ratings only show once a product has real customer reviews.
@@ -441,12 +445,12 @@ function showCollection(name){
     var isSizeMode = p.variantMode==='size' && p.topSizes && p.topSizes.length;
 
     card.innerHTML =
-      '<div class="prod-img">' +
-        (img ? '<img src="'+img+'" alt="'+p.name+'" onerror="this.style.display=\'none\'"/>' : '') +
+      '<a class="prod-img" href="'+pUrl+'">' +
+        (img ? '<img src="'+img+'" alt="'+p.name+'" loading="lazy" onerror="this.style.display=\'none\'"/>' : '') +
         badgeHTML +
-      '</div>' +
+      '</a>' +
       '<div class="prod-info">' +
-        '<div class="prod-name">'+p.name+'</div>' +
+        '<a class="prod-name" href="'+pUrl+'">'+p.name+'</a>' +
         '<div class="prod-cat">'+(CAT[p.cat]||p.cat||'')+'</div>' +
         (hasReviews ? '<div class="prod-stars">'+'★★★★★'.slice(0,Math.round(p.rating))+'☆☆☆☆☆'.slice(0,5-Math.round(p.rating))+' <span>'+Number(p.rating).toFixed(1)+' ('+p.reviewCount+')</span></div>' : '') +
         (dimsText ? '<div class="prod-dims">'+dimsText+'</div>' : '') +
