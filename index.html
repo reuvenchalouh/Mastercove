@@ -245,12 +245,12 @@ footer{background:var(--ink);color:rgba(255,255,255,0.6);padding:48px 0 24px;}
     <button class="mobile-menu-btn" id="mobile-menu-btn" onclick="toggleMobileMenu()" aria-label="Menu">
       <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
-    <a href="index.html" class="logo">
+    <a class='logo' href='/'>
       <img src="https://slaffkwfwmudvernzjua.supabase.co/storage/v1/object/public/product-images/New%20wallpaper.jpeg" alt="Master Cove"/>
     </a>
     <div class="header-trust">
       <div class="trust-item">🚚 Free Shipping to Your Door</div>
-      <a href="returns.html" class="trust-item" style="text-decoration:none;color:inherit;" title="30-day return window. 20% restocking fee applies; return shipping is the customer's responsibility.">↩️ Returns Within 30 Days</a>
+      <a class='trust-item' href='/returns' style='text-decoration:none;color:inherit;' title='30-day return window. 20% restocking fee applies; return shipping is the customer\'s responsibility.'>↩️ Returns Within 30 Days</a>
       <div class="trust-item">💳 Secure Checkout</div>
     </div>
     <div class="header-right">
@@ -294,6 +294,26 @@ footer{background:var(--ink);color:rgba(255,255,255,0.6);padding:48px 0 24px;}
 <div class="mega-dropdown" id="mega-dropdown"></div>
 
 <div class="main">
+  <div class="section" id="new-arrivals-section">
+    <div class="sec-head">
+      <div>
+        <div class="sec-title">New <em>Arrivals</em></div>
+        <div class="sec-sub">Our latest arrivals — updated regularly</div>
+      </div>
+    </div>
+    <div class="prod-grid" id="new-arrivals-grid"></div>
+  </div>
+
+  <div class="section" id="best-sellers-section" style="display:none;">
+    <div class="sec-head">
+      <div>
+        <div class="sec-title">Our <em>Favorites</em></div>
+        <div class="sec-sub">Hand-picked pieces we love</div>
+      </div>
+    </div>
+    <div class="prod-grid" id="best-sellers-grid"></div>
+  </div>
+
   <div class="why-mc" id="why-mc-section">
     <div class="why-mc-head">
       <div class="sec-title">Why <em>Master Cove</em></div>
@@ -308,38 +328,19 @@ footer{background:var(--ink);color:rgba(255,255,255,0.6);padding:48px 0 24px;}
       <div class="why-mc-item">
         <div class="why-mc-icon">🚚</div>
         <h4>Free Shipping, Tracked</h4>
-        <p>Every order ships free to your front door with tracking. Larger pieces travel by freight, and the carrier calls ahead to schedule. <a href="shipping.html">Shipping details</a></p>
+        <p>Every order ships free to your front door with tracking. Larger pieces travel by freight, and the carrier calls ahead to schedule. <a href='/shipping'>Shipping details</a></p>
       </div>
       <div class="why-mc-item">
         <div class="why-mc-icon">↩️</div>
         <h4>30-Day Returns</h4>
-        <p>Changed your mind? Return within 30 days. Anything that arrives damaged is replaced or refunded. <a href="returns.html">Return policy</a></p>
+        <p>Changed your mind? Return within 30 days. Anything that arrives damaged is replaced or refunded. <a href='/returns'>Return policy</a></p>
       </div>
       <div class="why-mc-item">
         <div class="why-mc-icon">💬</div>
         <h4>Real People, Real Answers</h4>
-        <p>Questions before or after you buy? Reach us at <a href="mailto:mastercovestore@gmail.com">mastercovestore@gmail.com</a> or <a href="tel:+13472060372">(347) 206-0372</a>.</p>
+        <p>Questions before or after you buy? Reach us at <a href="mailto:Mastercovestore@gmail.com">Mastercovestore@gmail.com</a> or <a href="tel:+13472060372">(347) 206-0372</a>.</p>
       </div>
     </div>
-  </div>
-  <div class="section" id="new-arrivals-section">
-    <div class="sec-head">
-      <div>
-        <div class="sec-title">New <em>Arrivals</em></div>
-        <div class="sec-sub">Our latest arrivals — updated regularly</div>
-      </div>
-    </div>
-    <div class="prod-grid" id="new-arrivals-grid"></div>
-  </div>
-
-  <div class="section" id="best-sellers-section" style="display:none;">
-    <div class="sec-head">
-      <div>
-        <div class="sec-title">Best <em>Sellers</em></div>
-        <div class="sec-sub">Customer favorites, tried and true</div>
-      </div>
-    </div>
-    <div class="prod-grid" id="best-sellers-grid"></div>
   </div>
 
   <div class="products-section" id="products">
@@ -351,7 +352,7 @@ footer{background:var(--ink);color:rgba(255,255,255,0.6);padding:48px 0 24px;}
     </div>
     <div class="filter-bar">
       <select class="sort-select" onchange="setSort(this.value)">
-        <option value="random">Sort: Random</option>
+        <option value="featured">Sort: Featured</option>
         <option value="newest">Sort: Newest</option>
         <option value="low">Price: Low to High</option>
         <option value="high">Price: High to Low</option>
@@ -368,7 +369,7 @@ footer{background:var(--ink);color:rgba(255,255,255,0.6);padding:48px 0 24px;}
   <div class="foot-inner">
     <div class="foot-grid">
       <div>
-        <a href="index.html" class="foot-logo">
+        <a class='foot-logo' href='/'>
           <img src="https://slaffkwfwmudvernzjua.supabase.co/storage/v1/object/public/product-images/New%20wallpaper.jpeg" alt="Master Cove"/>
         </a>
         <p class="foot-about">Quality furniture delivered directly to your door. Every piece built to last a lifetime.</p>
@@ -376,27 +377,27 @@ footer{background:var(--ink);color:rgba(255,255,255,0.6);padding:48px 0 24px;}
       <div class="foot-col">
         <h5>Shop</h5>
         <a href="#products" onclick="setCat(document.querySelector('.cat-btn'),'all')">All Furniture</a>
-        <a href="index.html?room=bedroom">Bedroom</a>
-        <a href="index.html?room=living">Living Room</a>
-        <a href="index.html?room=entryway">Entryway</a>
-        <a href="index.html?room=dining">Dining</a>
-        <a href="index.html?room=bathroom">Bathroom</a>
-        <a href="index.html?room=outdoor">Outdoor</a>
-        <a href="collections.html">Collections</a>
+        <a href='/?room=bedroom'>Bedroom</a>
+        <a href='/?room=living'>Living Room</a>
+        <a href='/?room=entryway'>Entryway</a>
+        <a href='/?room=dining'>Dining</a>
+        <a href='/?room=bathroom'>Bathroom</a>
+        <a href='/?room=outdoor'>Outdoor</a>
+        <a href='/collections'>Collections</a>
       </div>
       <div class="foot-col">
         <h5>Help</h5>
-        <a href="track-order.html">Order Tracking</a>
-        <a href="about.html">About Us</a>
-        <a href="returns.html">Returns</a>
-        <a href="privacy.html">Privacy Policy</a>
-        <a href="shipping.html">Shipping Policy</a>
-        <a href="about.html">Contact Us</a>
-        <a href="faq.html">FAQ</a>
+        <a href='/track-order'>Order Tracking</a>
+        <a href='/about'>About Us</a>
+        <a href='/returns'>Returns</a>
+        <a href='/privacy'>Privacy Policy</a>
+        <a href='/shipping'>Shipping Policy</a>
+        <a href='/about'>Contact Us</a>
+        <a href='/faq'>FAQ</a>
       </div>
       <div class="foot-col">
         <h5>Contact</h5>
-        <a href="mailto:mastercovestore@gmail.com">mastercovestore@gmail.com</a>
+        <a href="mailto:Mastercovestore@gmail.com">Mastercovestore@gmail.com</a>
         <a href="tel:+13472060372">(347) 206-0372</a>
         <p style="font-size:12px;color:rgba(255,255,255,0.3);margin-top:10px;line-height:1.7;">Master Cove LLC<br/>Brooklyn, NY</p>
       </div>
@@ -432,7 +433,7 @@ footer{background:var(--ink);color:rgba(255,255,255,0.6);padding:48px 0 24px;}
 
 <script>
 var currentCat  = 'all';
-var currentSort = 'random';
+var currentSort = 'featured';
 var currentRoom = null;
 var showWishlistOnly = false;
 var cart = [];
@@ -448,13 +449,15 @@ var NAV_ROOMS = [
   {key:'dining',   label:'Dining',      cats:['sideboard','bar','diningtable','chair']},
   {key:'kitchen',  label:'Kitchen',     cats:['island','bar','sideboard','chair']},
   {key:'bathroom', label:'Bathroom',    cats:['vanity']},
-  {key:'office',   label:'Office',      cats:['desk','bookcase','chair','sideboard']},
-  {key:'outdoor',  label:'Outdoor',     cats:['outdoor']}
+  {key:'office',   label:'Office',      cats:['desk','bookcase','chair','sideboard']}
 ];
+// Outdoor is out of season: hidden from the main menu, but /?room=outdoor still works
+var HIDDEN_ROOMS = {outdoor:['outdoor']};
 
 // Room pages show exactly the same categories as the room menus (one source of truth)
 var ROOM_MAP = {storage:['shoe','sideboard']};
 NAV_ROOMS.forEach(function(r){ ROOM_MAP[r.key] = r.cats; });
+Object.keys(HIDDEN_ROOMS).forEach(function(k){ ROOM_MAP[k] = HIDDEN_ROOMS[k]; });
 
 function buildRoomNav(){
   var wrap = document.getElementById('room-nav');
@@ -737,7 +740,9 @@ function applyFilters() {
           || (p.wood && p.wood.toLowerCase().indexOf(q) >= 0);
     });
   }
-  if (currentSort === 'newest') {
+  if (currentSort === 'featured') {
+    products.sort(function(a,b){ var oa=isFullyOutOfStock(a)?1:0, ob=isFullyOutOfStock(b)?1:0; if(oa!==ob) return oa-ob; return (b.createdAt||0) - (a.createdAt||0); });
+  } else if (currentSort === 'newest') {
     products.sort(function(a,b){ return (b.createdAt||0) - (a.createdAt||0); });
   } else if (currentSort === 'low') {
     products.sort(function(a,b){ return a.price - b.price; });
@@ -809,7 +814,7 @@ function buildCard(p, i) {
   }
   if (p.badge) {
     var badgeEl = document.createElement('div');
-    var labels = {new:'New',sale:'Sale',best:'Best Seller'};
+    var labels = {new:'New',sale:'Sale',best:'Our Pick'};
     badgeEl.className = 'badge badge-' + p.badge;
     badgeEl.textContent = labels[p.badge] || '';
     imgDiv.appendChild(badgeEl);
@@ -1131,7 +1136,7 @@ function updateCartUI() {
       +'<span style="font-size:13px;">'+item.qty+'</span>'
       +'<button class="c-qty-btn" data-key="'+item.key+'" data-d="1">+</button>'
       +'</div>'
-      +'<div class="c-price">$'+Number(item.price*item.qty).toLocaleString()+'</div>'
+      +'<div class="c-price">$'+Number(item.price*item.qty).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+'</div>'
       +'</div>'
       +'<button class="c-remove-btn" data-key="'+item.key+'" style="background:none;border:none;color:var(--mist);font-size:11px;text-decoration:underline;cursor:pointer;padding:0;margin-top:6px;font-family:Outfit,sans-serif;">Remove</button>';
     row.appendChild(info);
@@ -1143,7 +1148,7 @@ function updateCartUI() {
   body.querySelectorAll('.c-remove-btn').forEach(function(btn){
     btn.onclick=function(){ removeFromCart(btn.dataset.key); };
   });
-  document.getElementById('subtotal').textContent='$'+subtotal.toLocaleString();
+  document.getElementById('subtotal').textContent='$'+subtotal.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
   foot.style.display='block';
 }
 
@@ -1193,12 +1198,34 @@ function showToast(msg) {
   t._t=setTimeout(function(){ t.classList.remove('show'); },2500);
 }
 
+
+// A product is fully out of stock when every size / finish / fabric option is marked out of stock.
+// Fully out-of-stock products are left out of New Arrivals and sorted last; they come back automatically once restocked.
+function optionOut(o){
+  if(!o) return false;
+  if(o.outOfStock) return true;
+  if(o.fabrics && o.fabrics.length) return o.fabrics.every(function(f){ return !!f.outOfStock; });
+  return false;
+}
+function isFullyOutOfStock(p){
+  var sizes = p.topSizes || [];
+  if(sizes.length){
+    return sizes.every(function(sz){
+      if(sz.outOfStock) return true;
+      var f = sz.finishes || [];
+      return f.length ? f.every(optionOut) : false;
+    });
+  }
+  var fin = p.finishes || [];
+  return fin.length ? fin.every(optionOut) : false;
+}
+
 function renderHomeSections(){
   var naGrid = document.getElementById('new-arrivals-grid');
   var bsGrid = document.getElementById('best-sellers-grid');
   var bsSection = document.getElementById('best-sellers-section');
   if(naGrid){
-    var newest = allProducts.slice().sort(function(a,b){ return (b.createdAt||0) - (a.createdAt||0); }).slice(0,9);
+    var newest = allProducts.filter(function(p){ return !isFullyOutOfStock(p); }).sort(function(a,b){ return (b.createdAt||0) - (a.createdAt||0); }).slice(0,9);
     naGrid.innerHTML = '';
     newest.forEach(function(p,i){ naGrid.appendChild(buildCard(p,i)); });
   }
