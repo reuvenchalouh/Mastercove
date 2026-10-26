@@ -314,7 +314,28 @@ footer{background:var(--ink);color:rgba(255,255,255,0.6);padding:48px 0 24px;}
     <div class="prod-grid" id="best-sellers-grid"></div>
   </div>
 
-  <div class="why-mc" id="why-mc-section">
+  <div class="products-section" id="products">
+    <div class="sec-head">
+      <div>
+        <div class="sec-title" id="section-title">Shop <em>All Furniture</em></div>
+        <div class="sec-sub" id="section-sub">Browse our full collection of furniture, built to last</div>
+      </div>
+    </div>
+    <div class="filter-bar">
+      <select class="sort-select" onchange="setSort(this.value)">
+        <option value="featured">Sort: Featured</option>
+        <option value="newest">Sort: Newest</option>
+        <option value="low">Price: Low to High</option>
+        <option value="high">Price: High to Low</option>
+      </select>
+    </div>
+    <div class="prod-grid" id="pgrid"></div>
+    <div style="text-align:center;margin-top:36px;">
+      <button id="show-more-btn" onclick="showMore()" style="display:none;background:var(--white);color:var(--ink);border:1px solid var(--border);padding:13px 32px;border-radius:2px;font-size:13px;letter-spacing:0.04em;transition:all .15s;">Show More</button>
+    </div>
+  </div>
+
+  <div class="why-mc" id="why-mc-section" style="padding:16px 0 48px;">
     <div class="why-mc-head">
       <div class="sec-title">Why <em>Master Cove</em></div>
       <p>Thoughtfully designed furniture in real woods and quality finishes, curated by a small Brooklyn-based team and shipped free to your door.</p>
@@ -340,27 +361,6 @@ footer{background:var(--ink);color:rgba(255,255,255,0.6);padding:48px 0 24px;}
         <h4>Real People, Real Answers</h4>
         <p>Questions before or after you buy? Reach us at <a href="mailto:Mastercovestore@gmail.com">Mastercovestore@gmail.com</a> or <a href="tel:+13472060372">(347) 206-0372</a>.</p>
       </div>
-    </div>
-  </div>
-
-  <div class="products-section" id="products">
-    <div class="sec-head">
-      <div>
-        <div class="sec-title" id="section-title">Shop <em>All Furniture</em></div>
-        <div class="sec-sub" id="section-sub">Browse our full collection of furniture, built to last</div>
-      </div>
-    </div>
-    <div class="filter-bar">
-      <select class="sort-select" onchange="setSort(this.value)">
-        <option value="featured">Sort: Featured</option>
-        <option value="newest">Sort: Newest</option>
-        <option value="low">Price: Low to High</option>
-        <option value="high">Price: High to Low</option>
-      </select>
-    </div>
-    <div class="prod-grid" id="pgrid"></div>
-    <div style="text-align:center;margin-top:36px;">
-      <button id="show-more-btn" onclick="showMore()" style="display:none;background:var(--white);color:var(--ink);border:1px solid var(--border);padding:13px 32px;border-radius:2px;font-size:13px;letter-spacing:0.04em;transition:all .15s;">Show More</button>
     </div>
   </div>
 </div>
