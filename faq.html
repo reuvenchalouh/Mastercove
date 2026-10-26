@@ -88,21 +88,21 @@ footer{background:var(--ink);color:rgba(255,255,255,.5);padding:44px 0 24px;marg
 
 <header>
   <div class="header-inner">
-    <a href="index.html" class="logo">
+    <a class='logo' href='/'>
       <img src="https://slaffkwfwmudvernzjua.supabase.co/storage/v1/object/public/product-images/New%20wallpaper.jpeg" alt="Master Cove"/>
     </a>
     <nav class="main-nav">
-      <a href="index.html">Shop</a>
-      <a href="collections.html">Collections</a>
-      <a href="about.html">About</a>
-      <a href="track-order.html">Track Order</a>
+      <a href='/'>Shop</a>
+      <a href='/collections'>Collections</a>
+      <a href='/about'>About</a>
+      <a href='/track-order'>Track Order</a>
     </nav>
-    <a href="index.html" class="cart-pill">Shop Now</a>
+    <a class='cart-pill' href='/'>Shop Now</a>
   </div>
 </header>
 
 <div class="breadcrumb">
-  <a href="index.html">Home</a><span class="bc-sep">›</span>
+  <a href='/'>Home</a><span class="bc-sep">›</span>
   <span>FAQ</span>
 </div>
 
@@ -135,12 +135,12 @@ footer{background:var(--ink);color:rgba(255,255,255,.5);padding:44px 0 24px;marg
 
     <div class="faq-item">
       <button class="faq-q">What is your return policy? <span class="plus">+</span></button>
-      <div class="faq-a"><div class="faq-a-inner">We offer 30-day returns. Change-of-mind returns are subject to a 20% restocking fee, and return shipping is the customer's responsibility for non-defective items. Damage or defects must be reported within 7 days of delivery. Full details are on our <a href="returns.html" style="color:var(--walnut);text-decoration:underline;">Returns page</a>.</div></div>
+      <div class="faq-a"><div class="faq-a-inner">We offer 30-day returns. Change-of-mind returns are subject to a 20% restocking fee, and return shipping is the customer's responsibility for non-defective items. Damage or defects must be reported within 7 days of delivery. Full details are on our <a href='/returns' style='color:var(--walnut);text-decoration:underline;'>Returns page</a>.</div></div>
     </div>
 
     <div class="faq-item">
       <button class="faq-q">My item arrived damaged — what do I do? <span class="plus">+</span></button>
-      <div class="faq-a"><div class="faq-a-inner">Contact us within 7 days of delivery at mastercovestore@gmail.com with photos of the damage and your order number, and we'll take care of a replacement or refund.</div></div>
+      <div class="faq-a"><div class="faq-a-inner">Contact us within 7 days of delivery at Mastercovestore@gmail.com with photos of the damage and your order number, and we'll take care of a replacement or refund.</div></div>
     </div>
 
     <div class="faq-cat-title">Product &amp; Materials</div>
@@ -159,7 +159,7 @@ footer{background:var(--ink);color:rgba(255,255,255,.5);padding:44px 0 24px;marg
 
     <div class="faq-item">
       <button class="faq-q">How can I track my order? <span class="plus">+</span></button>
-      <div class="faq-a"><div class="faq-a-inner">Visit our <a href="track-order.html" style="color:var(--walnut);text-decoration:underline;">Order Tracking page</a> and enter your order number and email to see your delivery status.</div></div>
+      <div class="faq-a"><div class="faq-a-inner">Visit our <a href='/track-order' style='color:var(--walnut);text-decoration:underline;'>Order Tracking page</a> and enter your order number and email to see your delivery status.</div></div>
     </div>
 
     <div class="faq-item">
@@ -203,10 +203,10 @@ footer{background:var(--ink);color:rgba(255,255,255,.5);padding:44px 0 24px;marg
   <div class="foot-inner">
     <span>© 2026 Master Cove LLC. All rights reserved.</span>
     <div style="display:flex;gap:18px;">
-      <a href="index.html">Shop</a>
-      <a href="about.html">About</a>
-      <a href="returns.html">Returns</a>
-      <a href="mailto:mastercovestore@gmail.com">Contact</a>
+      <a href='/'>Shop</a>
+      <a href='/about'>About</a>
+      <a href='/returns'>Returns</a>
+      <a href="mailto:Mastercovestore@gmail.com">Contact</a>
     </div>
   </div>
 </footer>
@@ -263,7 +263,7 @@ document.getElementById('ask-form').addEventListener('submit', async function(e)
     statusEl.className = 'f-status show success';
     document.getElementById('ask-form').reset();
   } catch(err){
-    statusEl.textContent = 'Something went wrong. Please try again or email us directly at mastercovestore@gmail.com.';
+    statusEl.textContent = 'Something went wrong. Please try again or email us directly at Mastercovestore@gmail.com.';
     statusEl.className = 'f-status show error';
   } finally {
     submitBtn.disabled = false;
