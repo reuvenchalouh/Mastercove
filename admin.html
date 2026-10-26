@@ -307,7 +307,7 @@ async function adminUpload(path, file){
 <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-logo">
-    <a href="index.html"><img src="https://slaffkwfwmudvernzjua.supabase.co/storage/v1/object/public/product-images/New%20wallpaper.jpeg" alt="Master Cove" style="height:36px;object-fit:contain;"/></a>
+    <a href='/'><img src="https://slaffkwfwmudvernzjua.supabase.co/storage/v1/object/public/product-images/New%20wallpaper.jpeg" alt="Master Cove" style="height:36px;object-fit:contain;"/></a>
     <p>Admin Dashboard</p>
   </div>
   <nav class="sidebar-nav">
@@ -317,7 +317,7 @@ async function adminUpload(path, file){
       Products
     </button>
     <div class="nav-label">Store</div>
-    <a class="nav-btn" href="index.html" target="_blank">
+    <a class='nav-btn' href='/' target='_blank'>
       <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
       View Storefront
     </a>
@@ -1272,6 +1272,23 @@ function propagateFabricLibrary(newFinishes){
   });
 }
 
+
+// The edit form doesn't show every field (delivery dates from the stock check, stock locks,
+// size-level supplier links and SKUs). Copy those back from the saved product, matched by name,
+// so saving an edit never wipes them. Prices are never copied back.
+function keepHiddenFields(newList,oldList){
+  if(!Array.isArray(newList)||!Array.isArray(oldList))return;
+  var KIDS=['finishes','fabrics','sizes'],SKIP=['price','photos','name'];
+  newList.forEach(function(n){
+    var o=oldList.find(function(x){return (x&&x.name||'')===(n&&n.name||'');});
+    if(!o)return;
+    Object.keys(o).forEach(function(k){
+      if(KIDS.indexOf(k)>=0||SKIP.indexOf(k)>=0)return;
+      if(!(k in n))n[k]=o[k];
+    });
+    KIDS.forEach(function(k){keepHiddenFields(n[k],o[k]);});
+  });
+}
 function submitProduct(){
   var name=document.getElementById('f-name').value.trim();
   var brand=document.getElementById('f-brand').value.trim();
@@ -1336,12 +1353,16 @@ function submitProduct(){
   }
 
   var dims=(w||d||h)?(w||'—')+' x '+(d||'—')+' x '+(h||'—'):'';
-  if(!dims&&variantMode==='size')dims=sizeRangeDims(topSizes);
+  if(variantMode==='size'){var rngDims=sizeRangeDims(topSizes);if(rngDims&&(!dims||dims.indexOf('—')>=0))dims=rngDims;}
   var tagline=document.getElementById('f-tagline')?document.getElementById('f-tagline').value.trim():'';
   var collection=document.getElementById('f-collection')?document.getElementById('f-collection').value.trim():'';
   var collectionCover=document.getElementById('f-collection-cover-url')?document.getElementById('f-collection-cover-url').value.trim():'';
   var features=document.getElementById('f-features')?document.getElementById('f-features').value.trim():'';
   var product={id:editingId||Date.now(),name:name,brand:brand,cat:cat,price:price,was:was,shippingCost:shippingCost,desc:desc,tagline:tagline,features:features,wood:'',status:status,img:img,finishes:finishes,topSizes:topSizes,variantMode:variantMode,dims:dims,badge:selectedBadge,supplierLink:supLink,collection:collection,collectionCover:collectionCover,createdAt:editingId?(products.find(function(p){return p.id===editingId;})||{}).createdAt||Date.now():Date.now()};
+  if(editingId&&_editOriginal&&_editOriginal.id===editingId){
+    keepHiddenFields(product.topSizes,_editOriginal.topSizes);
+    keepHiddenFields(product.finishes,_editOriginal.finishes);
+  }
   if(editingId){var idx=products.findIndex(function(p){return p.id===editingId;});if(idx>=0)products[idx]=product;showToast('"'+name+'" updated','success');}
   else{products.unshift(product);showToast('"'+name+'" added!','success');}
   if(product.collection&&product.collectionCover){products.forEach(function(p){if(p.collection&&p.collection.trim()===product.collection.trim()&&p.id!==product.id){p.collectionCover=product.collectionCover;}});}
@@ -1349,9 +1370,35 @@ function submitProduct(){
   save();clearForm();renderTable();updateStats();
 }
 
-function editProduct(id){
+// Always edit the latest copy from the database, so a page left open for hours can't
+// undo the daily stock checks (or other changes) when you save.
+var _editOriginal=null;
+function rowToProduct(p){return{id:p.id,name:p.name,brand:p.brand,cat:p.cat,price:p.price,was:p.was,shippingCost:p.shipping_cost||0,desc:p.description||'',tagline:p.tagline||'',features:p.features||'',wood:p.wood||'',status:p.status,img:p.img||'',finishes:p.finishes||[],topSizes:p.top_sizes||[],variantMode:p.variant_mode||'finish',dims:p.dims||'',badge:p.badge||'',supplierLink:p.supplier_link||'',collection:p.collection||'',collectionCover:p.collection_cover||'',slug:p.slug||'',createdAt:p.created_at};}
+async function refreshProductFromDb(id){
+  try{
+    var res=await adminDb({action:'products_list'});
+    var row=res&&res.data&&res.data.find(function(r){return r.id===id;});
+    if(row){
+      var fresh=rowToProduct(row);
+      var i=products.findIndex(function(x){return x.id===id;});
+      if(i>=0)products[i]=fresh;
+      try{_savedSnap[id]=JSON.stringify(productToRow(fresh));}catch(e){}
+      return true;
+    }
+  }catch(e){console.log('Refresh error:',e);}
+  return false;
+}
+async function editProduct(id){
+  showToast('Loading latest version…','success');
+  var ok=await refreshProductFromDb(id);
+  if(!ok)showToast('Could not load the latest version — refresh the page before saving','error');
+  fillEditForm(id);
+  renderTable();updateStats();renderOOSTable();
+}
+function fillEditForm(id){
   var p=products.find(function(x){return x.id===id;});if(!p)return;
   editingId=id;
+  try{_editOriginal=JSON.parse(JSON.stringify(p));}catch(e){_editOriginal=null;}
   document.getElementById('f-name').value=p.name;
   document.getElementById('f-brand').value=p.brand;
   document.getElementById('f-cat').value=p.cat;
@@ -1365,6 +1412,7 @@ function editProduct(id){
   document.getElementById('f-supplier-link').value=p.supplierLink||'';
   if(document.getElementById('f-collection')){document.getElementById('f-collection').value=p.collection||'';var ccw=document.getElementById('collection-cover-wrap');if(ccw)ccw.style.display=p.collection?'block':'none';}
   if(document.getElementById('f-collection-cover-url')){document.getElementById('f-collection-cover-url').value=p.collectionCover||'';if(p.collectionCover){document.getElementById('collection-cover-img').src=p.collectionCover;document.getElementById('collection-cover-preview').style.display='block';}}
+  ['f-w','f-d','f-h'].forEach(function(k){document.getElementById(k).value='';});
   if(p.dims){var pts=p.dims.split(/[x×]/).map(function(s){return s.trim();});document.getElementById('f-w').value=pts[0]||'';document.getElementById('f-d').value=pts[1]||'';document.getElementById('f-h').value=pts[2]||'';}
   clearFinishes();clearTopSizes();
   var pmode=p.variantMode||(p.topSizes&&p.topSizes.length?'size':'finish');
@@ -1386,11 +1434,11 @@ function editProduct(id){
   document.getElementById('edit-cancel-wrap').style.display='block';
   document.getElementById('form-panel').scrollIntoView({behavior:'smooth',block:'start'});
 }
-function cancelEdit(){editingId=null;clearForm();}
+function cancelEdit(){editingId=null;_editOriginal=null;clearForm();}
 
 function duplicateProduct(id){
-  editProduct(id);
-  editingId=null;
+  fillEditForm(id);
+  editingId=null;_editOriginal=null;
   var nameEl=document.getElementById('f-name');
   if(nameEl&&nameEl.value&&nameEl.value.toLowerCase().indexOf('copy of ')!==0){nameEl.value='Copy of '+nameEl.value;}
   document.getElementById('form-title').textContent='Duplicate Product';
@@ -1662,7 +1710,7 @@ async function loadProductsFromSupabase(){
     var res=await adminDb({action:'products_list'});
     if(res.error)throw res.error;
     if(res.data&&res.data.length){
-      products=res.data.map(function(p){return{id:p.id,name:p.name,brand:p.brand,cat:p.cat,price:p.price,was:p.was,shippingCost:p.shipping_cost||0,desc:p.description||'',tagline:p.tagline||'',features:p.features||'',wood:p.wood||'',status:p.status,img:p.img||'',finishes:p.finishes||[],topSizes:p.top_sizes||[],variantMode:p.variant_mode||'finish',dims:p.dims||'',badge:p.badge||'',supplierLink:p.supplier_link||'',collection:p.collection||'',collectionCover:p.collection_cover||'',slug:p.slug||'',createdAt:p.created_at};});
+      products=res.data.map(rowToProduct);
       snapshotProducts();
       renderTable();updateStats();renderOOSTable();
     }
