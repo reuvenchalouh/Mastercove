@@ -334,6 +334,10 @@ async function adminUpload(path, file){
       <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>
       Promo Codes
     </button>
+    <button class="nav-btn" id="nav-subs" onclick="showView('subs')">
+      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><polyline points="4 6 12 13 20 6"/></svg>
+      Subscribers<span class="nav-count" id="nav-subs-count"></span>
+    </button>
   </nav>
   <div class="sidebar-foot">Master Cove v2.0</div>
 </aside>
@@ -590,6 +594,22 @@ async function adminUpload(path, file){
       <table class="prod-table">
         <thead><tr><th>Code</th><th>Discount</th><th>Minimum</th><th>Expires</th><th>Uses</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody id="promo-tbody"><tr><td colspan="7" style="color:var(--mist);">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="view" id="view-subs">
+    <div class="panel">
+      <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div><h3>Email Subscribers <span id="subs-total" style="font-weight:400;color:var(--mist);"></span></h3><p>People who signed up through the 10% off popup. Each one was emailed the code WELCOME10.</p></div>
+        <div style="display:flex;gap:8px;">
+          <button onclick="copySubEmails()" style="padding:8px 14px;background:var(--white);border:1px solid var(--border);border-radius:2px;font-family:'Outfit',sans-serif;font-size:12.5px;cursor:pointer;">Copy all emails</button>
+          <button onclick="downloadSubsCsv()" style="padding:8px 14px;background:var(--walnut);color:#fff;border:none;border-radius:2px;font-family:'Outfit',sans-serif;font-size:12.5px;cursor:pointer;">Download CSV</button>
+        </div>
+      </div>
+      <table class="prod-table">
+        <thead><tr><th>Email</th><th>Signed up</th><th>Page</th><th>Actions</th></tr></thead>
+        <tbody id="subs-tbody"><tr><td colspan="4" style="color:var(--mist);">Loading…</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -1976,11 +1996,52 @@ function renderOrders(){
 function showView(v){
   document.querySelectorAll('.view').forEach(function(el){el.classList.remove('active');});document.getElementById('view-'+v).classList.add('active');
   document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('active');});var nb=document.getElementById('nav-'+v);if(nb)nb.classList.add('active');
-  document.getElementById('page-title').innerHTML={products:'Product <em>Catalog</em>',orders:'Customer <em>Orders</em>',oos:'Out of <em>Stock</em>',promos:'Promo <em>Codes</em>'}[v]||v;
+  document.getElementById('page-title').innerHTML={products:'Product <em>Catalog</em>',orders:'Customer <em>Orders</em>',oos:'Out of <em>Stock</em>',promos:'Promo <em>Codes</em>',subs:'Email <em>Subscribers</em>'}[v]||v;
   if(v==='orders')loadOrdersFromSupabase();
   if(v==='oos')renderOOSTable();
   if(v==='promos')loadPromos();
+  if(v==='subs')loadSubscribers();
   closeSidebar();
+}
+
+
+/* ── EMAIL SUBSCRIBERS (signup popup) ── */
+var subsList=[];
+async function loadSubscribers(){
+  var r=await adminDb({action:'subscribers_list'});
+  var tb=document.getElementById('subs-tbody');
+  if(r.error){tb.innerHTML='<tr><td colspan="4" style="color:var(--red);">Could not load subscribers: '+promoEsc(r.error.message)+'</td></tr>';return;}
+  subsList=r.data||[];renderSubscribers();
+}
+function renderSubscribers(){
+  var tb=document.getElementById('subs-tbody');
+  document.getElementById('subs-total').textContent='('+subsList.length+')';
+  var nc=document.getElementById('nav-subs-count');if(nc)nc.textContent=subsList.length?subsList.length:'';
+  if(!subsList.length){tb.innerHTML='<tr><td colspan="4" style="color:var(--mist);">No subscribers yet — they\'ll appear here as visitors sign up.</td></tr>';return;}
+  tb.innerHTML=subsList.map(function(s){
+    var d=new Date(s.created_at);
+    var when=d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'America/New_York'})+' '+d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/New_York'});
+    return '<tr><td><a href="mailto:'+promoEsc(s.email)+'" style="color:var(--walnut);">'+promoEsc(s.email)+'</a></td><td>'+when+'</td><td style="color:var(--mist);">'+promoEsc(s.page||'')+'</td>'
+      +'<td><button class="act-btn del" onclick="deleteSubscriber('+s.id+')">Remove</button></td></tr>';
+  }).join('');
+}
+async function deleteSubscriber(id){
+  var s=subsList.find(function(x){return x.id===id;});if(!s)return;
+  if(!confirm('Remove '+s.email+' from your subscriber list?'))return;
+  var r=await adminDb({action:'subscribers_delete',id:id});
+  if(r.error){showToast('Could not remove: '+r.error.message,'error');return;}
+  subsList=subsList.filter(function(x){return x.id!==id;});renderSubscribers();showToast('Removed','success');
+}
+function copySubEmails(){
+  if(!subsList.length){showToast('No subscribers yet','error');return;}
+  var txt=subsList.map(function(s){return s.email;}).join(', ');
+  try{navigator.clipboard.writeText(txt);showToast(subsList.length+' emails copied','success');}catch(e){prompt('Copy these emails:',txt);}
+}
+function downloadSubsCsv(){
+  if(!subsList.length){showToast('No subscribers yet','error');return;}
+  var rows=[['email','signed_up','page']].concat(subsList.map(function(s){return [s.email,s.created_at,s.page||''];}));
+  var csv=rows.map(function(r){return r.map(function(c){return '"'+String(c).replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+  var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='mastercove-subscribers.csv';document.body.appendChild(a);a.click();a.remove();
 }
 
 /* ── PROMO CODES ── */
@@ -2056,6 +2117,7 @@ try{
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsYWZma3dmd211ZHZlcm56anVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMzU4MDksImV4cCI6MjA5MTYxMTgwOX0.BEz8_GNKPTQB90LJBJTZFyJYFF-9ypdfbEsLAfEESqY"
   );
   window.adminReady.then(loadProductsFromSupabase);
+  window.adminReady.then(function(){ loadSubscribers().catch(function(){}); });
 }catch(e){console.log('Supabase init error:',e);}
 </script>
 </body>
