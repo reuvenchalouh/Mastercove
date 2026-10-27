@@ -599,9 +599,23 @@ async function adminUpload(path, file){
   </div>
 
   <div class="view" id="view-subs">
+    <div class="panel" style="margin-bottom:20px;">
+      <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div><h3>Customers Who Ordered <span id="subs-cust-total" style="font-weight:400;color:var(--mist);"></span></h3><p>Subscribers who have placed an order. Send a thank-you offer to help them complete their collection.</p></div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <label class="promo-lbl" style="margin:0;">Offer code</label>
+          <input class="finput" id="subs-offer-code" value="COMPLETE5" style="width:130px;text-transform:uppercase;" onchange="saveOfferCode()"/>
+          <span id="subs-offer-pct" style="font-size:12.5px;color:var(--mist);"></span>
+        </div>
+      </div>
+      <table class="prod-table">
+        <thead><tr><th>Customer</th><th>Orders</th><th>Bought</th><th>Complete the collection</th><th>Actions</th></tr></thead>
+        <tbody id="subs-cust-tbody"><tr><td colspan="5" style="color:var(--mist);">Loading…</td></tr></tbody>
+      </table>
+    </div>
     <div class="panel">
       <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
-        <div><h3>Email Subscribers <span id="subs-total" style="font-weight:400;color:var(--mist);"></span></h3><p>People who signed up through the 10% off popup. Each one was emailed the code WELCOME10.</p></div>
+        <div><h3>Haven't Ordered Yet <span id="subs-total" style="font-weight:400;color:var(--mist);"></span></h3><p>Signed up through the 10% off popup (emailed code WELCOME10) but no order yet.</p></div>
         <div style="display:flex;gap:8px;">
           <button onclick="copySubEmails()" style="padding:8px 14px;background:var(--white);border:1px solid var(--border);border-radius:2px;font-family:'Outfit',sans-serif;font-size:12.5px;cursor:pointer;">Copy all emails</button>
           <button onclick="downloadSubsCsv()" style="padding:8px 14px;background:var(--walnut);color:#fff;border:none;border-radius:2px;font-family:'Outfit',sans-serif;font-size:12.5px;cursor:pointer;">Download CSV</button>
@@ -2006,24 +2020,96 @@ function showView(v){
 
 
 /* ── EMAIL SUBSCRIBERS (signup popup) ── */
-var subsList=[];
+// Split into: subscribers who have ordered (thank-you / complete-the-collection offer) and those who haven't yet.
+var subsList=[], subsOrders=[], subsCustomers=[], subsProspects=[];
+function subEsc(t){return String(t==null?'':t).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function offerCode(){var el=document.getElementById('subs-offer-code');var c=(el&&el.value||'COMPLETE5').trim().toUpperCase();return c||'COMPLETE5';}
+function saveOfferCode(){try{localStorage.setItem('mc_offer_code',offerCode());}catch(e){}renderSubscribers();}
+async function fetchOrdersQuiet(){
+  try{
+    var res=await fetch('/.netlify/functions/admin-orders',{method:'POST',headers:{'Content-Type':'application/json','x-admin-password':ADMIN_PW},body:JSON.stringify({action:'list'})});
+    var j=await res.json(); if(!res.ok)return [];
+    return (j.orders||[]).map(function(o){return{email:String(o.email||'').trim().toLowerCase(),customer:o.customer||'',orderNumber:o.order_number||'',product:o.product||'',createdAt:o.created_at||'',items:Array.isArray(o.items)?o.items:[],productIds:Array.isArray(o.product_ids)?o.product_ids:[]};});
+  }catch(e){return [];}
+}
 async function loadSubscribers(){
+  try{var saved=localStorage.getItem('mc_offer_code');if(saved)document.getElementById('subs-offer-code').value=saved;}catch(e){}
   var r=await adminDb({action:'subscribers_list'});
-  var tb=document.getElementById('subs-tbody');
-  if(r.error){tb.innerHTML='<tr><td colspan="4" style="color:var(--red);">Could not load subscribers: '+promoEsc(r.error.message)+'</td></tr>';return;}
-  subsList=r.data||[];renderSubscribers();
+  if(r.error){document.getElementById('subs-tbody').innerHTML='<tr><td colspan="4" style="color:var(--red);">Could not load subscribers: '+subEsc(r.error.message)+'</td></tr>';return;}
+  subsList=r.data||[];
+  subsOrders=await fetchOrdersQuiet();
+  try{var pr=await adminDb({action:'promo_list'});var code=offerCode();var hit=(pr.data||[]).find(function(x){return x.code===code;});
+    var el=document.getElementById('subs-offer-pct');if(el)el.textContent=hit?(Number(hit.percent_off)+'% off'+(hit.active?'':' · TURNED OFF')):'code not found — create it in Promo Codes';}catch(e){}
+  renderSubscribers();
+}
+// Products a customer bought (from order items / product ids, falling back to the product text)
+function boughtProducts(ords){
+  var ids={},names=[];
+  ords.forEach(function(o){
+    (o.productIds||[]).forEach(function(id){ids[String(id)]=1;});
+    (o.items||[]).forEach(function(it){if(it&&it.id!==undefined)ids[String(it.id)]=1;else if(it&&it.name)names.push(it.name);});
+    if(!(o.productIds||[]).length&&!(o.items||[]).length&&o.product)names.push(o.product);
+  });
+  var list=products.filter(function(p){return ids[String(p.id)]||names.some(function(n){return n&&n.toLowerCase().indexOf(String(p.name||'').toLowerCase())>=0;});});
+  return list;
+}
+function collectionSuggestions(bought){
+  var have={};bought.forEach(function(p){have[p.id]=1;});
+  var cols={};bought.forEach(function(p){if(p.collection)cols[p.collection.trim()]=1;});
+  var out=products.filter(function(p){return p.status==='active'&&p.collection&&cols[p.collection.trim()]&&!have[p.id];});
+  return {collections:Object.keys(cols),pieces:out.slice(0,6)};
 }
 function renderSubscribers(){
-  var tb=document.getElementById('subs-tbody');
-  document.getElementById('subs-total').textContent='('+subsList.length+')';
+  var byEmail={};subsOrders.forEach(function(o){if(o.email){(byEmail[o.email]=byEmail[o.email]||[]).push(o);}});
+  subsCustomers=[];subsProspects=[];
+  subsList.forEach(function(s){var em=String(s.email||'').toLowerCase();if(byEmail[em])subsCustomers.push({sub:s,orders:byEmail[em]});else subsProspects.push(s);});
   var nc=document.getElementById('nav-subs-count');if(nc)nc.textContent=subsList.length?subsList.length:'';
-  if(!subsList.length){tb.innerHTML='<tr><td colspan="4" style="color:var(--mist);">No subscribers yet — they\'ll appear here as visitors sign up.</td></tr>';return;}
-  tb.innerHTML=subsList.map(function(s){
+  document.getElementById('subs-total').textContent='('+subsProspects.length+')';
+  document.getElementById('subs-cust-total').textContent='('+subsCustomers.length+')';
+  // Customers who ordered
+  var ct=document.getElementById('subs-cust-tbody');
+  if(!subsCustomers.length){ct.innerHTML='<tr><td colspan="5" style="color:var(--mist);">No subscribers have ordered yet — when a subscriber places an order (same email), they move here.</td></tr>';}
+  else ct.innerHTML=subsCustomers.map(function(c,i){
+    var ords=c.orders.slice().sort(function(a,b){return String(b.createdAt).localeCompare(String(a.createdAt));});
+    var bought=boughtProducts(ords), sug=collectionSuggestions(bought);
+    var name=ords[0].customer||'';
+    var boughtTxt=bought.length?bought.map(function(p){return subEsc(p.name);}).join('<br/>'):subEsc(ords.map(function(o){return o.product;}).join(', '));
+    var sugTxt=sug.pieces.length?sug.pieces.map(function(p){return subEsc(p.name);}).join('<br/>'):'<span style="color:var(--mist);">No other collection pieces</span>';
+    return '<tr><td><b>'+subEsc(name)+'</b><br/><a href="mailto:'+subEsc(c.sub.email)+'" style="color:var(--walnut);">'+subEsc(c.sub.email)+'</a></td>'
+      +'<td>'+ords.length+'<br/><span style="color:var(--mist);font-size:12px;">last '+subEsc(String(ords[0].createdAt).slice(0,10))+'</span></td>'
+      +'<td style="font-size:12.5px;">'+boughtTxt+'</td><td style="font-size:12.5px;">'+sugTxt+'</td>'
+      +'<td><button class="act-btn edit" onclick="emailOffer('+i+')">Email offer</button></td></tr>';
+  }).join('');
+  // Haven't ordered yet
+  var tb=document.getElementById('subs-tbody');
+  if(!subsProspects.length){tb.innerHTML='<tr><td colspan="4" style="color:var(--mist);">No subscribers here yet — they\'ll appear as visitors sign up.</td></tr>';return;}
+  tb.innerHTML=subsProspects.map(function(s){
     var d=new Date(s.created_at);
     var when=d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'America/New_York'})+' '+d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/New_York'});
-    return '<tr><td><a href="mailto:'+promoEsc(s.email)+'" style="color:var(--walnut);">'+promoEsc(s.email)+'</a></td><td>'+when+'</td><td style="color:var(--mist);">'+promoEsc(s.page||'')+'</td>'
+    return '<tr><td><a href="mailto:'+subEsc(s.email)+'" style="color:var(--walnut);">'+subEsc(s.email)+'</a></td><td>'+when+'</td><td style="color:var(--mist);">'+subEsc(s.page||'')+'</td>'
       +'<td><button class="act-btn del" onclick="deleteSubscriber('+s.id+')">Remove</button></td></tr>';
   }).join('');
+}
+// Opens a ready-to-send Gmail draft (from the store account) — nothing is sent until you press Send in Gmail
+function emailOffer(i){
+  var c=subsCustomers[i];if(!c)return;
+  var ords=c.orders.slice().sort(function(a,b){return String(b.createdAt).localeCompare(String(a.createdAt));});
+  var bought=boughtProducts(ords), sug=collectionSuggestions(bought);
+  var first=(ords[0].customer||'').trim().split(/\s+/)[0]||'there';
+  var noThe=function(t){return String(t||'').replace(/^the\s+/i,'');};
+  var item=bought.length?('your '+noThe(bought[0].name)):(ords[0].product?('your '+noThe(ords[0].product)):'your new furniture');
+  var code=offerCode(); var pctTxt=(document.getElementById('subs-offer-pct').textContent.match(/^(\d+)% off/)||[])[1]||'5';
+  var lines=['Hi '+first+',','','We hope you\'re enjoying '+item+'! Thank you again for choosing Master Cove.',''];
+  if(sug.pieces.length){
+    lines.push('As a thank-you, here\'s an extra '+pctTxt+'% off to complete your '+noThe(sug.collections[0]||'')+' collection:');lines.push('');
+    sug.pieces.forEach(function(p){lines.push('• '+p.name+' — https://mastercove.com/products/'+(p.slug||p.id));});
+  } else {
+    lines.push('As a thank-you, here\'s an extra '+pctTxt+'% off your next piece:');lines.push('https://mastercove.com/');
+  }
+  lines.push('','Use code '+code+' at checkout. Free shipping on every order, as always.','','Warmly,','Reuven','Master Cove','(347) 206-0372');
+  var subject='A thank-you from Master Cove — '+pctTxt+'% off to complete your collection';
+  var url='https://mail.google.com/mail/?authuser=mastercovestore@gmail.com&view=cm&fs=1&to='+encodeURIComponent(c.sub.email)+'&su='+encodeURIComponent(subject)+'&body='+encodeURIComponent(lines.join('\n'));
+  window.open(url,'_blank');
 }
 async function deleteSubscriber(id){
   var s=subsList.find(function(x){return x.id===id;});if(!s)return;
@@ -2033,13 +2119,14 @@ async function deleteSubscriber(id){
   subsList=subsList.filter(function(x){return x.id!==id;});renderSubscribers();showToast('Removed','success');
 }
 function copySubEmails(){
-  if(!subsList.length){showToast('No subscribers yet','error');return;}
-  var txt=subsList.map(function(s){return s.email;}).join(', ');
-  try{navigator.clipboard.writeText(txt);showToast(subsList.length+' emails copied','success');}catch(e){prompt('Copy these emails:',txt);}
+  if(!subsProspects.length){showToast('No subscribers yet','error');return;}
+  var txt=subsProspects.map(function(s){return s.email;}).join(', ');
+  try{navigator.clipboard.writeText(txt);showToast(subsProspects.length+' emails copied','success');}catch(e){prompt('Copy these emails:',txt);}
 }
 function downloadSubsCsv(){
   if(!subsList.length){showToast('No subscribers yet','error');return;}
-  var rows=[['email','signed_up','page']].concat(subsList.map(function(s){return [s.email,s.created_at,s.page||''];}));
+  var byEmail={};subsOrders.forEach(function(o){if(o.email)byEmail[o.email]=(byEmail[o.email]||0)+1;});
+  var rows=[['email','signed_up','page','orders']].concat(subsList.map(function(s){return [s.email,s.created_at,s.page||'',byEmail[String(s.email).toLowerCase()]||0];}));
   var csv=rows.map(function(r){return r.map(function(c){return '"'+String(c).replace(/"/g,'""')+'"';}).join(',');}).join('\n');
   var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='mastercove-subscribers.csv';document.body.appendChild(a);a.click();a.remove();
 }
