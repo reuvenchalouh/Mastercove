@@ -61,6 +61,20 @@ exports.handler = async function(event) {
       return json(200, { path: data.path, token: data.token });
     }
 
+    // ---- Email subscribers (signup popup) ----
+    if (action === 'subscribers_list') {
+      const { data, error } = await supabase.from('subscribers').select('id,email,source,page,created_at').order('created_at', { ascending: false });
+      if (error) throw error;
+      return json(200, { data: data || [] });
+    }
+
+    if (action === 'subscribers_delete') {
+      if (body.id === undefined || body.id === null) return json(400, { error: 'Missing subscriber id.' });
+      const { error } = await supabase.from('subscribers').delete().eq('id', body.id);
+      if (error) throw error;
+      return json(200, { success: true });
+    }
+
     // ---- Promo codes ----
     if (action === 'promo_list') {
       const { data, error } = await supabase.from('promo_codes').select('*').order('created_at', { ascending: false });
