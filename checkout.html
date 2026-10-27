@@ -355,12 +355,12 @@ function recalcTotals(){
 
   var isNY = NY_STATE_NAMES.indexOf((stateVal||'').trim().toUpperCase()) >= 0;
   document.getElementById('t-tax-label').textContent = isNY ? 'Tax (NY 8.875%)' : 'Tax';
-  document.getElementById('t-sub').textContent   = '$' + sub.toLocaleString();
+  document.getElementById('t-sub').textContent   = '$' + sub.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
   document.getElementById('t-ship').textContent  = ship > 0 ? ('$' + ship.toFixed(2)) : 'Free';
   document.getElementById('t-tax').textContent   = '$' + tax.toFixed(2);
-  document.getElementById('t-total').textContent = '$' + orderTotal.toLocaleString();
+  document.getElementById('t-total').textContent = '$' + orderTotal.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
   var payAmt = document.getElementById('pay-amount');
-  if (payAmt) payAmt.textContent = '$' + orderTotal.toLocaleString();
+  if (payAmt) payAmt.textContent = '$' + orderTotal.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
   if (typeof updateWalletTotal === 'function') updateWalletTotal();
 }
 
@@ -376,7 +376,7 @@ function formatPhone(raw) {
 function resetPayBtn() {
   var btn = document.getElementById('pay-btn');
   btn.disabled = false;
-  btn.innerHTML = '🔒 Pay <span id="pay-amount">$' + orderTotal.toLocaleString() + '</span>';
+  btn.innerHTML = '🔒 Pay <span id="pay-amount">$' + orderTotal.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) + '</span>';
 }
 
 function loadSummary(skipTracking) {
@@ -404,7 +404,7 @@ function loadSummary(skipTracking) {
     row.appendChild(info);
     var price = document.createElement('div');
     price.className = 'item-price';
-    price.textContent = '$' + Number(item.price * item.qty).toLocaleString();
+    price.textContent = '$' + Number(item.price * item.qty).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
     row.appendChild(price);
     itemsEl.appendChild(row);
   });
@@ -573,7 +573,7 @@ function onSuccess(orderNumber, name, email, address, city, state, zip) {
     + '&name=' + encodeURIComponent(name)
     + '&address=' + encodeURIComponent(fullAddress)
     + '&product=' + encodeURIComponent(itemNames)
-    + '&total=' + encodeURIComponent(orderTotal.toLocaleString())
+    + '&total=' + encodeURIComponent(orderTotal.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}))
     + '&value=' + encodeURIComponent(orderTotal)
     + '&items=' + encodeURIComponent(gaItemsJSON);
 }
