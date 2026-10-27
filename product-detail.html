@@ -503,7 +503,7 @@ src="https://www.facebook.com/tr?id=2156219968568427&ev=PageView&noscript=1"
         <a href='/returns'>Returns</a>
         <a href='/privacy'>Privacy Policy</a>
         <a href='/shipping'>Shipping Policy</a>
-        <a href='/about'>Contact Us</a>
+        <a href='/contact'>Contact Us</a>
         <a href='/faq'>FAQ</a>
       </div>
       <div class="foot-col">
@@ -1491,5 +1491,111 @@ async function loadReviews(p){
   }catch(e){console.log('Load reviews error:',e);}
 }
 </script>
+
+<!-- EMAIL SIGNUP POPUP: 10% off first order (code WELCOME10). Shows once every 14 days; never again after signing up. -->
+<style>
+.mcp-overlay{position:fixed;inset:0;background:rgba(28,26,23,.45);z-index:1000;opacity:0;pointer-events:none;transition:opacity .3s;}
+.mcp-overlay.open{opacity:1;pointer-events:auto;}
+.mcp-box{position:fixed;left:50%;top:50%;transform:translate(-50%,-46%);width:min(440px,calc(100vw - 32px));background:#FDFBF8;border-radius:6px;z-index:1001;box-shadow:0 24px 70px rgba(28,26,23,.28);opacity:0;pointer-events:none;transition:opacity .3s,transform .3s;overflow:hidden;font-family:'Outfit',sans-serif;}
+.mcp-box.open{opacity:1;pointer-events:auto;transform:translate(-50%,-50%);}
+.mcp-top{background:#1C1A17;color:#D4AA7D;text-align:center;padding:10px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;}
+.mcp-body{padding:30px 32px 28px;text-align:center;}
+.mcp-close{position:absolute;top:6px;right:10px;background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1;padding:4px;}
+.mcp-title{font-family:'Playfair Display',serif;font-size:30px;font-weight:400;color:#1C1A17;line-height:1.2;margin:0 0 10px;}
+.mcp-title em{color:#6B4C35;font-style:italic;}
+.mcp-sub{font-size:14px;color:#5C5750;font-weight:300;line-height:1.6;margin:0 0 20px;}
+.mcp-form{display:flex;flex-direction:column;gap:10px;}
+.mcp-input{border:1px solid #DDD5C8;background:#fff;padding:13px 14px;font-size:14px;font-family:'Outfit',sans-serif;border-radius:2px;outline:none;color:#1C1A17;}
+.mcp-input:focus{border-color:#6B4C35;}
+.mcp-btn{background:#1C1A17;color:#fff;border:none;padding:14px;font-size:13px;letter-spacing:.06em;font-weight:500;border-radius:2px;cursor:pointer;font-family:'Outfit',sans-serif;}
+.mcp-btn:disabled{opacity:.6;cursor:default;}
+.mcp-no{background:none;border:none;color:#A8A09A;font-size:12px;margin-top:12px;cursor:pointer;text-decoration:underline;font-family:'Outfit',sans-serif;}
+.mcp-err{color:#B5432A;font-size:12.5px;min-height:16px;}
+.mcp-code{border:1px dashed #B8895A;background:#F5EFE6;border-radius:4px;padding:16px;margin:4px 0 14px;font-size:26px;letter-spacing:4px;font-weight:600;color:#1C1A17;}
+.mcp-fine{font-size:11.5px;color:#A8A09A;margin-top:12px;}
+@media(max-width:600px){
+  .mcp-box{top:auto;bottom:0;left:0;right:0;width:100%;transform:translateY(100%);border-radius:12px 12px 0 0;}
+  .mcp-box.open{transform:translateY(0);}
+  .mcp-body{padding:24px 20px 26px;}
+  .mcp-title{font-size:26px;}
+}
+</style>
+<div class="mcp-overlay" id="mcp-overlay"></div>
+<div class="mcp-box" id="mcp-box" role="dialog" aria-modal="true" aria-labelledby="mcp-title">
+  <div class="mcp-top">Free Shipping · 30-Day Returns<button class="mcp-close" id="mcp-close" aria-label="Close">×</button></div>
+  <div class="mcp-body" id="mcp-step1">
+    <h3 class="mcp-title" id="mcp-title">Take <em>10% off</em><br/>your first order</h3>
+    <p class="mcp-sub">Join our list for new arrivals and members-only offers. We'll send your code right away.</p>
+    <form class="mcp-form" id="mcp-form" novalidate>
+      <input class="mcp-input" id="mcp-email" type="email" placeholder="Your email address" autocomplete="email" required/>
+      <div class="mcp-err" id="mcp-err"></div>
+      <button class="mcp-btn" id="mcp-submit" type="submit">Get My 10% Off</button>
+    </form>
+    <button class="mcp-no" id="mcp-no" type="button">No thanks</button>
+  </div>
+  <div class="mcp-body" id="mcp-step2" style="display:none;">
+    <h3 class="mcp-title">You're <em>in!</em></h3>
+    <p class="mcp-sub">Use this code at checkout for 10% off. We've also emailed it to you.</p>
+    <div class="mcp-code" id="mcp-code">WELCOME10</div>
+    <button class="mcp-btn" id="mcp-copy" type="button">Copy Code &amp; Keep Shopping</button>
+    <div class="mcp-fine">Applies to the product subtotal. Free shipping on every order.</div>
+  </div>
+</div>
+<script>
+(function(){
+  var KEY_SUB='mc_subscribed', KEY_UNTIL='mc_popup_until', DELAY=20000, SNOOZE=14*24*3600*1000;
+  function get(k){try{return localStorage.getItem(k);}catch(e){return null;}}
+  function set(k,v){try{localStorage.setItem(k,v);}catch(e){}}
+  if(get(KEY_SUB)==='1')return;
+  if(Number(get(KEY_UNTIL)||0)>Date.now())return;
+  var shown=false, box, ov;
+  function cartOpen(){var d=document.getElementById('drawer')||document.getElementById('cart-drawer');return d&&d.classList.contains('open');}
+  function show(){
+    if(shown)return;
+    if(cartOpen()){setTimeout(show,8000);return;}
+    shown=true; box=document.getElementById('mcp-box'); ov=document.getElementById('mcp-overlay');
+    if(!box)return;
+    box.classList.add('open'); ov.classList.add('open');
+    set(KEY_UNTIL,String(Date.now()+SNOOZE));
+    if(typeof gtag==='function')gtag('event','view_promotion',{promotion_name:'WELCOME10 popup'});
+  }
+  function hide(){if(box)box.classList.remove('open');if(ov)ov.classList.remove('open');}
+  document.addEventListener('DOMContentLoaded',function(){
+    document.getElementById('mcp-close').onclick=hide;
+    document.getElementById('mcp-no').onclick=hide;
+    document.getElementById('mcp-overlay').onclick=hide;
+    document.addEventListener('keydown',function(e){if(e.key==='Escape')hide();});
+    document.getElementById('mcp-form').addEventListener('submit',async function(e){
+      e.preventDefault();
+      var em=document.getElementById('mcp-email').value.trim(), err=document.getElementById('mcp-err'), btn=document.getElementById('mcp-submit');
+      if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(em)){err.textContent='Please enter a valid email address.';return;}
+      err.textContent=''; btn.disabled=true; btn.textContent='Sending…';
+      try{
+        var r=await fetch('/.netlify/functions/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em,source:'popup',page:location.pathname})});
+        var j=await r.json();
+        if(!r.ok||!j.ok)throw new Error(j.error||'failed');
+        document.getElementById('mcp-code').textContent=j.code||'WELCOME10';
+        document.getElementById('mcp-step1').style.display='none';
+        document.getElementById('mcp-step2').style.display='';
+        set(KEY_SUB,'1');
+        if(typeof gtag==='function')gtag('event','generate_lead',{method:'popup'});
+        if(typeof fbq==='function')fbq('track','Lead');
+      }catch(x){err.textContent='Something went wrong. Please try again.';}
+      finally{btn.disabled=false;btn.textContent='Get My 10% Off';}
+    });
+    document.getElementById('mcp-copy').onclick=function(){
+      var c=document.getElementById('mcp-code').textContent;
+      try{navigator.clipboard.writeText(c);}catch(e){}
+      this.textContent='Copied!'; var self=this; setTimeout(function(){hide();self.textContent='Copy Code & Keep Shopping';},900);
+    };
+    setTimeout(show,DELAY);
+    window.addEventListener('scroll',function(){var h=document.documentElement;if((h.scrollTop+window.innerHeight)/h.scrollHeight>0.5)show();},{passive:true});
+    if(window.matchMedia&&window.matchMedia('(pointer:fine)').matches){
+      document.addEventListener('mouseout',function(e){if(!e.relatedTarget&&e.clientY<=0)show();});
+    }
+  });
+})();
+</script>
+
 </body>
 </html>
