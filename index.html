@@ -771,15 +771,29 @@ function getActiveImg(p) {
    Price, color (with a color patch), wood type, upholstery, bed size and
    availability. Options and counts come from the products currently shown
    (category / room / search), so only relevant choices appear. */
-var activeFilters = { stock:[], price:[], color:[], wood:[], fabric:[], size:[] };
+var activeFilters = { stock:[], type:[], price:[], color:[], size:[], width:[], fabric:[], wood:[] };
 var FILTER_GROUPS = [
   { key:'stock',  label:'Availability' },
+  { key:'type',   label:'Type' },
   { key:'price',  label:'Price' },
   { key:'color',  label:'Color' },
-  { key:'size',   label:'Size' },
+  { key:'size',   label:'Bed Size' },
+  { key:'width',  label:'Width' },
   { key:'fabric', label:'Upholstery' },
   { key:'wood',   label:'Wood Type' }
 ];
+// Width ranges (inches) for tables, sofas, sideboards, dressers, desks...
+var WIDTH_BUCKETS = [
+  { id:'w40',  label:'Under 40"',  lo:0,   hi:40 },
+  { id:'w60',  label:'40" – 60"',  lo:40,  hi:60 },
+  { id:'w80',  label:'60" – 80"',  lo:60,  hi:80 },
+  { id:'w100', label:'80" – 100"', lo:80,  hi:100 },
+  { id:'w101', label:'100" & Up',  lo:100, hi:1e9 }
+];
+// Categories where width isn't a useful filter (bed size and seating are chosen other ways)
+var NO_WIDTH_CATS = ['bed','chair','accentchair','armchair','nightstand','bar','outdoor'];
+// Filters that can be saved in the page link, e.g. /?cat=bed&size=Queen&fabric=Velvet
+var FILTER_URL_KEYS = { stock:'stock', type:'type', price:'price', color:'color', size:'size', width:'width', fabric:'fabric', wood:'wood' };
 var PRICE_BUCKETS = [
   { id:'u500', label:'Under $500',      lo:0,    hi:500 },
   { id:'500',  label:'$500 – $1,000',   lo:500,  hi:1000 },
@@ -856,7 +870,7 @@ function productFacets(p){
   if (p._facets) return p._facets;
   var opts = productOptions(p);
   var prices = opts.map(function(o){ return o.price; }).filter(function(x){ return x > 0; });
-  var f = { stock:{}, price:{}, color:{}, wood:{}, fabric:{}, size:{} };
+  var f = { stock:{}, type:{}, price:{}, color:{}, size:{}, width:{}, fabric:{}, wood:{} };
   PRICE_BUCKETS.forEach(function(b){ if (prices.some(function(x){ return x >= b.lo && x < b.hi; })) f.price[b.id] = 1; });
   // Color comes from the finish name and the fabric color (vanity basin colors are skipped)
   opts.forEach(function(o){
@@ -878,6 +892,15 @@ function productFacets(p){
     else { var m = String(n).match(/\b(twin|full|queen|king)\b/i); if (m) f.size[m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase()] = 1; }
   });
   if (!isFullyOutOfStock(p)) f.stock['In Stock'] = 1;
+  // Type (category) — used on room, search and all-furniture pages
+  f.type = {}; f.type[getCatLabel(p.cat)] = 1;
+  // Width: the first number of each "W x D x H" (product + every size option)
+  f.width = {};
+  var widths = [];
+  function addW(v){ var n = parseFloat(v); if (n > 0 && n < 400) widths.push(n); }
+  String(p.dims || '').split(/x/i)[0].replace(/["”]/g, '').split(/[-–]/).forEach(addW);
+  (p.topSizes || []).forEach(function(sz){ ((sz && sz.componentDims) || []).forEach(function(d){ if (d) addW(d.w); }); });
+  if (NO_WIDTH_CATS.indexOf(p.cat) < 0) WIDTH_BUCKETS.forEach(function(b){ if (widths.some(function(w){ return w >= b.lo && w < b.hi; })) f.width[b.id] = 1; });
   p._facets = f;
   return f;
 }
@@ -892,14 +915,42 @@ function matchesFacets(p, skipGroup){
   return true;
 }
 function filterCount(){ var n = 0; for (var g in activeFilters) n += activeFilters[g].length; return n; }
-function resetFilters(){ for (var g in activeFilters) activeFilters[g] = []; }
+function resetFilters(){ for (var g in activeFilters) activeFilters[g] = []; syncFiltersToUrl(); }
 function toggleFilterValue(group, value){
   var arr = activeFilters[group], i = arr.indexOf(value);
-  if (i >= 0) arr.splice(i, 1); else arr.push(value);
+  if (i >= 0) arr.splice(i, 1); else {
+    arr.push(value);
+    // Google Analytics: which filters shoppers use (Reports → Engagement → Events → filter_used)
+    if (typeof gtag === 'function') gtag('event', 'filter_used', { filter_group: group, filter_value: fsLabel(group, value), page_category: currentRoom || currentCat || 'all' });
+  }
   visibleCount = PAGE_SIZE;
+  syncFiltersToUrl();
   renderProducts();
 }
-function clearFilters(){ resetFilters(); visibleCount = PAGE_SIZE; renderProducts(); }
+function clearFilters(){ resetFilters(); visibleCount = PAGE_SIZE; syncFiltersToUrl(); renderProducts(); }
+
+// Keep the chosen filters in the address bar so the back button, bookmarks,
+// shared links and ad links all open the same filtered page.
+function syncFiltersToUrl(){
+  try {
+    var params = new URLSearchParams(window.location.search);
+    Object.keys(FILTER_URL_KEYS).forEach(function(g){
+      var k = FILTER_URL_KEYS[g];
+      if (activeFilters[g].length) params.set(k, activeFilters[g].join(',')); else params.delete(k);
+    });
+    var qs = params.toString().replace(/%2C/g, ',').replace(/%20/g, '+');
+    window.history.replaceState(window.history.state, '', window.location.pathname + (qs ? '?' + qs : ''));
+  } catch (e) {}
+}
+function readFiltersFromUrl(){
+  var out = {}, params = new URLSearchParams(window.location.search), any = false;
+  Object.keys(FILTER_URL_KEYS).forEach(function(g){
+    var raw = params.get(FILTER_URL_KEYS[g]);
+    out[g] = raw ? raw.split(',').map(function(v){ return v.trim(); }).filter(Boolean) : [];
+    if (out[g].length) any = true;
+  });
+  return any ? out : null;
+}
 var closedFilterGroups = {};
 function toggleFilterGroup(key){ closedFilterGroups[key] = !closedFilterGroups[key]; renderProducts(); }
 function toggleFilters(open){
@@ -911,7 +962,12 @@ function toggleFilters(open){
 }
 function fsArg(s){ return "'" + String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'") + "'"; }
 function fsEsc(s){ return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
-function fsLabel(group, v){ return group === 'price' ? PRICE_BUCKETS.filter(function(b){ return b.id === v; })[0].label : v; }
+function fsLabel(group, v){
+  var list = group === 'price' ? PRICE_BUCKETS : group === 'width' ? WIDTH_BUCKETS : null;
+  if (!list) return v;
+  var hit = list.filter(function(b){ return b.id === v; })[0];
+  return hit ? hit.label : v;
+}
 
 function renderFilterSidebar(base){
   var side = document.getElementById('shop-side');
@@ -922,6 +978,8 @@ function renderFilterSidebar(base){
     var counts = {};
     base.forEach(function(p){ if (!matchesFacets(p, G.key)) return; var fv = productFacets(p)[G.key]; for (var k in fv) counts[k] = (counts[k] || 0) + 1; });
     var order = G.key === 'price' ? PRICE_BUCKETS.map(function(b){ return b.id; })
+              : G.key === 'width' ? WIDTH_BUCKETS.map(function(b){ return b.id; })
+              : G.key === 'type' ? Object.keys(counts).sort(function(a, b){ return (counts[b] - counts[a]) || a.localeCompare(b); })
               : G.key === 'color' ? COLOR_FAMILIES.map(function(c){ return c.id; })
               : G.key === 'wood' ? WOOD_TYPES.map(function(w){ return w.id; })
               : G.key === 'fabric' ? FABRIC_TYPES.map(function(w){ return w.id; })
@@ -930,6 +988,7 @@ function renderFilterSidebar(base){
     var vals = order.filter(function(v){ return counts[v] || sel.indexOf(v) >= 0; });
     if (!vals.length) return;
     if (G.key !== 'stock' && G.key !== 'price' && vals.length < 2 && !sel.length) return; // nothing to choose between
+    if (G.key === 'type' && currentCat !== 'all' && !currentRoom && !sel.length) return;
     var closed = !!closedFilterGroups[G.key];
     html += '<div class="fs-group' + (closed ? ' closed' : '') + '"><button class="fs-head" onclick="toggleFilterGroup(' + fsArg(G.key) + ')">' + G.label + '<span>' + (closed ? '+' : '&minus;') + '</span></button><div class="fs-body">';
     vals.forEach(function(v){
@@ -1508,6 +1567,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   var urlCat = urlParams.get('cat');
   var urlRoom = urlParams.get('room');
   var urlSearch = urlParams.get('search');
+  var urlFilters = readFiltersFromUrl();
   if (urlSearch) {
     document.getElementById('search-input').value = urlSearch;
     onSearch();
@@ -1518,6 +1578,13 @@ document.addEventListener('DOMContentLoaded', async function() {
   } else {
     renderHomeSections();
     renderProducts();
+  }
+  if (urlFilters) {
+    for (var g in urlFilters) activeFilters[g] = urlFilters[g];
+    visibleCount = PAGE_SIZE;
+    syncFiltersToUrl();
+    renderProducts();
+    if (!urlCat && !urlRoom && !urlSearch) scrollToProducts();
   }
   updateCartUI();
 });
