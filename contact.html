@@ -181,7 +181,7 @@ select.f-input{appearance:auto;background:#fff;}
       </div>
       <div class="f-row">
         <label class="f-label">Message <span class="req">*</span></label>
-        <textarea class="f-textarea" id="f-question" placeholder="How can we help?" required></textarea>
+        <textarea class="f-textarea" id="f-question" placeholder="Please type your question — e.g. How long does delivery take to my ZIP code?" required minlength="15"></textarea>
       </div>
       <button type="submit" class="f-submit" id="f-submit">Send Message</button>
       <div class="f-status" id="f-status"></div>
@@ -215,6 +215,15 @@ document.getElementById('ask-form').addEventListener('submit', async function(e)
   if(!name || !email || !message){
     statusEl.textContent = 'Please fill in your name, email, and message.';
     statusEl.className = 'f-status show error';
+    return;
+  }
+  // The message must be an actual question, not just an address or order number
+  var words = message.split(/\s+/).filter(Boolean).length;
+  var sameAsRef = ref && message.toLowerCase().replace(/\W/g,'') === ref.toLowerCase().replace(/\W/g,'');
+  if (message.length < 15 || words < 3 || sameAsRef){
+    statusEl.textContent = 'Please type your question in the Message box so we know how to help (for example: "Do you deliver to ZIP 11223?").';
+    statusEl.className = 'f-status show error';
+    document.getElementById('f-question').focus();
     return;
   }
   submitBtn.disabled = true; submitBtn.textContent = 'Sending…'; statusEl.className = 'f-status';
