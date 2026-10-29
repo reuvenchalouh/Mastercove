@@ -143,6 +143,41 @@ header{background:var(--white);border-bottom:1px solid var(--border);position:st
 .room-tile-name{font-size:13px;font-weight:500;color:var(--ink);margin-bottom:3px;}
 .room-tile-cats{font-size:10.5px;color:var(--mist);}
 .products-section{padding:48px 0;}
+/* ── Shop filters (left sidebar) ── */
+.shop-layout{display:grid;grid-template-columns:220px 1fr;gap:36px;align-items:start;}
+.shop-main{min-width:0;}
+.shop-side{position:sticky;top:84px;max-height:calc(100vh - 100px);overflow-y:auto;padding-right:6px;font-size:13px;}
+.shop-side::-webkit-scrollbar{width:4px;}.shop-side::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.fs-top{display:flex;align-items:baseline;gap:12px;margin-bottom:6px;}
+.fs-top b{font-family:'Playfair Display',serif;font-weight:400;font-size:19px;color:var(--ink);flex:1;}
+.fs-clear{background:none;border:none;color:var(--walnut);font-size:12px;cursor:pointer;text-decoration:underline;padding:0;font-family:inherit;}
+.fs-group{border-bottom:1px solid var(--border);padding:12px 0;}
+.fs-head{display:flex;justify-content:space-between;align-items:center;width:100%;background:none;border:none;padding:0;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink);}
+.fs-head span{font-size:16px;font-weight:400;color:var(--mist);}
+.fs-body{margin-top:9px;display:flex;flex-direction:column;gap:6px;}
+.fs-group.closed .fs-body{display:none;}
+.fs-opt{display:flex;align-items:center;gap:8px;cursor:pointer;color:var(--slate);line-height:1.3;}
+.fs-opt input{accent-color:var(--walnut);width:14px;height:14px;margin:0;flex-shrink:0;cursor:pointer;}
+.fs-opt .cnt{color:var(--mist);font-size:11.5px;}
+.fs-opt:hover{color:var(--ink);}
+.fs-sw{width:14px;height:14px;border-radius:50%;border:1px solid rgba(0,0,0,.15);flex-shrink:0;}
+.filter-btn{display:none;align-items:center;gap:6px;padding:7px 14px;border:1px solid var(--border);border-radius:2px;background:var(--white);font-family:'Outfit',sans-serif;font-size:12.5px;color:var(--ink);cursor:pointer;margin-right:auto;}
+.fs-chips{display:flex;flex-wrap:wrap;gap:6px;margin-right:auto;padding-right:12px;}
+.fs-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;background:var(--white);border:1px solid var(--border);border-radius:20px;font-size:11.5px;color:var(--slate);cursor:pointer;}
+.fs-chip:hover{border-color:var(--walnut);}
+.fs-close,.fs-apply,.fs-backdrop{display:none;}
+@media(max-width:900px){
+  .shop-layout{grid-template-columns:1fr;}
+  .filter-btn{display:inline-flex;}
+  .fs-chips{display:none;}
+  .shop-side{position:fixed;top:0;left:0;bottom:0;width:86vw;max-width:340px;max-height:none;background:#FDFBF8;z-index:1200;padding:20px 18px 90px;transform:translateX(-105%);transition:transform .25s;box-shadow:0 0 40px rgba(0,0,0,.2);}
+  .shop-side.open{transform:none;}
+  .fs-close{display:block;background:none;border:none;font-size:26px;line-height:1;cursor:pointer;color:var(--ink);padding:0 2px;}
+  .fs-apply{display:block;position:fixed;bottom:0;left:0;width:86vw;max-width:340px;padding:15px;background:var(--ink);color:#fff;border:none;font-size:13px;letter-spacing:.05em;font-family:'Outfit',sans-serif;cursor:pointer;transform:translateX(-105%);transition:transform .25s;z-index:1201;}
+  .shop-side.open ~ .fs-apply{transform:none;}
+  .fs-backdrop{position:fixed;inset:0;background:rgba(28,26,23,.4);z-index:1150;}
+  .fs-backdrop.open{display:block;}
+}
 .filter-bar{display:flex;align-items:center;justify-content:flex-end;margin-bottom:24px;}
 .sort-select{padding:7px 12px;border:1px solid var(--border);border-radius:2px;font-family:'Outfit',sans-serif;font-size:12.5px;color:var(--ink);background:var(--white);outline:none;cursor:pointer;}
 .sort-select:focus{border-color:var(--walnut);}
@@ -321,7 +356,14 @@ footer{background:var(--ink);color:rgba(255,255,255,0.6);padding:48px 0 24px;}
         <div class="sec-sub" id="section-sub">Browse our full collection of furniture, built to last</div>
       </div>
     </div>
+    <div class="shop-layout">
+    <aside class="shop-side" id="shop-side" aria-label="Filter products"></aside>
+    <button class="fs-apply" id="fs-apply" onclick="toggleFilters(false)">Show Results</button>
+    <div class="fs-backdrop" id="fs-backdrop" onclick="toggleFilters(false)"></div>
+    <div class="shop-main">
     <div class="filter-bar">
+      <button class="filter-btn" id="filter-btn" onclick="toggleFilters(true)">&#9776; Filters</button>
+      <div class="fs-chips" id="fs-chips"></div>
       <select class="sort-select" onchange="setSort(this.value)">
         <option value="featured">Sort: Featured</option>
         <option value="newest">Sort: Newest</option>
@@ -332,6 +374,8 @@ footer{background:var(--ink);color:rgba(255,255,255,0.6);padding:48px 0 24px;}
     <div class="prod-grid" id="pgrid"></div>
     <div style="text-align:center;margin-top:36px;">
       <button id="show-more-btn" onclick="showMore()" style="display:none;background:var(--white);color:var(--ink);border:1px solid var(--border);padding:13px 32px;border-radius:2px;font-size:13px;letter-spacing:0.04em;transition:all .15s;">Show More</button>
+    </div>
+    </div>
     </div>
   </div>
 
@@ -660,6 +704,7 @@ function closeMegaDropdown(){
 function jumpToCat(cat){
   document.querySelectorAll('.cat-btn').forEach(function(b){ b.classList.remove('active'); });
   currentCat = cat; currentRoom = null; visibleCount = PAGE_SIZE;
+  resetFilters();
   var naSection = document.getElementById('new-arrivals-section'); var whySec = document.getElementById('why-mc-section');
   var bsSection = document.getElementById('best-sellers-section');
   if(naSection) naSection.style.display = 'none'; if(whySec) whySec.style.display = 'none';
@@ -672,6 +717,7 @@ function jumpToCat(cat){
 function jumpToRoom(room){
   document.querySelectorAll('.cat-btn').forEach(function(b){ b.classList.remove('active'); });
   currentRoom = room; currentCat = 'all'; visibleCount = PAGE_SIZE;
+  resetFilters();
   var naSection = document.getElementById('new-arrivals-section'); var whySec = document.getElementById('why-mc-section');
   var bsSection = document.getElementById('best-sellers-section');
   if(naSection) naSection.style.display = 'none'; if(whySec) whySec.style.display = 'none';
@@ -721,6 +767,194 @@ function getActiveImg(p) {
   return p.img || null;
 }
 
+/* ── SHOP FILTERS ─────────────────────────────────────────────
+   Price, color (with a color patch), wood type, upholstery, bed size and
+   availability. Options and counts come from the products currently shown
+   (category / room / search), so only relevant choices appear. */
+var activeFilters = { stock:[], price:[], color:[], wood:[], fabric:[], size:[] };
+var FILTER_GROUPS = [
+  { key:'stock',  label:'Availability' },
+  { key:'price',  label:'Price' },
+  { key:'color',  label:'Color' },
+  { key:'size',   label:'Size' },
+  { key:'fabric', label:'Upholstery' },
+  { key:'wood',   label:'Wood Type' }
+];
+var PRICE_BUCKETS = [
+  { id:'u500', label:'Under $500',      lo:0,    hi:500 },
+  { id:'500',  label:'$500 – $1,000',   lo:500,  hi:1000 },
+  { id:'1000', label:'$1,000 – $1,500', lo:1000, hi:1500 },
+  { id:'1500', label:'$1,500 – $2,500', lo:1500, hi:2500 },
+  { id:'2500', label:'$2,500 & Up',     lo:2500, hi:1e9 }
+];
+// Color families: patch color + the words that put an option name into that family (first match wins)
+var COLOR_FAMILIES = [
+  { id:'Black',  hex:'#1f1d1b', re:/black|ebony|onyx|\bjet\b|espresso|charcoal|graphite|midnight(?! blue)/i },
+  { id:'White',  hex:'#f6f3ee', re:/white|ivory|alabaster|snow|pearl|feather|frost|\bsalt\b|chalk|cloud|coconut|porcelain|isabelline|parchment/i },
+  { id:'Gray',   hex:'#9b968f', re:/gr[ae]y|pewter|silver|slate|\bfog\b|\bmist\b|storm|mineral|stalactite|smoke|dove|vaporous|harbor|fossil|newsprint|river rock|boulevard|cement/i },
+  { id:'Cream & Beige', hex:'#e4d6bf', re:/cream|beige|linen|linon|antique|moonstruck|flax|\bsand\b|oatmeal|almond|ecru|wheat(?!grass)|\bbone\b|stone|greige|tortilla|toast|dune|mushroom|marble/i },
+  { id:'Brown & Walnut', hex:'#6b4c35', re:/walnut|brown|chestnut|mocha|cocoa|coffee|chocolate|truffle|toffee|cappuccino|tobacco|caramel|cognac|camel|\btan\b|taupe|hazelnut|wenge|mahogany|teak|rustic|earth|canyon|saddle|otter|java|\bnut\b|bisque|carob|cherry|bronze|copper|cinnamon/i },
+  { id:'Natural & Light Wood', hex:'#cfa877', re:/natural|oak|honey|bleached|maple|\bash\b|beech|birch|light wood|weathered|blonde|acacia|mango/i },
+  { id:'Green',  hex:'#6d7d5c', re:/green|olive|sage|moss|forest|juniper|eucalyptus|foliage|fern|\bpine\b|wheatgrass|emerald|cypress/i },
+  { id:'Blue',   hex:'#3e5a7e', re:/blue|navy|azure|\bsky\b|teal|marine|\bsea\b|denim|cadet/i },
+  { id:'Pink & Red', hex:'#c4877f', re:/pink|rose|blush|coral|\bred\b|rust|terracotta|mulberry|burgundy|wine|sunrise/i },
+  { id:'Yellow & Gold', hex:'#c9a43c', re:/yellow|mustard|gold|brass|ochre/i }
+];
+var WOOD_TYPES = [
+  { id:'Solid Wood',  re:/\bsolid (wood|oak|walnut|mango|acacia|pine|rubberwood|beech|elm|ash|teak|mahogany|maple|birch|poplar)\b|\bwood solids\b|\bsolids\b/i },
+  { id:'Oak',         re:/\bsolid oak\b|\b(white |red )?oak (wood|veneer|solids?|frame|base|legs?)\b|\bwhite oak\b/i },
+  { id:'Walnut',      re:/\bsolid walnut\b|\bwalnut (wood|veneer|solids?)\b/i },
+  { id:'Mango',       re:/\bmango\b/i },
+  { id:'Acacia',      re:/\bacacia\b/i },
+  { id:'Teak',        re:/\bteak\b/i },
+  { id:'Mahogany',    re:/\bmahogany\b/i },
+  { id:'Pine',        re:/\bpine\b/i },
+  { id:'Rubberwood',  re:/rubber ?wood/i },
+  { id:'Beech, Elm & Ash', re:/\bbeech\b|\belm\b|\bash (wood|frame)\b|\bsolid ash\b/i },
+  { id:'Rattan & Cane', re:/rattan|\bcane\b|wicker/i }
+];
+var FABRIC_TYPES = [
+  { id:'Bouclé',        re:/boucl/i },
+  { id:'Velvet',        re:/velvet/i },
+  { id:'Chenille',      re:/chenille/i },
+  { id:'Vegan Leather', re:/vegan leather|faux leather|pu leather|microfiber leather/i },
+  { id:'Leather',       re:/leather/i },
+  { id:'Linen',         re:/linen/i },
+  { id:'Cotton',        re:/cotton/i },
+  { id:'Woven Fabric',  re:/weave|tabby|slub|heathered|basketweave|checker|everyday fabric|polyester|woven|fleece|shearling|sherpa|mohair|fabric/i }
+];
+var BED_SIZES = ['Twin','Full','Queen','King','California King'];
+
+function productOptions(p){
+  // Every buyable option: { name, type, price, out }
+  var out = [];
+  function addFin(f, basePrice, baseOut){
+    if (!f || typeof f !== 'object') return;
+    var fabs = (f.fabrics || []).filter(function(b){ return b && typeof b === 'object'; });
+    if (fabs.length) fabs.forEach(function(b){ out.push({ fin:f.name || '', name:b.name || '', type:b.type || '', price:Number(b.price) || Number(f.price) || basePrice, out:!!(b.outOfStock || f.outOfStock || baseOut) }); });
+    else out.push({ fin:'', name:f.name || '', type:'', price:Number(f.price) || basePrice, out:!!(f.outOfStock || baseOut) });
+  }
+  if (p.topSizes && p.topSizes.length) {
+    p.topSizes.forEach(function(sz){
+      var fins = sz.finishes || [];
+      if (fins.length) fins.forEach(function(f){ addFin(f, Number(sz.price) || Number(p.price) || 0, sz.outOfStock); });
+      else out.push({ name:'', type:'', price:Number(sz.price) || Number(p.price) || 0, out:!!sz.outOfStock });
+    });
+  } else {
+    (p.finishes || []).forEach(function(f){
+      if (!f || typeof f !== 'object') return;
+      var sizes = f.sizes || [];
+      if (sizes.length) sizes.forEach(function(sz){ addFin({ name:f.name, fabrics:f.fabrics, price:Number(sz.price) || Number(f.price), outOfStock:f.outOfStock || sz.outOfStock }, Number(p.price) || 0, false); });
+      else addFin(f, Number(p.price) || 0, false);
+    });
+  }
+  if (!out.length) out.push({ name:'', type:'', price:Number(p.price) || 0, out:false });
+  return out;
+}
+
+function productFacets(p){
+  if (p._facets) return p._facets;
+  var opts = productOptions(p);
+  var prices = opts.map(function(o){ return o.price; }).filter(function(x){ return x > 0; });
+  var f = { stock:{}, price:{}, color:{}, wood:{}, fabric:{}, size:{} };
+  PRICE_BUCKETS.forEach(function(b){ if (prices.some(function(x){ return x >= b.lo && x < b.hi; })) f.price[b.id] = 1; });
+  // Color comes from the finish name and the fabric color (vanity basin colors are skipped)
+  opts.forEach(function(o){
+    [o.fin, o.name].forEach(function(nm){
+      nm = String(nm || '');
+      if (!nm || /^fabric only$/i.test(nm) || /basin/i.test(nm)) return;
+      for (var i = 0; i < COLOR_FAMILIES.length; i++) { if (COLOR_FAMILIES[i].re.test(nm)) { f.color[COLOR_FAMILIES[i].id] = 1; break; } }
+    });
+  });
+  var text = [p.name, p.desc, p.features, p.wood, p.tagline].join(' ');
+  WOOD_TYPES.forEach(function(w){ if (w.re.test(text)) f.wood[w.id] = 1; });
+  var types = opts.map(function(o){ return o.type; }).filter(Boolean);
+  types.forEach(function(t){ for (var i = 0; i < FABRIC_TYPES.length; i++) { if (FABRIC_TYPES[i].re.test(t)) { f.fabric[FABRIC_TYPES[i].id] = 1; break; } } });
+  var sizeNames = [];
+  (p.topSizes || []).forEach(function(s){ sizeNames.push(s.name || ''); });
+  (p.finishes || []).forEach(function(fi){ ((fi && fi.sizes) || []).forEach(function(s){ sizeNames.push(s.name || ''); }); });
+  sizeNames.forEach(function(n){
+    if (/cal(ifornia)?\.? ?king/i.test(n)) f.size['California King'] = 1;
+    else { var m = String(n).match(/\b(twin|full|queen|king)\b/i); if (m) f.size[m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase()] = 1; }
+  });
+  if (!isFullyOutOfStock(p)) f.stock['In Stock'] = 1;
+  p._facets = f;
+  return f;
+}
+
+function matchesFacets(p, skipGroup){
+  var f = productFacets(p);
+  for (var g in activeFilters) {
+    if (g === skipGroup) continue;
+    var sel = activeFilters[g];
+    if (sel.length && !sel.some(function(v){ return f[g][v]; })) return false;
+  }
+  return true;
+}
+function filterCount(){ var n = 0; for (var g in activeFilters) n += activeFilters[g].length; return n; }
+function resetFilters(){ for (var g in activeFilters) activeFilters[g] = []; }
+function toggleFilterValue(group, value){
+  var arr = activeFilters[group], i = arr.indexOf(value);
+  if (i >= 0) arr.splice(i, 1); else arr.push(value);
+  visibleCount = PAGE_SIZE;
+  renderProducts();
+}
+function clearFilters(){ resetFilters(); visibleCount = PAGE_SIZE; renderProducts(); }
+var closedFilterGroups = {};
+function toggleFilterGroup(key){ closedFilterGroups[key] = !closedFilterGroups[key]; renderProducts(); }
+function toggleFilters(open){
+  var side = document.getElementById('shop-side'), bd = document.getElementById('fs-backdrop');
+  if (side) side.classList.toggle('open', !!open);
+  if (bd) bd.classList.toggle('open', !!open);
+  document.body.style.overflow = open ? 'hidden' : '';
+  if (!open && window.innerWidth <= 900) scrollToProducts();
+}
+function fsArg(s){ return "'" + String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'") + "'"; }
+function fsEsc(s){ return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
+function fsLabel(group, v){ return group === 'price' ? PRICE_BUCKETS.filter(function(b){ return b.id === v; })[0].label : v; }
+
+function renderFilterSidebar(base){
+  var side = document.getElementById('shop-side');
+  if (!side) return;
+  var html = '<div class="fs-top"><b>Filter</b>' + (filterCount() ? '<button class="fs-clear" onclick="clearFilters()">Clear all</button>' : '') + '<button class="fs-close" onclick="toggleFilters(false)" aria-label="Close filters">&times;</button></div>';
+  FILTER_GROUPS.forEach(function(G){
+    // Counts ignore this group's own selection, so shoppers can tick several values
+    var counts = {};
+    base.forEach(function(p){ if (!matchesFacets(p, G.key)) return; var fv = productFacets(p)[G.key]; for (var k in fv) counts[k] = (counts[k] || 0) + 1; });
+    var order = G.key === 'price' ? PRICE_BUCKETS.map(function(b){ return b.id; })
+              : G.key === 'color' ? COLOR_FAMILIES.map(function(c){ return c.id; })
+              : G.key === 'wood' ? WOOD_TYPES.map(function(w){ return w.id; })
+              : G.key === 'fabric' ? FABRIC_TYPES.map(function(w){ return w.id; })
+              : G.key === 'size' ? BED_SIZES : ['In Stock'];
+    var sel = activeFilters[G.key];
+    var vals = order.filter(function(v){ return counts[v] || sel.indexOf(v) >= 0; });
+    if (!vals.length) return;
+    if (G.key !== 'stock' && G.key !== 'price' && vals.length < 2 && !sel.length) return; // nothing to choose between
+    var closed = !!closedFilterGroups[G.key];
+    html += '<div class="fs-group' + (closed ? ' closed' : '') + '"><button class="fs-head" onclick="toggleFilterGroup(' + fsArg(G.key) + ')">' + G.label + '<span>' + (closed ? '+' : '&minus;') + '</span></button><div class="fs-body">';
+    vals.forEach(function(v){
+      var sw = '';
+      if (G.key === 'color') sw = '<span class="fs-sw" style="background:' + COLOR_FAMILIES.filter(function(c){ return c.id === v; })[0].hex + '"></span>';
+      html += '<label class="fs-opt"><input type="checkbox"' + (sel.indexOf(v) >= 0 ? ' checked' : '') + ' onchange="toggleFilterValue(' + fsEsc(fsArg(G.key)) + ',' + fsEsc(fsArg(v)) + ')"/>' + sw + '<span>' + fsEsc(fsLabel(G.key, v)) + ' <span class="cnt">(' + (counts[v] || 0) + ')</span></span></label>';
+    });
+    html += '</div></div>';
+  });
+  side.innerHTML = html;
+  var n = filterCount();
+  var btn = document.getElementById('filter-btn');
+  if (btn) btn.innerHTML = '&#9776; Filters' + (n ? ' (' + n + ')' : '');
+  var chips = document.getElementById('fs-chips');
+  if (chips) {
+    var c = '';
+    FILTER_GROUPS.forEach(function(G){ activeFilters[G.key].forEach(function(v){
+      c += '<span class="fs-chip" onclick="toggleFilterValue(' + fsEsc(fsArg(G.key)) + ',' + fsEsc(fsArg(v)) + ')">' + fsEsc(fsLabel(G.key, v)) + ' &times;</span>';
+    }); });
+    chips.innerHTML = c;
+  }
+  var apply = document.getElementById('fs-apply');
+  if (apply) { var k = base.filter(function(p){ return matchesFacets(p); }).length; apply.textContent = 'Show ' + k + ' Result' + (k === 1 ? '' : 's'); }
+}
+
 function applyFilters() {
   var products = allProducts.slice();
   if (showWishlistOnly) {
@@ -740,6 +974,8 @@ function applyFilters() {
           || (p.wood && p.wood.toLowerCase().indexOf(q) >= 0);
     });
   }
+  renderFilterSidebar(products);
+  products = products.filter(function(p){ return matchesFacets(p); });
   if (currentSort === 'featured') {
     products.sort(function(a,b){ var oa=isFullyOutOfStock(a)?1:0, ob=isFullyOutOfStock(b)?1:0; if(oa!==ob) return oa-ob; return (b.createdAt||0) - (a.createdAt||0); });
   } else if (currentSort === 'newest') {
@@ -760,7 +996,7 @@ function renderProducts() {
   if (!products.length) {
     var empty = document.createElement('div');
     empty.className = 'empty-state';
-    empty.innerHTML = '<div class="ei">🪵</div><h3>No products found</h3><p>Try a different category or check back soon for new arrivals.</p>';
+    empty.innerHTML = filterCount() ? '<div class="ei">🪵</div><h3>No products match these filters</h3><p><a href="javascript:void(0)" onclick="clearFilters()" style="color:var(--walnut);">Clear all filters</a></p>' : '<div class="ei">🪵</div><h3>No products found</h3><p>Try a different category or check back soon for new arrivals.</p>';
     grid.appendChild(empty);
     if (moreBtn) moreBtn.style.display = 'none';
     return;
@@ -961,6 +1197,7 @@ function setCat(btn, cat) {
   document.querySelectorAll('.cat-btn').forEach(function(b){ b.classList.remove('active'); });
   btn.classList.add('active');
   currentCat = cat; currentRoom = null; visibleCount = PAGE_SIZE;
+  resetFilters();
   document.getElementById('section-title').innerHTML = cat==='all' ? 'Shop <em>All Furniture</em>' : getCatLabel(cat)+' <em>Collection</em>';
   document.getElementById('section-sub').textContent = cat==='all' ? 'Browse our full collection of furniture, built to last' : 'Our latest arrivals — updated regularly';
   renderProducts(); scrollToProducts();
@@ -968,6 +1205,7 @@ function setCat(btn, cat) {
 
 function filterByRoom(room) {
   currentRoom = room; currentCat = 'all'; visibleCount = PAGE_SIZE;
+  resetFilters();
   document.querySelectorAll('.cat-btn').forEach(function(b){ b.classList.remove('active'); });
   document.querySelector('.cat-btn').classList.add('active');
   var labels = {bedroom:'Bedroom',living:'Living Room',entryway:'Entryway',dining:'Dining',kitchen:'Kitchen',bathroom:'Bathroom',office:'Office',outdoor:'Outdoor'};
@@ -978,7 +1216,7 @@ function filterByRoom(room) {
 
 function setSort(val){ currentSort = val; if(val==='random')allProducts=shuffle(allProducts); visibleCount = PAGE_SIZE; renderProducts(); }
 function onSearch(){
-  currentRoom = null; visibleCount = PAGE_SIZE;
+  currentRoom = null; visibleCount = PAGE_SIZE; resetFilters();
   var q = document.getElementById('search-input').value.trim();
   var naSection = document.getElementById('new-arrivals-section'); var whySec = document.getElementById('why-mc-section');
   var bsSection = document.getElementById('best-sellers-section');
