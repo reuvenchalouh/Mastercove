@@ -1991,6 +1991,7 @@ function renderOrders(){
     return '<div class="order-card">'
       +'<div class="order-card-head"><div style="display:flex;align-items:center;gap:10px;flex:1;"><span class="order-num">'+(o.orderNumber||'MC-????')+'</span><div><div class="order-customer">'+o.customer+' -- '+o.product+(o.variant?' ('+o.variant+')':'')+'</div><div class="order-date">Placed: '+o.createdAt+'</div></div></div><span><span class="order-status '+SC[o.status]+'">'+SL[o.status]+'</span>'+returnBadge(o)+'</span></div>'
       +'<div class="order-timeline">'+tl+'</div>'
+      +((function(){var m=String(o.notes||'').match(/DELIVERY UPGRADE:[^\n]*/);return m?'<div style="margin:0 20px 12px;padding:10px 14px;background:#fdf1ec;border:1px solid #e8b9a6;border-left:4px solid #b5432a;border-radius:3px;font-size:13px;color:#7a2e1c;"><b>&#9888; '+m[0].replace(/</g,'&lt;')+'</b></div>':'';})())
       +'<div class="order-body">'
       +'<div class="order-field"><label>Ship To</label><div class="val">'+addr+'</div></div>'
       +'<div class="order-field"><label>Customer</label><div class="val">'+(o.customer||'')+(o.email?'<br/><a href="mailto:'+o.email+'" style="color:var(--walnut);">'+o.email+'</a>':'')+'</div></div>'
