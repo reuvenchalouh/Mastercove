@@ -101,6 +101,15 @@ header{background:var(--white);border-bottom:1px solid var(--border);padding:0 3
 .wallet-note{font-size:11px;color:var(--mist);text-align:center;margin-top:8px;}
 .pay-accept{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
 .pay-accept span{font-size:11px;padding:3px 8px;border:1px solid var(--border);border-radius:3px;background:var(--white);color:var(--slate);font-weight:500;}
+/* Delivery upgrades (Alpine items only) */
+.delivery-box{margin:0 0 16px;padding-bottom:16px;border-bottom:1px solid var(--border);}
+.delivery-title{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--mist);margin-bottom:10px;}
+.dopt{display:flex;align-items:flex-start;gap:10px;padding:11px 12px;border:1px solid var(--border);border-radius:4px;margin-bottom:8px;cursor:pointer;background:var(--white);}
+.dopt:has(input:checked){border-color:var(--walnut);box-shadow:0 0 0 1px var(--walnut);}
+.dopt input{margin-top:3px;accent-color:var(--walnut);}
+.dopt-main{flex:1;font-size:13.5px;line-height:1.35;}
+.dopt-main small{display:block;color:var(--mist);font-size:12px;margin-top:2px;}
+.dopt-price{font-size:13.5px;font-weight:500;white-space:nowrap;}
 @media(max-width:768px){.checkout-wrap{grid-template-columns:1fr;}}
 </style>
 <script src="https://js.stripe.com/v3/"></script>
@@ -120,6 +129,12 @@ header{background:var(--white);border-bottom:1px solid var(--border);padding:0 3
     </div>
     <div class="order-items" id="order-items"></div>
     <div class="order-totals" id="order-totals" style="display:none;">
+      <div class="delivery-box" id="delivery-box" style="display:none;">
+        <div class="delivery-title">Delivery Options</div>
+        <label class="dopt"><input type="radio" name="delivery" value="standard" checked onchange="setDelivery(this.value)"/><span class="dopt-main"><b>Standard Delivery</b><small>Delivered to your door.</small></span><span class="dopt-price" id="dopt-standard-price">Free</span></label>
+        <label class="dopt"><input type="radio" name="delivery" value="room" onchange="setDelivery(this.value)"/><span class="dopt-main"><b>Room of Choice</b><small>Brought inside and placed in the room of your choice.</small></span><span class="dopt-price">+$119.99</span></label>
+        <label class="dopt"><input type="radio" name="delivery" value="whiteglove" onchange="setDelivery(this.value)"/><span class="dopt-main"><b>White Glove</b><small>Room of choice placement, unpacking and packaging removal.</small></span><span class="dopt-price">+$239.99</span></label>
+      </div>
       <div class="promo-row" id="promo-row">
         <input class="finput" id="promo-input" type="text" placeholder="Promo code" autocomplete="off" autocapitalize="characters" onkeydown="if(event.key==='Enter'){event.preventDefault();applyPromo();}"/>
         <button class="promo-apply" id="promo-btn" type="button" onclick="applyPromo()">Apply</button>
@@ -131,7 +146,7 @@ header{background:var(--white);border-bottom:1px solid var(--border);padding:0 3
       </div>
       <div class="total-row"><span>Subtotal</span><span id="t-sub">$0</span></div>
       <div class="total-row discount-row" id="t-discount-row" style="display:none;"><span id="t-discount-label">Discount</span><span id="t-discount">−$0</span></div>
-      <div class="total-row"><span>Shipping</span><span id="t-ship">Free</span></div>
+      <div class="total-row"><span id="t-ship-label">Shipping</span><span id="t-ship">Free</span></div>
       <div class="total-row"><span id="t-tax-label">Tax</span><span id="t-tax">$0</span></div>
       <div class="total-row final"><span>Total</span><span id="t-total">$0</span></div>
     </div>
@@ -264,8 +279,48 @@ function gaItemsFromCart(){
 function getSubtotal(){
   return cart.reduce(function(s,item){ return s + item.price * item.qty; }, 0);
 }
-function getShipping(){
+function getBaseShipping(){
   return cart.reduce(function(m,item){ return Math.max(m, item.shipping||0); }, 0);
+}
+function getShipping(){
+  return Math.round((getBaseShipping() + (DELIVERY_PRICES[deliveryChoice] || 0)) * 100) / 100;
+}
+
+/* ── DELIVERY UPGRADES ─────────────────────────────────────────
+   Room of Choice / White Glove are offered only when the cart has an
+   Alpine (or Origins by Alpine) item. The fee is added to shipping, and the
+   server re-checks it at payment. */
+var DELIVERY_PRICES = { standard: 0, room: 119.99, whiteglove: 239.99 };
+var DELIVERY_LABELS = { standard: 'Standard Delivery', room: 'Room of Choice', whiteglove: 'White Glove' };
+var deliveryChoice = 'standard';
+var deliveryEligible = false;
+
+function setDelivery(v) {
+  deliveryChoice = DELIVERY_PRICES.hasOwnProperty(v) ? v : 'standard';
+  var r = document.querySelector('input[name="delivery"][value="' + deliveryChoice + '"]');
+  if (r) r.checked = true;
+  checkoutIdempotencyKey = null; // total changed, so this is a new payment attempt
+  recalcTotals();
+}
+
+function showDeliveryOptions(on) {
+  deliveryEligible = !!on;
+  var box = document.getElementById('delivery-box');
+  if (box) box.style.display = on ? '' : 'none';
+  if (!on && deliveryChoice !== 'standard') setDelivery('standard');
+  var sp = document.getElementById('dopt-standard-price');
+  if (sp) { var b = getBaseShipping(); sp.textContent = b > 0 ? ('$' + b.toFixed(2)) : 'Free'; }
+  if (typeof updateWalletTotal === 'function') updateWalletTotal();
+}
+
+function checkDeliveryEligibility() {
+  var ids = cart.map(function(i){ return Number(i.id); }).filter(function(n){ return n > 0; });
+  if (!ids.length) { showDeliveryOptions(false); return; }
+  var KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsYWZma3dmd211ZHZlcm56anVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMzU4MDksImV4cCI6MjA5MTYxMTgwOX0.BEz8_GNKPTQB90LJBJTZFyJYFF-9ypdfbEsLAfEESqY';
+  fetch('https://slaffkwfwmudvernzjua.supabase.co/rest/v1/products?select=id,brand&id=in.(' + ids.join(',') + ')', { headers: { apikey: KEY, Authorization: 'Bearer ' + KEY } })
+    .then(function(r){ return r.json(); })
+    .then(function(rows){ showDeliveryOptions(Array.isArray(rows) && rows.some(function(p){ return /alpine|origins/i.test(p.brand || ''); })); })
+    .catch(function(){ showDeliveryOptions(false); });
 }
 
 /* ── PROMO CODES ──────────────────────────────────────────────
@@ -357,6 +412,8 @@ function recalcTotals(){
   document.getElementById('t-tax-label').textContent = isNY ? 'Tax (NY 8.875%)' : 'Tax';
   document.getElementById('t-sub').textContent   = '$' + sub.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
   document.getElementById('t-ship').textContent  = ship > 0 ? ('$' + ship.toFixed(2)) : 'Free';
+  var shipLbl = document.getElementById('t-ship-label');
+  if (shipLbl) shipLbl.textContent = deliveryChoice !== 'standard' ? ('Shipping (' + DELIVERY_LABELS[deliveryChoice] + ')') : 'Shipping';
   document.getElementById('t-tax').textContent   = '$' + tax.toFixed(2);
   document.getElementById('t-total').textContent = '$' + orderTotal.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
   var payAmt = document.getElementById('pay-amount');
@@ -494,6 +551,7 @@ function submitPayment() {
         zip: zip,
         items: cart,
         promoCode: appliedPromo ? appliedPromo.code : '',
+        delivery: deliveryChoice,
         idempotencyKey: checkoutIdempotencyKey
       })
     })
@@ -501,6 +559,7 @@ function submitPayment() {
     .then(function(data) {
       if (data.error) {
         if (data.promoInvalid) { removePromo(data.error); btn.disabled = false; resetPayBtn(); showErr('Your promo code could not be applied, so your total has been updated. Please review it and press Pay again.'); return; }
+        if (data.deliveryInvalid) { showDeliveryOptions(false); btn.disabled = false; resetPayBtn(); showErr(data.error); return; }
         if (data.updatedItems && data.updatedItems.length) {
           // Server found out-of-date prices — update the cart with the real ones
           // so the customer sees the correct total before paying.
@@ -561,7 +620,7 @@ function onSuccess(orderNumber, name, email, address, city, state, zip) {
     });
   }
 
-  var itemNames = cart.map(function(i){ return i.name + (i.finish ? ' (' + i.finish + ')' : '') + (i.fabric ? ' - ' + i.fabric : '') + ' x' + i.qty; }).join(', ');
+  var itemNames = cart.map(function(i){ return i.name + (i.finish ? ' (' + i.finish + ')' : '') + (i.fabric ? ' - ' + i.fabric : '') + ' x' + i.qty; }).join(', ') + (deliveryChoice !== 'standard' ? ' + ' + DELIVERY_LABELS[deliveryChoice] + ' delivery' : '');
   var gaItemsJSON = JSON.stringify(gaItemsFromCart());
   localStorage.removeItem('mc_cart');
   // For the Google Customer Reviews survey on the confirmation page (kept out of the URL)
@@ -606,15 +665,22 @@ function walletDisplayItems(stateVal) {
   var sub = getSubtotal(), ship = getShipping(), discount = getDiscount(sub), tax = calcTax(sub - discount, stateVal || '');
   var rows = [{ label: 'Subtotal', amount: Math.round(sub * 100) }];
   if (discount > 0) rows.push({ label: 'Discount (' + appliedPromo.code + ')', amount: -Math.round(discount * 100) });
-  rows.push({ label: ship > 0 ? 'Shipping' : 'Shipping (free)', amount: Math.round(ship * 100) });
+  rows.push({ label: deliveryChoice !== 'standard' ? ('Shipping (' + DELIVERY_LABELS[deliveryChoice] + ')') : (ship > 0 ? 'Shipping' : 'Shipping (free)'), amount: Math.round(ship * 100) });
   if (tax > 0) rows.push({ label: 'NY sales tax (8.875%)', amount: Math.round(tax * 100) });
   return rows;
 }
 
 function walletShippingOptions() {
-  var ship = getShipping();
-  return [{ id: 'standard', label: ship > 0 ? 'Standard delivery' : 'Free delivery',
-            detail: 'Ships from our partner warehouse', amount: Math.round(ship * 100) }];
+  var base = getBaseShipping();
+  var opts = [{ id: 'standard', label: base > 0 ? 'Standard delivery' : 'Free delivery',
+                detail: 'Delivered to your door', amount: Math.round(base * 100) }];
+  if (deliveryEligible) {
+    opts.push({ id: 'room', label: 'Room of Choice', detail: 'Placed in the room of your choice', amount: Math.round((base + DELIVERY_PRICES.room) * 100) });
+    opts.push({ id: 'whiteglove', label: 'White Glove', detail: 'Room of choice, unpacking and packaging removal', amount: Math.round((base + DELIVERY_PRICES.whiteglove) * 100) });
+  }
+  // The first option is the one the wallet shows as selected
+  opts.sort(function(a, b){ return (a.id === deliveryChoice ? -1 : 0) - (b.id === deliveryChoice ? -1 : 0); });
+  return opts;
 }
 
 function updateWalletTotal() {
@@ -623,7 +689,8 @@ function updateWalletTotal() {
   try {
     paymentRequest.update({
       total: { label: 'Master Cove', amount: walletTotalCents(stateVal) },
-      displayItems: walletDisplayItems(stateVal)
+      displayItems: walletDisplayItems(stateVal),
+      shippingOptions: walletShippingOptions()
     });
   } catch (e) { /* can't update while the wallet sheet is open; that's fine */ }
 }
@@ -670,6 +737,18 @@ function initWalletPay() {
     });
   });
 
+  // Customer picked a delivery option in the wallet sheet
+  paymentRequest.on('shippingoptionchange', function(ev) {
+    var id = (ev.shippingOption && ev.shippingOption.id) || 'standard';
+    deliveryChoice = (deliveryEligible && DELIVERY_PRICES.hasOwnProperty(id)) ? id : 'standard';
+    var r = document.querySelector('input[name="delivery"][value="' + deliveryChoice + '"]');
+    if (r) r.checked = true;
+    checkoutIdempotencyKey = null;
+    var stateVal = document.getElementById('f-state') ? document.getElementById('f-state').value : '';
+    ev.updateWith({ status: 'success', total: { label: 'Master Cove', amount: walletTotalCents(stateVal) }, displayItems: walletDisplayItems(stateVal) });
+    recalcTotals();
+  });
+
   // Customer approved the payment in the wallet
   paymentRequest.on('paymentmethod', function(ev) {
     var a = ev.shippingAddress || {};
@@ -712,6 +791,7 @@ function initWalletPay() {
         address: address, city: city, state: state, zip: zip,
         items: cart,
         promoCode: appliedPromo ? appliedPromo.code : '',
+        delivery: deliveryChoice,
         idempotencyKey: checkoutIdempotencyKey
       })
     })
@@ -720,6 +800,7 @@ function initWalletPay() {
       if (data.error) {
         ev.complete('fail');
         if (data.promoInvalid) { removePromo(data.error); showErr('Your promo code could not be applied, so your total has been updated. Please review it and try again.'); return; }
+        if (data.deliveryInvalid) { showDeliveryOptions(false); showErr(data.error); return; }
         if (data.updatedItems && data.updatedItems.length) {
           data.updatedItems.forEach(function(u){
             if (cart[u.index]) { cart[u.index].price = u.price; cart[u.index].shipping = u.shipping; }
@@ -762,6 +843,7 @@ function initWalletPay() {
 
 loadSummary();
 initWalletPay();
+checkDeliveryEligibility();
 </script>
 </body>
 </html>
