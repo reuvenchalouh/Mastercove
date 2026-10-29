@@ -29,6 +29,24 @@ function formatPhone(raw) {
 const NY_TAX_RATE = 0.08875;
 const NY_STATE_NAMES = ['NY', 'NEW YORK'];
 
+// ---------------------------------------------------------------------------
+// DELIVERY UPGRADES (Alpine / Origins by Alpine products only)
+// Alpine offers Room of Choice ($100) and White Glove ($200) on its own site;
+// we charge 20% more. The fee is added to shipping (not discounted, not taxed),
+// and the order notes say which service to pick when ordering from Alpine.
+// ---------------------------------------------------------------------------
+const DELIVERY_OPTIONS = {
+  standard:   { label: 'Standard Delivery', price: 0,      alpine: '' },
+  room:       { label: 'Room of Choice',    price: 119.99, alpine: 'Room of Choice ($100)' },
+  whiteglove: { label: 'White Glove',       price: 239.99, alpine: 'White Glove ($200)' }
+};
+const DELIVERY_BRANDS = /alpine|origins/i;
+function deliveryNote(key) {
+  const d = DELIVERY_OPTIONS[key];
+  if (!d || !d.price) return '';
+  return 'DELIVERY UPGRADE: ' + d.label + ' (customer paid $' + d.price.toFixed(2) + '). When ordering on alpinefurniture.net, choose "' + d.alpine + '" as the shipping method.';
+}
+
 function norm(s) { return String(s || '').trim().toLowerCase(); }
 function toCents(n) { return Math.round((Number(n) || 0) * 100); }
 
@@ -155,14 +173,14 @@ async function priceCart(supabase, items, state) {
   const ids = [...new Set(items.map(i => i && i.id).filter(id => id !== undefined && id !== null))];
   const { data: products, error } = await supabase
     .from('products')
-    .select('id,name,slug,price,shipping_cost,status,finishes,top_sizes,variant_mode,supplier_link')
+    .select('id,name,slug,brand,price,shipping_cost,status,finishes,top_sizes,variant_mode,supplier_link')
     .in('id', ids);
   if (error) return { error: 'Could not verify prices. Please try again.' };
 
   const byId = {};
   (products || []).forEach(p => { byId[String(p.id)] = p; });
 
-  let subCents = 0, shipCents = 0;
+  let subCents = 0, shipCents = 0, deliveryEligible = false;
   const verifiedItems = [];
   const updatedItems = [];
 
@@ -181,6 +199,7 @@ async function priceCart(supabase, items, state) {
       return { error: label + ' — that option is no longer available. Please remove it and add it again.' };
     }
     const shipping = Number(p.shipping_cost) || 0;
+    if (DELIVERY_BRANDS.test(String(p.brand || ''))) deliveryEligible = true;
 
     subCents += toCents(unit) * qty;
     shipCents = Math.max(shipCents, toCents(shipping));
@@ -204,7 +223,7 @@ async function priceCart(supabase, items, state) {
   }
 
   const totals = computeTotals(subCents, shipCents, state, 0);
-  return Object.assign({ subCents, shipCents, verifiedItems, updatedItems }, totals);
+  return Object.assign({ subCents, shipCents, deliveryEligible, verifiedItems, updatedItems }, totals);
 }
 // ---------------------------------------------------------------------------
 
@@ -221,6 +240,17 @@ exports.handler = async function(event) {
     // Work out the real total from Supabase — ignore any price the browser sent.
     const priced = await priceCart(supabase, body.items, state);
     if (priced.error) return { statusCode: 400, body: JSON.stringify({ error: priced.error }) };
+
+    // Delivery upgrade (Room of Choice / White Glove) — only for Alpine items
+    const delivery = DELIVERY_OPTIONS[body.delivery] ? body.delivery : 'standard';
+    if (delivery !== 'standard' && !priced.deliveryEligible) {
+      return { statusCode: 400, body: JSON.stringify({ error: 'That delivery option is not available for the items in your cart. Your total has been updated, please review it and press Pay again.', deliveryInvalid: true }) };
+    }
+    if (delivery !== 'standard') {
+      priced.shipCents += toCents(DELIVERY_OPTIONS[delivery].price);
+      Object.assign(priced, computeTotals(priced.subCents, priced.shipCents, state, 0));
+    }
+    const deliveryText = deliveryNote(delivery);
 
     // Promo code: re-checked here so an expired/invalid/tampered code can never be charged
     let promo = null;
@@ -254,7 +284,7 @@ exports.handler = async function(event) {
       receipt_email: email,
       description: 'Master Cove Order',
       shipping: { name, phone: phone || undefined, address: { line1: address, city, state, postal_code: zip, country: 'US' } },
-      metadata: { customer_name: name, customer_email: email, customer_phone: phone, verified_subtotal_cents: String(priced.subCents), verified_shipping_cents: String(priced.shipCents), verified_tax_cents: String(priced.taxCents), promo_code: promo ? promo.code : '', promo_percent: promo ? String(promo.percent) : '', discount_cents: String(priced.discountCents || 0) },
+      metadata: { customer_name: name, customer_email: email, customer_phone: phone, verified_subtotal_cents: String(priced.subCents), verified_shipping_cents: String(priced.shipCents), verified_tax_cents: String(priced.taxCents), promo_code: promo ? promo.code : '', delivery_option: delivery, promo_percent: promo ? String(promo.percent) : '', discount_cents: String(priced.discountCents || 0) },
       return_url: 'https://mastercove.com/order-confirmed.html'
     }, idempotencyKey ? { idempotencyKey: idempotencyKey } : undefined);
 
@@ -274,10 +304,10 @@ exports.handler = async function(event) {
         orderNumber = existing[0].order_number;
       } else {
         const promoText = promo ? (promo.code + ' (' + promo.percent + '% off, -$' + (priced.discountCents / 100).toFixed(2) + ')') : '';
-        orderNumber = await saveOrder({ email, name, phone, address, city, state, zip, items, amount, stripeId: paymentIntent.id, promoText });
+        orderNumber = await saveOrder({ email, name, phone, address, city, state, zip, items, amount, stripeId: paymentIntent.id, promoText, deliveryText });
         if (promo) { try { await supabase.rpc('increment_promo_use', { c: promo.code }); } catch (e) { console.error('Promo count error:', e.message); } }
         // Notify YOU (the store owner) of the new order
-        await sendOwnerNotification({ orderNumber, customerName: name, customerEmail: email, customerPhone: phone, items, address: fullAddress, revenue, promoText });
+        await sendOwnerNotification({ orderNumber, customerName: name, customerEmail: email, customerPhone: phone, items, address: fullAddress, revenue, promoText, deliveryText });
       }
 
       return { statusCode: 200, body: JSON.stringify({ success: true, orderId: paymentIntent.id, orderNumber }) };
@@ -290,7 +320,7 @@ exports.handler = async function(event) {
   }
 };
 
-async function sendOwnerNotification({ orderNumber, customerName, customerEmail, customerPhone, items, address, revenue, promoText }) {
+async function sendOwnerNotification({ orderNumber, customerName, customerEmail, customerPhone, items, address, revenue, promoText, deliveryText }) {
   try {
     // Build item rows with qty and supplier link
     const itemRows = (items || []).map(function(i) {
@@ -320,6 +350,7 @@ async function sendOwnerNotification({ orderNumber, customerName, customerEmail,
             <tr><td style="padding:8px 0;color:#888;font-size:13px;border-bottom:1px solid #eee;">Customer</td><td colspan="2" style="padding:8px 0;font-size:13px;border-bottom:1px solid #eee;">${customerName} (${customerEmail})</td></tr>
             <tr><td style="padding:8px 0;color:#888;font-size:13px;border-bottom:1px solid #eee;">Phone</td><td colspan="2" style="padding:8px 0;font-size:13px;border-bottom:1px solid #eee;">${customerPhone || 'Not provided'}</td></tr>
             <tr><td style="padding:8px 0;color:#888;font-size:13px;border-bottom:1px solid #eee;">Ship To</td><td colspan="2" style="padding:8px 0;font-size:13px;border-bottom:1px solid #eee;">${address}</td></tr>
+            ${deliveryText ? `<tr><td style="padding:8px 0;color:#888;font-size:13px;border-bottom:1px solid #eee;">Delivery</td><td colspan="2" style="padding:8px 0;font-size:13px;font-weight:700;color:#b5432a;border-bottom:1px solid #eee;">${deliveryText}</td></tr>` : ''}
             ${promoText ? `<tr><td style="padding:8px 0;color:#888;font-size:13px;border-bottom:1px solid #eee;">Promo</td><td colspan="2" style="padding:8px 0;font-size:13px;border-bottom:1px solid #eee;">${promoText}</td></tr>` : ''}
             <tr><td style="padding:8px 0;color:#888;font-size:13px;border-bottom:1px solid #eee;">Total</td><td colspan="2" style="padding:8px 0;font-weight:700;font-size:15px;color:#6B4C35;border-bottom:1px solid #eee;">$${revenue}</td></tr>
           </table>
@@ -361,7 +392,7 @@ async function generateOrderNumber() {
   return 'MC-' + String(crypto.randomInt(10000000, 100000000));
 }
 
-async function saveOrder({ email, name, phone, address, city, state, zip, items, amount, stripeId, promoText }) {
+async function saveOrder({ email, name, phone, address, city, state, zip, items, amount, stripeId, promoText, deliveryText }) {
   try {
     const orderNumber = await generateOrderNumber();
     const productNames = (items || []).map(i => {
@@ -389,7 +420,7 @@ async function saveOrder({ email, name, phone, address, city, state, zip, items,
         link: i.supplierLink || '', price: Number(i.price) || 0
       })),
       phone: phone || '',
-      notes: promoText ? ('Promo: ' + promoText) : '',
+      notes: [deliveryText || '', promoText ? ('Promo: ' + promoText) : ''].filter(Boolean).join('\n'),
       status: 'new',
       timestamps: {},
       stripe_id: stripeId,
