@@ -149,6 +149,11 @@ select.f-input{appearance:auto;background:#fff;}
       <p>Fill out the form and we'll reply directly to your email. You can also check our <a href="/faq" style="color:var(--walnut);">FAQ</a>, <a href="/shipping" style="color:var(--walnut);">shipping</a> and <a href="/returns" style="color:var(--walnut);">returns</a> pages.</p>
     </div>
     <form class="ask-form" id="ask-form">
+      <!-- Spam trap: hidden from people, bots fill it in -->
+      <div aria-hidden="true" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;">
+        <label for="f-website">Leave this empty</label>
+        <input id="f-website" name="mc_hp_check" type="text" tabindex="-1" autocomplete="new-password"/>
+      </div>
       <div class="f-row f-row-2">
         <div>
           <label class="f-label">Name <span class="req">*</span></label>
@@ -202,6 +207,7 @@ select.f-input{appearance:auto;background:#fff;}
 </footer>
 
 <script>
+window.__formLoadedAt = Date.now();
 document.getElementById('ask-form').addEventListener('submit', async function(e){
   e.preventDefault();
   var submitBtn = document.getElementById('f-submit');
@@ -231,7 +237,7 @@ document.getElementById('ask-form').addEventListener('submit', async function(e)
   try {
     var res = await fetch('/.netlify/functions/ask-question', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({name: name, email: email, question: question, product: ref})
+      body: JSON.stringify({name: name, email: email, question: question, product: ref, website: document.getElementById('f-website').value, t: window.__formLoadedAt})
     });
     if(!res.ok) throw new Error('Failed to send');
     statusEl.textContent = 'Thanks — your message has been sent! We\'ll reply to your email soon.';
