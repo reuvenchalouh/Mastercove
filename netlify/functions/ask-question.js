@@ -15,8 +15,18 @@ exports.handler = async function(event) {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
 
   try {
-    const { name, email, question, product } = JSON.parse(event.body);
+    const { name, email, question, product, website, t } = JSON.parse(event.body);
     if (!name || !email || !question) return { statusCode: 400, body: JSON.stringify({ error: 'Missing required fields' }) };
+
+    // Spam filter: bots fill the hidden "website" field, post straight to this function
+    // without loading the page (no t), or submit within seconds of the page loading.
+    // They get a normal "success" reply so they don't retry, but no email is sent.
+    const elapsed = Date.now() - Number(t);
+    const placeholder = String(product || '').trim().toUpperCase() === 'MC-1042';
+    if (website || !t || !(elapsed > 4000 && elapsed < 86400000) || placeholder) {
+      console.log('Blocked spam form submission', { hasWebsite: !!website, elapsed, placeholder });
+      return { statusCode: 200, body: JSON.stringify({ success: true }) };
+    }
 
     const safeName = escapeHtml(name);
     const safeEmail = escapeHtml(email);
