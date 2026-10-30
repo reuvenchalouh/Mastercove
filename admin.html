@@ -569,6 +569,7 @@ async function adminUpload(path, file){
           <th>Variant</th>
           <th>Type</th>
           <th>SKU</th>
+          <th>Back in Stock</th>
           <th>Actions</th>
         </tr></thead>
         <tbody id="oos-tbody"></tbody>
@@ -1594,6 +1595,15 @@ function renderTable(){
 }
 
 /* ── OUT OF STOCK TAB ── */
+// Estimated back-in-stock date: the supplier's restock date saved by the daily stock check,
+// or worked back from a preorder delivery estimate. Returns {t: sortable time, label} or N/A.
+function oosBackDate(o){
+  o=o||{};var d=null;
+  if(o.restock){d=new Date(o.restock+'T12:00:00');}
+  else if(o.delivery&&o.delivery.pre&&o.delivery.start){d=new Date(o.delivery.start+'T12:00:00');d.setDate(d.getDate()-(o.delivery.ship==='freight'?24:5));}
+  if(!d||isNaN(d))return {t:Infinity,label:'N/A'};
+  return {t:d.getTime(),label:d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})};
+}
 function collectOOSItems(){
   var items=[];
   products.forEach(function(p){
@@ -1601,15 +1611,15 @@ function collectOOSItems(){
       p.topSizes.forEach(function(sz,si){
         if(sz.outOfStock){
           var img='';for(var k=0;k<(sz.finishes||[]).length;k++){if(sz.finishes[k].photos&&sz.finishes[k].photos.length){img=sz.finishes[k].photos[0];break;}}
-          items.push({productId:p.id,productName:p.name,img:img||p.img||'',variant:sz.name||'Size',type:'Size',sku:'',kind:'size',sizeIdx:si});
+          items.push({productId:p.id,productName:p.name,img:img||p.img||'',variant:sz.name||'Size',type:'Size',sku:'',kind:'size',sizeIdx:si,back:oosBackDate(sz)});
         }
         (sz.finishes||[]).forEach(function(f,fi){
           if(f.outOfStock){
-            items.push({productId:p.id,productName:p.name,img:(f.photos&&f.photos[0])||p.img||'',variant:(sz.name?sz.name+' — ':'')+(f.name||'Finish'),type:'Finish (Size)',sku:f.sku||'',kind:'sizeFinish',sizeIdx:si,finIdx:fi});
+            items.push({productId:p.id,productName:p.name,img:(f.photos&&f.photos[0])||p.img||'',variant:(sz.name?sz.name+' — ':'')+(f.name||'Finish'),type:'Finish (Size)',sku:f.sku||'',kind:'sizeFinish',sizeIdx:si,finIdx:fi,back:oosBackDate(f)});
           }
           (f.fabrics||[]).forEach(function(fab,fabi){
             if(fab.outOfStock){
-              items.push({productId:p.id,productName:p.name,img:(fab.photos&&fab.photos[0])||(f.photos&&f.photos[0])||p.img||'',variant:(sz.name?sz.name+' — ':'')+(f.name&&f.name!=='Fabric Only'?f.name+' — ':'')+(fab.type?fab.type+' ':'')+(fab.name||'Fabric'),type:'Fabric (Size)',sku:fab.sku||'',kind:'sizeFabric',sizeIdx:si,finIdx:fi,fabIdx:fabi});
+              items.push({productId:p.id,productName:p.name,img:(fab.photos&&fab.photos[0])||(f.photos&&f.photos[0])||p.img||'',variant:(sz.name?sz.name+' — ':'')+(f.name&&f.name!=='Fabric Only'?f.name+' — ':'')+(fab.type?fab.type+' ':'')+(fab.name||'Fabric'),type:'Fabric (Size)',sku:fab.sku||'',kind:'sizeFabric',sizeIdx:si,finIdx:fi,fabIdx:fabi,back:oosBackDate(fab)});
             }
           });
         });
@@ -1617,11 +1627,11 @@ function collectOOSItems(){
     } else {
       (p.finishes||[]).forEach(function(f,fi){
         if(f.outOfStock){
-          items.push({productId:p.id,productName:p.name,img:(f.photos&&f.photos[0])||p.img||'',variant:f.name||'Finish',type:'Finish',sku:f.sku||'',kind:'finish',finIdx:fi});
+          items.push({productId:p.id,productName:p.name,img:(f.photos&&f.photos[0])||p.img||'',variant:f.name||'Finish',type:'Finish',sku:f.sku||'',kind:'finish',finIdx:fi,back:oosBackDate(f)});
         }
         (f.fabrics||[]).forEach(function(fab,fabi){
           if(fab.outOfStock){
-            items.push({productId:p.id,productName:p.name,img:(fab.photos&&fab.photos[0])||(f.photos&&f.photos[0])||p.img||'',variant:(f.name?f.name+' — ':'')+(fab.name||'Fabric'),type:'Fabric',sku:'',kind:'fabric',finIdx:fi,fabIdx:fabi});
+            items.push({productId:p.id,productName:p.name,img:(fab.photos&&fab.photos[0])||(f.photos&&f.photos[0])||p.img||'',variant:(f.name?f.name+' — ':'')+(fab.name||'Fabric'),type:'Fabric',sku:'',kind:'fabric',finIdx:fi,fabIdx:fabi,back:oosBackDate(fab)});
           }
         });
       });
@@ -1662,13 +1672,14 @@ function renderOOSTable(){
   var items=collectOOSItems().filter(function(it){
     return !q||it.productName.toLowerCase().includes(q)||it.variant.toLowerCase().includes(q)||(it.sku||'').toLowerCase().includes(q);
   });
-  if(!items.length){tbody.innerHTML='<tr><td colspan="5"><div class="empty-state"><div class="ei">✓</div><p>'+(collectOOSItems().length?'No matches.':'Nothing out of stock right now.')+'</p></div></td></tr>';return;}
+  if(!items.length){tbody.innerHTML='<tr><td colspan="6"><div class="empty-state"><div class="ei">✓</div><p>'+(collectOOSItems().length?'No matches.':'Nothing out of stock right now.')+'</p></div></td></tr>';return;}
   tbody.innerHTML=items.map(function(it){
     return '<tr class="slide-in">'
       +'<td><div class="prod-thumb-cell"><div class="prod-thumb">'+(it.img?'<img src="'+it.img+'" onerror="this.style.display=\'none\'"/>':'')+'</div><div class="prod-name" style="font-size:14px;">'+it.productName+'</div></div></td>'
       +'<td>'+it.variant+'</td>'
       +'<td><span class="cat-tag">'+it.type+'</span></td>'
       +'<td>'+(it.sku?'<span style="font-family:monospace;font-size:12px;">'+it.sku+'</span>':'<span style="color:var(--mist);">—</span>')+'</td>'
+      +'<td>'+(it.back&&it.back.label!=='N/A'?'<span style="white-space:nowrap;">'+it.back.label+'</span>':'<span style="color:var(--mist);">N/A</span>')+'</td>'
       +'<td><button class="act-btn edit" onclick="markInStock('+it.productId+',\''+it.kind+'\','+(it.sizeIdx!==undefined?it.sizeIdx:'null')+','+(it.finIdx!==undefined?it.finIdx:'null')+','+(it.fabIdx!==undefined?it.fabIdx:'null')+')">Mark In Stock</button></td>'
       +'</tr>';
   }).join('');
