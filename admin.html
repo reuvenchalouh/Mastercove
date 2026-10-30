@@ -53,6 +53,7 @@ body{font-family:'Outfit',sans-serif;background:#F0EBE3;color:var(--ink);font-si
 .cat-stat-card:hover{border-color:var(--walnut);box-shadow:0 2px 12px rgba(107,76,53,0.1);}
 .cs-name{font-size:10px;font-weight:600;color:var(--walnut);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;}
 .cs-count{font-family:'Playfair Display',serif;font-size:26px;color:var(--ink);line-height:1;}
+.cs-opts{font-family:'Outfit',sans-serif;font-size:13px;font-weight:300;color:var(--walnut);margin-left:2px;}
 .cs-count-lbl{font-size:10px;color:var(--mist);margin-top:2px;font-weight:300;}
 .cs-avg{font-size:12px;color:var(--slate);margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-weight:300;}
 .cs-avg b{font-weight:600;color:var(--ink);}
@@ -705,6 +706,14 @@ function productStockCounts(p){
   }
   return {n:n,o:o};
 }
+// Number of options a customer can pick on a product: every size x finish x fabric
+// combination (a bed in 2 sizes with 5 colors each counts as 10). A product with no options counts as 1.
+function optionCount(p){
+  var leaves=function(f){return Math.max(1,(f.fabrics||[]).length)*Math.max(1,(f.sizes||[]).length);};
+  var sum=function(fins){return (fins&&fins.length)?fins.reduce(function(n,f){return n+leaves(f||{});},0):1;};
+  if(p.variantMode==='size'&&p.topSizes&&p.topSizes.length)return p.topSizes.reduce(function(n,sz){return n+sum((sz||{}).finishes);},0);
+  return sum(p.finishes);
+}
 function updateOOSCounts(){
   var items=collectOOSItems();
   var full=0,part=0;
@@ -751,12 +760,15 @@ function updateStats(){
     }
   }
   var grid=document.getElementById('cat-stats-grid');grid.innerHTML='';
+  var totalOpts=products.reduce(function(n,p){return n+optionCount(p);},0);
+  document.getElementById('ss-total').innerHTML=products.length+'<span class="cs-opts" title="Every size / finish / fabric combination customers can choose"> ('+totalOpts.toLocaleString()+')</span>';
   Object.keys(CAT).forEach(function(key){
     var cp=products.filter(function(p){return p.cat===key;});if(!cp.length)return;
     var ap=cp.map(function(p){return p.price;}).filter(Boolean);
     var avg=ap.length?Math.round(ap.reduce(function(a,b){return a+b;},0)/ap.length):0;
     var card=document.createElement('div');card.className='cat-stat-card';card.onclick=function(){filterByCatClick(key);};
-    card.innerHTML='<div class="cs-name">'+CAT[key]+'</div><div class="cs-count">'+cp.length+'</div><div class="cs-count-lbl">product'+(cp.length!==1?'s':'')+'</div><div class="cs-avg">Avg: <b>$'+avg.toLocaleString()+'</b></div>';
+    var opts=cp.reduce(function(n,p){return n+optionCount(p);},0);
+    card.innerHTML='<div class="cs-name">'+CAT[key]+'</div><div class="cs-count">'+cp.length+'<span class="cs-opts"> ('+opts.toLocaleString()+')</span></div><div class="cs-count-lbl">product'+(cp.length!==1?'s':'')+' (options)</div><div class="cs-avg">Avg: <b>$'+avg.toLocaleString()+'</b></div>';
     grid.appendChild(card);
   });
 }
