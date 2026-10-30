@@ -374,6 +374,14 @@ async function runSync() {
       if (est) o.obj.delivery = est; else delete o.obj.delivery;
       changed.set(o.product.id, o.product);
     }
+    // Modway's expected restock date (shown in the admin Out of Stock tab); removed once it's back
+    const rm = s.code === 'preorder' && String(s.text || '').match(/expected ([A-Z][a-z]+ \d{1,2}, \d{4})/);
+    const rd = rm ? new Date(rm[1] + ' UTC') : null;
+    const restock = rd && !isNaN(rd) ? rd.toISOString().slice(0, 10) : null;
+    if ((o.obj.restock || null) !== restock) {
+      if (restock) o.obj.restock = restock; else delete o.obj.restock;
+      changed.set(o.product.id, o.product);
+    }
     const now = o.obj.outOfStock === true;
     if (decision.out !== now) {
       o.obj.outOfStock = decision.out;
