@@ -41,6 +41,9 @@ const DELIVERY_OPTIONS = {
   whiteglove: { label: 'White Glove',       price: 239.99, alpine: 'White Glove ($200)' }
 };
 const DELIVERY_BRANDS = /alpine|origins/i;
+// Reminder saved in the order notes (and the owner email) whenever the cart has an
+// Alpine / Origins piece, so the dealer discount code is used when placing the order.
+const SUPPLIER_CODE_NOTE = 'ALPINE / ORIGINS ORDER: enter discount code MASTERCOVE15 at checkout on alpinefurniture.net or originsbyalpine.com.';
 function deliveryNote(key) {
   const d = DELIVERY_OPTIONS[key];
   if (!d || !d.price) return '';
@@ -250,7 +253,7 @@ exports.handler = async function(event) {
       priced.shipCents += toCents(DELIVERY_OPTIONS[delivery].price);
       Object.assign(priced, computeTotals(priced.subCents, priced.shipCents, state, 0));
     }
-    const deliveryText = deliveryNote(delivery);
+    const deliveryText = [(priced && priced.deliveryEligible) ? SUPPLIER_CODE_NOTE : '', deliveryNote(delivery)].filter(Boolean).join('\n');
 
     // Promo code: re-checked here so an expired/invalid/tampered code can never be charged
     let promo = null;
@@ -350,7 +353,7 @@ async function sendOwnerNotification({ orderNumber, customerName, customerEmail,
             <tr><td style="padding:8px 0;color:#888;font-size:13px;border-bottom:1px solid #eee;">Customer</td><td colspan="2" style="padding:8px 0;font-size:13px;border-bottom:1px solid #eee;">${customerName} (${customerEmail})</td></tr>
             <tr><td style="padding:8px 0;color:#888;font-size:13px;border-bottom:1px solid #eee;">Phone</td><td colspan="2" style="padding:8px 0;font-size:13px;border-bottom:1px solid #eee;">${customerPhone || 'Not provided'}</td></tr>
             <tr><td style="padding:8px 0;color:#888;font-size:13px;border-bottom:1px solid #eee;">Ship To</td><td colspan="2" style="padding:8px 0;font-size:13px;border-bottom:1px solid #eee;">${address}</td></tr>
-            ${deliveryText ? `<tr><td style="padding:8px 0;color:#888;font-size:13px;border-bottom:1px solid #eee;">Delivery</td><td colspan="2" style="padding:8px 0;font-size:13px;font-weight:700;color:#b5432a;border-bottom:1px solid #eee;">${deliveryText}</td></tr>` : ''}
+            ${deliveryText ? `<tr><td style="padding:8px 0;color:#888;font-size:13px;border-bottom:1px solid #eee;">Order notes</td><td colspan="2" style="padding:8px 0;font-size:13px;font-weight:700;color:#b5432a;border-bottom:1px solid #eee;">${String(deliveryText).replace(/\n/g, '<br>')}</td></tr>` : ''}
             ${promoText ? `<tr><td style="padding:8px 0;color:#888;font-size:13px;border-bottom:1px solid #eee;">Promo</td><td colspan="2" style="padding:8px 0;font-size:13px;border-bottom:1px solid #eee;">${promoText}</td></tr>` : ''}
             <tr><td style="padding:8px 0;color:#888;font-size:13px;border-bottom:1px solid #eee;">Total</td><td colspan="2" style="padding:8px 0;font-weight:700;font-size:15px;color:#6B4C35;border-bottom:1px solid #eee;">$${revenue}</td></tr>
           </table>
