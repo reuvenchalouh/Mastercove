@@ -56,6 +56,25 @@ function pidOf(link) {
 }
 
 // Every finish / fabric / size with its own HerNest link. Keeps a reference so the flag can be flipped.
+// Parent options (a "Fabric Only" group, or a size) follow their children:
+// a parent is out of stock only when every linked option under it is out.
+function rollupStock(p) {
+  const hasLink = o => !!(o && o.link);
+  const finOut = f => {
+    const fabs = (f.fabrics || []).filter(b => b && typeof b === 'object');
+    if (fabs.length && fabs.some(hasLink)) f.outOfStock = fabs.every(b => b.outOfStock === true);
+    return f.outOfStock === true;
+  };
+  (p.finishes || []).forEach(finOut);
+  (p.top_sizes || []).forEach(s => {
+    const fins = (s.finishes || []).filter(f => f && typeof f === 'object');
+    if (!fins.length) return;
+    const linked = fins.some(f => hasLink(f) || (f.fabrics || []).some(hasLink));
+    const outs = fins.map(finOut);
+    if (linked) s.outOfStock = outs.every(Boolean);
+  });
+}
+
 function collectOptions(p) {
   const out = [];
   const label = (...parts) => parts.filter(Boolean).join(' / ');
@@ -307,6 +326,7 @@ exports.handler = async function(event) {
         }
       }
       for (const p of changed.values()) {
+        rollupStock(p);
         const { error: upErr } = await supabase.from('products').update({ finishes: p.finishes, top_sizes: p.top_sizes }).eq('id', p.id);
         if (upErr) console.error('Update failed for', p.id, upErr.message); else applied.updated++;
       }
