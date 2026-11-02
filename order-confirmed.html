@@ -140,7 +140,12 @@ if(address) document.getElementById('detail-address').textContent = address;
 
 // Fire GA4 purchase event once, using the real order number as the transaction ID.
 // Guards against double-firing if this page is reloaded or revisited via back/forward.
-if(order && typeof gtag === 'function'){
+// Only count a purchase when this browser just completed checkout for this exact order
+// (checkout.html saves the order number in sessionStorage right before redirecting here).
+// Stops bots, crawlers and anyone opening a copied confirmation link from logging fake sales.
+var cameFromCheckout = false;
+try { var gcr = JSON.parse(sessionStorage.getItem('mc_gcr') || 'null'); cameFromCheckout = !!(gcr && order && String(gcr.order) === String(order)); } catch(e){}
+if(order && cameFromCheckout && typeof gtag === 'function'){
   var firedKey = 'mc_ga_purchase_fired_' + order;
   var alreadyFired = false;
   try { alreadyFired = sessionStorage.getItem(firedKey) === '1'; } catch(e){}
