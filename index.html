@@ -491,7 +491,7 @@ var visibleCount = PAGE_SIZE;
 
 var NAV_ROOMS = [
   {key:'bedroom',  label:'Bedroom',     cats:['dresser','chest','nightstand','bookcase','bed','wardrobe']},
-  {key:'living',   label:'Living Room', cats:['sofa','sectional','armchair','sideboard','tv','chair','accentchair','bench','coffeetable','sidetable']},
+  {key:'living',   label:'Living Room', cats:['sofa','sectional','armchair','ottoman','sideboard','tv','chair','accentchair','bench','coffeetable','sidetable']},
   {key:'entryway', label:'Entryway',    cats:['shoe','sidetable','bench']},
   {key:'dining',   label:'Dining',      cats:['sideboard','bar','diningtable','chair']},
   {key:'kitchen',  label:'Kitchen',     cats:['island','bar','sideboard','chair']},
@@ -1300,7 +1300,7 @@ function onSearch(){
   }
 }
 function scrollToProducts(){ setTimeout(function(){ var el=document.getElementById('products'); if(el)el.scrollIntoView({behavior:'smooth'}); },50); }
-function getCatLabel(cat){ var map={dresser:'Dresser',chest:'Chest',sideboard:'Sideboard',tv:'TV Console',coffeetable:'Coffee Table',diningtable:'Dining Table',sidetable:'Side Table',nightstand:'Nightstand',shoe:'Shoe Storage',bookcase:'Bookcase',desk:'Desk',chair:'Chair',accentchair:'Accent Chair',sofa:'Sofa',sectional:'Sectional',armchair:'Lounge & Armchairs',bar:'Bar',bed:'Bed',bench:'Bench',vanity:'Vanity',outdoor:'Outdoor Furniture',island:'Kitchen Island',wardrobe:'Wardrobe',other:'Other'}; return map[cat]||cat; }
+function getCatLabel(cat){ var map={dresser:'Dresser',chest:'Chest',sideboard:'Sideboard',tv:'TV Console',coffeetable:'Coffee Table',diningtable:'Dining Table',sidetable:'Side Table',nightstand:'Nightstand',shoe:'Shoe Storage',bookcase:'Bookcase',desk:'Desk',chair:'Chair',accentchair:'Accent Chair',sofa:'Sofa',sectional:'Sectional',armchair:'Lounge & Armchairs',bar:'Bar',bed:'Bed',bench:'Bench',ottoman:'Ottoman',vanity:'Vanity',outdoor:'Outdoor Furniture',island:'Kitchen Island',wardrobe:'Wardrobe',other:'Other'}; return map[cat]||cat; }
 function productUrl(p){ return (p && p.slug) ? ('/products/' + p.slug) : ('product-detail.html?id=' + (p ? p.id : '')); }
 function openProduct(id){
   var p = allProducts.find(function(x){ return String(x.id)===String(id); });
