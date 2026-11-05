@@ -8,7 +8,7 @@
 const SB = 'https://slaffkwfwmudvernzjua.supabase.co/rest/v1/products';
 const KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsYWZma3dmd211ZHZlcm56anVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMzU4MDksImV4cCI6MjA5MTYxMTgwOX0.BEz8_GNKPTQB90LJBJTZFyJYFF-9ypdfbEsLAfEESqY';
 const SITE = 'https://mastercove.com';
-const CAT_LABELS = { dresser: 'Dressers', chest: 'Chests', sideboard: 'Sideboards', tv: 'TV Consoles', coffeetable: 'Coffee Tables', diningtable: 'Dining Tables', sidetable: 'Side Tables', nightstand: 'Nightstands', shoe: 'Shoe Storage', bookcase: 'Bookcases', desk: 'Desks', chair: 'Chairs', accentchair: 'Accent Chairs', sofa: 'Sofas', sectional: 'Sectionals', armchair: 'Lounge & Armchairs', bar: 'Bars', bed: 'Beds', bench: 'Benches', vanity: 'Vanities', outdoor: 'Outdoor Furniture', island: 'Kitchen Islands', wardrobe: 'Wardrobes' };
+const CAT_LABELS = { dresser: 'Dressers', chest: 'Chests', sideboard: 'Sideboards', tv: 'TV Consoles', coffeetable: 'Coffee Tables', diningtable: 'Dining Tables', sidetable: 'Side Tables', nightstand: 'Nightstands', shoe: 'Shoe Storage', bookcase: 'Bookcases', desk: 'Desks', chair: 'Chairs', accentchair: 'Accent Chairs', sofa: 'Sofas', sectional: 'Sectionals', armchair: 'Lounge & Armchairs', bar: 'Bars', bed: 'Beds', bench: 'Benches', ottoman: 'Ottomans', vanity: 'Vanities', outdoor: 'Outdoor Furniture', island: 'Kitchen Islands', wardrobe: 'Wardrobes' };
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const objs = (a) => (Array.isArray(a) ? a : []).filter((x) => x && typeof x === 'object');
