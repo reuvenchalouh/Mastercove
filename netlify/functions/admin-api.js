@@ -30,7 +30,17 @@ exports.handler = async function(event) {
     if (action === 'login') return json(200, { success: true });
 
     if (action === 'products_list') {
-      const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
+      // One product (body.id), or one page (body.limit / body.offset). Netlify can't send back more
+      // than 6 MB at once, and the whole catalog is bigger than that, so the admin loads it in pages.
+      let q = supabase.from('products').select('*');
+      if (body.id !== undefined && body.id !== null) q = q.eq('id', body.id);
+      else {
+        q = q.order('created_at', { ascending: false }).order('id', { ascending: false });
+        const limit = Math.min(Math.max(parseInt(body.limit, 10) || 200, 1), 400);
+        const offset = Math.max(parseInt(body.offset, 10) || 0, 0);
+        q = q.range(offset, offset + limit - 1);
+      }
+      const { data, error } = await q;
       if (error) throw error;
       return json(200, { data: data || [] });
     }
