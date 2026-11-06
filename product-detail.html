@@ -852,7 +852,7 @@ function renderProduct(p){
     }); // keep the order set in admin (the first finish is what the page opens on)
 
     var fgrid=document.getElementById('finish-grid');
-    if(fins.length===1){
+    if(fins.length===1&&isPlaceholderFinish(fins[0])){
       document.getElementById('finish-label-row').style.display='none';
       fgrid.style.display='none';
     } else {
@@ -1147,6 +1147,10 @@ function renderTopSizeMode(topSizes,fallbackImg){
   if(first){selectTopSize(grid.querySelectorAll('.sz-opt')[sizes.indexOf(first)],first,fallbackImg);}
 }
 
+function isPlaceholderFinish(f){
+  var n=String((f&&f.name)||'').trim().toLowerCase();
+  return !n||n==='fabric only'||n==='default'||n==='standard';
+}
 function renderDescFeatures(desc,features){
   var flLeft=document.getElementById('pdp-features-list-left');
   var featWrap=document.getElementById('pdp-left-features');
@@ -1190,7 +1194,9 @@ function selectTopSize(el,sz,fallbackImg){
   var finGrid=document.getElementById('top-size-finish-grid');
   finGrid.innerHTML='';
   var finishes=sz.finishes||[];
-  if(finishes.length===1){
+  // A single finish is still shown when it's a real wood/frame color (e.g. "Weathered Gray Teak"),
+  // so shoppers can see what they're getting. Only the "Fabric Only" placeholder stays hidden.
+  if(finishes.length===1&&isPlaceholderFinish(finishes[0])){
     selectTopSizeFinish(null,finishes[0]);
     finRow.style.display='none';
   } else if(finishes.length){
