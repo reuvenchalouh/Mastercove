@@ -3,6 +3,8 @@
 // Checks every Modway variant your products link to in one run, marks options in/out of stock,
 // logs the run (table stock_check_runs) and emails a summary. Owner locks (table stock_locks,
 // key "mw:<variant id>") always win. Variants Modway now marks "Closeout" are listed in the email.
+// Each option remembers when it went out of stock (outSince). After REMOVE_AFTER_DAYS out of stock
+// it is removed from the listing (copy kept in table removed_options).
 const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 const { Resend } = require('resend');
@@ -31,6 +33,9 @@ const MAX_FAILURE_RATE = 0.6; // pages that fail are simply skipped and rechecke
 // or "Ships via FedEx" on the full product page, only while a color is in stock.
 const SHIP_LOOKUPS_PER_RUN = 25;  // new / unknown / old products looked up per run
 const SHIP_REFRESH_DAYS = 30;     // re-confirm each product's shipping method about once a month
+// An option that has been out of stock this long (and has no restock date coming) is taken off
+// its listing. A copy is saved in the removed_options table so it can be put back.
+const REMOVE_AFTER_DAYS = 180;
 // ────────────────────────────────────────────────────────────
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -207,23 +212,57 @@ function escapeHtml(s) {
   return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-async function emailOwner(wentOut, cameBack, failed, closeouts) {
-  closeouts = closeouts || [];
-  if (!wentOut.length && !cameBack.length && !closeouts.length) return;
+// Takes options that have been out of stock for REMOVE_AFTER_DAYS off a product.
+// A finish whose fabrics/sizes are all removed goes too, and so does a size whose finishes are all removed.
+// Never empties a whole listing: that one is reported for the owner to decide.
+function pruneStale(p, staleSet) {
+  const keepLeaf = (x) => !(x && staleSet.has(x));
+  const pruneFinish = (f) => {
+    if (!f || typeof f !== 'object') return f;
+    if (staleSet.has(f)) return null;
+    for (const k of ['fabrics', 'sizes']) {
+      if (Array.isArray(f[k]) && f[k].length) {
+        const kept = f[k].filter(keepLeaf);
+        if (!kept.length) return null;
+        f[k] = kept;
+      }
+    }
+    return f;
+  };
+  if (Array.isArray(p.finishes)) p.finishes = p.finishes.map(pruneFinish).filter(Boolean);
+  if (Array.isArray(p.top_sizes)) {
+    p.top_sizes = p.top_sizes.map(s => {
+      if (!s || typeof s !== 'object') return s;
+      if (staleSet.has(s)) return null;
+      if (Array.isArray(s.finishes) && s.finishes.length) {
+        const kept = s.finishes.map(pruneFinish).filter(Boolean);
+        if (!kept.length) return null;
+        s.finishes = kept;
+      }
+      return s;
+    }).filter(Boolean);
+  }
+}
+
+async function emailOwner(wentOut, cameBack, failed, closeouts, removed, review) {
+  closeouts = closeouts || []; removed = removed || []; review = review || [];
+  if (!wentOut.length && !cameBack.length && !closeouts.length && !removed.length && !review.length) return;
   const rows = (list) => list.map(c =>
     `<li style="margin:0 0 6px;">${escapeHtml(c.product)} — <b>${escapeHtml(c.label || 'default')}</b>${c.why ? ` <span style="color:#A8A09A;">(${escapeHtml(c.why)})</span>` : ''}</li>`).join('');
   const html = `<div style="font-family:Arial,sans-serif;font-size:14px;color:#1C1A17;max-width:600px;">
     <h2 style="font-family:Georgia,serif;font-weight:400;">Modway stock sync</h2>
     ${wentOut.length ? `<p><b>Marked OUT of stock (${wentOut.length}):</b></p><ul>${rows(wentOut)}</ul>` : ''}
     ${cameBack.length ? `<p><b>Back IN stock (${cameBack.length}):</b></p><ul>${rows(cameBack)}</ul>` : ''}
-    ${closeouts.length ? `<p><b>Now marked CLOSEOUT at Modway (${closeouts.length}):</b> these won't be restocked once they sell out. Consider removing them.</p><ul>${rows(closeouts)}</ul>` : ''}
+    ${closeouts.length ? `<p><b>Now marked CLOSEOUT at Modway (${closeouts.length}):</b> they stay on your site while Modway has stock, and come off automatically after ${Math.round(REMOVE_AFTER_DAYS / 30)} months out of stock.</p><ul>${rows(closeouts)}</ul>` : ''}
+    ${removed.length ? `<p><b>Removed after ${Math.round(REMOVE_AFTER_DAYS / 30)}+ months out of stock (${removed.length}):</b> a copy is saved in the removed_options table if you want one back.</p><ul>${rows(removed)}</ul>` : ''}
+    ${review.length ? `<p><b>Whole listing out of stock ${Math.round(REMOVE_AFTER_DAYS / 30)}+ months (${review.length}):</b> left on the site for you to decide (delete or keep).</p><ul>${rows(review)}</ul>` : ''}
     ${failed ? `<p style="color:#A8A09A;">${failed} option(s) couldn't be checked today and were left unchanged.</p>` : ''}
   </div>`;
   try {
     await resend.emails.send({
       from: 'Modway Stock Update <orders@mastercove.com>',
       to: OWNER_EMAIL,
-      subject: `Modway stock: ${wentOut.length} out, ${cameBack.length} back in` + (closeouts.length ? `, ${closeouts.length} closeout` : ''),
+      subject: `Modway stock: ${wentOut.length} out, ${cameBack.length} back in` + (closeouts.length ? `, ${closeouts.length} closeout` : '') + (removed.length ? `, ${removed.length} removed` : ''),
       html
     });
   } catch (e) { console.error('Summary email failed:', e.message); }
@@ -375,6 +414,7 @@ async function runSync() {
   // Apply results
   const changed = new Map();
   const wentOut = [], cameBack = [], closeouts = [];
+  const today = new Date().toISOString().slice(0, 10);
   let unchecked = 0;
   for (const o of options) {
     const key = o.handle + '|' + o.variant;
@@ -407,6 +447,44 @@ async function runSync() {
       changed.set(o.product.id, o.product);
       (decision.out ? wentOut : cameBack).push({ product: o.product.name, label: o.label, why: decision.why });
     }
+    // Remember the day it went out of stock (cleared when it comes back)
+    if (decision.out && !o.obj.outSince) { o.obj.outSince = today; changed.set(o.product.id, o.product); }
+    if (!decision.out && o.obj.outSince) { delete o.obj.outSince; changed.set(o.product.id, o.product); }
+  }
+
+  // Take off options that have been out of stock for REMOVE_AFTER_DAYS with no restock date coming
+  const removed = [], review = [];
+  const cutoff = new Date(Date.now() - REMOVE_AFTER_DAYS * DAY).toISOString().slice(0, 10);
+  const staleByProduct = new Map();
+  for (const o of options) {
+    if (o.variant && (o.variant in locks)) continue;        // owner decides locked ones
+    const ob = o.obj;
+    if (ob.outOfStock !== true || !ob.outSince || ob.outSince > cutoff) continue;
+    if (ob.restock && ob.restock >= today) continue;         // Modway has a restock date coming
+    if (!staleByProduct.has(o.product.id)) staleByProduct.set(o.product.id, { product: o.product, list: [] });
+    staleByProduct.get(o.product.id).list.push(o);
+  }
+  for (const { product: p, list } of staleByProduct.values()) {
+    const before = JSON.stringify({ f: p.finishes, t: p.top_sizes });
+    const trial = JSON.parse(before);
+    const all = collectOptions(p);
+    const staleIdx = new Set(list.map(o => all.findIndex(x => x.obj === o.obj)));
+    const trialOpts = collectOptions({ finishes: trial.f, top_sizes: trial.t });
+    const tp = { finishes: trial.f, top_sizes: trial.t };
+    pruneStale(tp, new Set(trialOpts.filter((_, i) => staleIdx.has(i)).map(x => x.obj)));
+    if (!collectOptions(tp).length) {                       // would empty the whole listing
+      review.push({ product: p.name, label: 'all options', why: 'out of stock since ' + list.map(o => o.obj.outSince).sort()[0] });
+      continue;
+    }
+    const rows = list.map(o => ({
+      product_id: p.id, product_name: p.name, label: o.label,
+      supplier_pid: 'mw:' + o.variant, out_since: o.obj.outSince, data: o.obj
+    }));
+    const { error: arcErr } = await supabase.from('removed_options').insert(rows);
+    if (arcErr) { console.error('Archive failed, not removing from', p.id, arcErr.message); continue; }
+    pruneStale(p, new Set(list.map(o => o.obj)));
+    changed.set(p.id, p);
+    for (const o of list) removed.push({ product: p.name, label: o.label, why: 'out of stock since ' + o.obj.outSince });
   }
 
   for (const p of changed.values()) {
@@ -416,8 +494,8 @@ async function runSync() {
     if (upErr) console.error('Update failed for', p.id, upErr.message);
   }
 
-  await emailOwner(wentOut, cameBack, unchecked, closeouts);
-  const summary = `Checked ${total} of ${sliceKeys.length} Modway variants (${failed} failed). ${wentOut.length} marked out, ${cameBack.length} back in, ${closeouts.length} closeout, ${changed.size} products updated.`;
+  await emailOwner(wentOut, cameBack, unchecked, closeouts, removed, review);
+  const summary = `Checked ${total} of ${sliceKeys.length} Modway variants (${failed} failed). ${wentOut.length} marked out, ${cameBack.length} back in, ${closeouts.length} closeout, ${removed.length} removed (out ${REMOVE_AFTER_DAYS}+ days), ${changed.size} products updated.`;
   console.log(summary);
-  return { statusCode: 200, body: summary, details: { errors: errorTypes, wentOut, cameBack, closeouts } };
+  return { statusCode: 200, body: summary, details: { errors: errorTypes, wentOut, cameBack, closeouts, removed, review } };
 }
