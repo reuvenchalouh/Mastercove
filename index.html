@@ -9,18 +9,30 @@
 <link rel="manifest" href="/site.webmanifest">
 <meta name="theme-color" content="#232531">
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Master Cove — Furniture Built to Last</title>
+<title>Master Cove | Online Furniture Store — Real Wood, Free Shipping</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
-<meta name="description" content="Master Cove — Quality furniture built to last, delivered to your door. Shop sofas, sectionals, dressers, sideboards, beds and more. Free shipping on every order."/>
+<meta name="description" content="Shop quality furniture online at Master Cove: real wood sideboards, dressers, beds, dining chairs, kitchen islands and sofas. Free shipping on every order and 30-day returns."/>
 <meta name="robots" content="index, follow"/>
-<meta property="og:title" content="Master Cove — Furniture Built to Last"/>
+<meta property="og:title" content="Master Cove | Online Furniture Store — Real Wood, Free Shipping"/>
 <meta property="og:description" content="Shop quality furniture, from sofas to solid wood. Free shipping on every order, 30-day returns."/>
 <meta property="og:image" content="https://slaffkwfwmudvernzjua.supabase.co/storage/v1/object/public/product-images/New%20wallpaper.jpeg"/>
 <meta property="og:site_name" content="Master Cove"/>
 <meta name="twitter:card" content="summary_large_image"/>
 <meta property="og:url" content="https://mastercove.com"/>
 <meta property="og:type" content="website"/>
-<link rel="canonical" href="https://mastercove.com"/>
+<link rel="canonical" href="https://mastercove.com/"/>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@graph":[
+ {"@type":"OnlineStore","@id":"https://mastercove.com/#store","name":"Master Cove","legalName":"Master Cove LLC","url":"https://mastercove.com/",
+  "logo":"https://slaffkwfwmudvernzjua.supabase.co/storage/v1/object/public/product-images/New%20wallpaper.jpeg",
+  "description":"Online furniture store for real wood and upholstered furniture: sideboards, dressers, beds, dining chairs, kitchen islands, sofas and more, with free shipping on every order.",
+  "email":"mastercovestore@gmail.com","telephone":"+1-347-206-0372",
+  "address":{"@type":"PostalAddress","addressLocality":"Brooklyn","addressRegion":"NY","addressCountry":"US"},
+  "areaServed":"US",
+  "sameAs":["https://www.instagram.com/mastercovestore/","https://www.pinterest.com/mastercovestore"]},
+ {"@type":"WebSite","@id":"https://mastercove.com/#website","name":"Master Cove","url":"https://mastercove.com/","publisher":{"@id":"https://mastercove.com/#store"}}
+]}
+</script>
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script>
 var _sb = null;
@@ -261,6 +273,20 @@ footer{background:var(--ink);color:rgba(255,255,255,0.6);padding:48px 0 24px;}
 @media(max-width:900px){.header-trust{display:none;}.room-grid{grid-template-columns:repeat(3,1fr);}.foot-grid{grid-template-columns:1fr 1fr;}}
 @media(max-width:600px){.room-grid{grid-template-columns:repeat(2,1fr);}.prod-grid{grid-template-columns:1fr;}.header-inner{padding:0 12px;gap:8px;}.main{padding:0 16px;}.foot-grid{grid-template-columns:1fr;}.logo img{height:32px;}.mobile-menu-btn{display:flex;order:1;}.header-trust{display:none;}.search-wrap{display:none;}.mobile-search-btn{display:flex;order:2;}.icon-btn span{display:none;}.cart-btn{padding:8px;order:5;}.cart-btn-text{display:none;}.cart-count-badge{display:flex;align-items:center;justify-content:center;position:absolute;top:2px;right:2px;background:var(--maple);color:var(--ink);font-size:9px;font-weight:700;width:15px;height:15px;border-radius:50%;line-height:1;}.drawer{width:92vw;max-width:380px;}.cat-strip{display:none;}.header-right{display:contents;}.logo{order:3;flex:1;justify-content:center;}.wishlist-btn{order:4;}}
 .why-mc{padding:40px 0 8px;}
+/* Homepage intro (H1) and "about shopping with us" text: real, readable text for customers and Google */
+.home-intro{text-align:center;max-width:860px;margin:0 auto;padding:4px 0 40px;}
+.home-eyebrow{font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:var(--walnut);font-weight:500;}
+.home-intro h1{font-family:'Playfair Display',serif;font-size:40px;font-weight:400;line-height:1.15;margin:10px 0 14px;}
+.home-intro h1 em{color:var(--walnut);font-style:italic;}
+.home-intro p{font-size:14.5px;color:var(--slate);line-height:1.75;font-weight:300;max-width:700px;margin:0 auto;}
+.home-cats{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:22px;}
+.home-cats a{border:1px solid var(--border);background:var(--white);padding:8px 15px;border-radius:999px;font-size:12.5px;color:var(--ink);transition:border-color .15s,color .15s;}
+.home-cats a:hover{border-color:var(--walnut);color:var(--walnut);}
+.home-about{max-width:860px;margin:40px auto 0;padding-top:32px;border-top:1px solid var(--border);}
+.home-about h2{font-family:'Playfair Display',serif;font-size:22px;font-weight:400;margin-bottom:12px;text-align:center;}
+.home-about p{font-size:13.5px;color:var(--slate);line-height:1.8;font-weight:300;margin-bottom:12px;text-align:center;}
+.home-about a{color:var(--walnut);border-bottom:1px solid var(--maple);}
+@media(max-width:600px){.home-intro{padding:0 0 28px;}.home-intro h1{font-size:28px;}.home-intro p{font-size:13.5px;}.home-cats a{font-size:12px;padding:7px 12px;}.home-about h2{font-size:20px;}}
 .why-mc-head{text-align:center;margin-bottom:26px;}
 .why-mc-head .sec-title{font-size:30px;}
 .why-mc-head p{font-size:13.5px;color:var(--slate);margin-top:8px;font-weight:300;max-width:620px;margin-left:auto;margin-right:auto;line-height:1.7;}
@@ -333,6 +359,29 @@ footer{background:var(--ink);color:rgba(255,255,255,0.6);padding:48px 0 24px;}
 
 <div class="main">
   <div class="section" id="new-arrivals-section">
+    <div class="home-intro">
+      <div class="home-eyebrow">Online Furniture Store &middot; Free Shipping</div>
+      <h1>Quality Furniture Online, <em>Built to Last</em></h1>
+      <p>Master Cove is an online furniture store for real wood and upholstered pieces: sideboards, dressers, beds, dining chairs, kitchen islands, sofas and more. Every order ships free to your door, with 30-day returns and real people to answer your questions.</p>
+      <nav class="home-cats" aria-label="Shop by category">
+        <a href="/?cat=sofa">Sofas</a>
+        <a href="/?cat=sectional">Sectionals</a>
+        <a href="/?cat=bed">Beds</a>
+        <a href="/?cat=dresser">Dressers</a>
+        <a href="/?cat=nightstand">Nightstands</a>
+        <a href="/?cat=chair">Dining Chairs &amp; Stools</a>
+        <a href="/?cat=diningtable">Dining Tables</a>
+        <a href="/?cat=sideboard">Sideboards</a>
+        <a href="/?cat=island">Kitchen Islands</a>
+        <a href="/?cat=coffeetable">Coffee Tables</a>
+        <a href="/?cat=desk">Desks</a>
+        <a href="/?cat=vanity">Bathroom Vanities</a>
+      </nav>
+    </div>
+    <script>
+      // Category, room or search links skip the homepage intro (the product list is shown instead)
+      (function(){ var q = new URLSearchParams(location.search); if (q.get('cat') || q.get('room') || q.get('search')) { var s = document.getElementById('new-arrivals-section'); if (s) s.style.display = 'none'; } })();
+    </script>
     <div class="sec-head">
       <div>
         <div class="sec-title">New <em>Arrivals</em></div>
@@ -408,6 +457,11 @@ footer{background:var(--ink);color:rgba(255,255,255,0.6);padding:48px 0 24px;}
         <h4>Real People, Real Answers</h4>
         <p>Questions before or after you buy? Reach us at <a href="mailto:Mastercovestore@gmail.com">Mastercovestore@gmail.com</a> or <a href="tel:+13472060372">(347) 206-0372</a>.</p>
       </div>
+    </div>
+    <div class="home-about">
+      <h2>Shopping for Furniture Online at Master Cove</h2>
+      <p>Master Cove is a small, Brooklyn-based online furniture store focused on pieces that are made to last. Our collection pairs real woods like oak, walnut, elm, ash and rubberwood with upholstered sofas, beds and dining chairs in performance velvet, bouclé, chenille and vegan leather.</p>
+      <p>Shop by room: <a href="/?room=bedroom">bedroom</a>, <a href="/?room=living">living room</a>, <a href="/?room=dining">dining room</a>, <a href="/?room=kitchen">kitchen</a>, <a href="/?room=bathroom">bathroom</a> and <a href="/?room=office">home office</a>. Or explore our <a href="/collections">furniture collections</a> of coordinated pieces designed to work together. Every product page lists real materials and dimensions, every order ships free with tracking, and you have 30 days to return.</p>
     </div>
   </div>
 </div>
