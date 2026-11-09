@@ -4,6 +4,8 @@
 // real product names, photos, prices and links on the homepage instead of an empty grid.
 // If anything goes wrong the normal page is sent unchanged.
 
+import { CAT_SLUG, ROOM_SLUG } from './lib/category-pages.js';
+
 const SB = 'https://slaffkwfwmudvernzjua.supabase.co/rest/v1/products';
 const KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsYWZma3dmd211ZHZlcm56anVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMzU4MDksImV4cCI6MjA5MTYxMTgwOX0.BEz8_GNKPTQB90LJBJTZFyJYFF-9ypdfbEsLAfEESqY';
 const COUNT = 9; // same number of cards the page shows in New Arrivals
@@ -39,6 +41,15 @@ function card(p) {
 }
 
 export default async (request, context) => {
+  // Old category links (/?cat=sofa, /?room=bedroom) move to the category pages (/shop/sofas, ...)
+  const url = new URL(request.url);
+  const qc = url.searchParams.get('cat'), qr = url.searchParams.get('room');
+  const to = !url.searchParams.get('search') && ((qc && CAT_SLUG[qc]) || (!qc && qr && ROOM_SLUG[qr]));
+  if (to) {
+    const rest = new URLSearchParams(url.search); rest.delete('cat'); rest.delete('room');
+    const qs = rest.toString();
+    return Response.redirect(new URL('/shop/' + to + (qs ? '?' + qs : ''), url), 301);
+  }
   const res = await context.next();
   const type = res.headers.get('content-type') || '';
   if (res.status !== 200 || !type.includes('text/html')) return res;
