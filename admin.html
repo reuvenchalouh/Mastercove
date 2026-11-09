@@ -551,7 +551,7 @@ async function adminUpload(path, file){
     <div class="sy-status" id="sy-status"></div>
     <div class="db-panel" id="sy-attn-panel" style="margin-bottom:16px;display:none;">
       <h3>Needs your attention</h3>
-      <p class="db-note">Supplier links that stopped working, and listings sold out for 6+ months. These were taken off sale automatically — fix the link or decide what to do.</p>
+      <p class="db-note">Only things you can fix: a whole listing sold out for 6+ months (delete or keep it), or an Alpine option whose SKU is missing or wrong, so its stock can't be checked.</p>
       <div id="sy-attn"></div>
     </div>
     <div class="db-sec">Day by day</div>
@@ -2521,8 +2521,9 @@ async function loadSync(){
   if(r.error){document.getElementById('sy-days').innerHTML='<div class="db-empty">Could not load: '+dbEsc(r.error.message)+'</div>';return;}
   syData=r.data||{};renderSync();
 }
-// A link that now opens the wrong product, or a SKU the supplier no longer lists (sold-out pages are normal, not a problem)
-function syLinkProblem(c){return /different .* product|page (is )?gone|not in .*feed|HTTP 404/i.test(c.why||'');}
+// Only things the owner can fix: an Alpine SKU missing from the feed, or an option with no SKU.
+// (HerNest removes or changes the page of a sold-out product, which is normal: not listed here.)
+function syLinkProblem(c){return /not in .*feed|No SKU on this option/i.test(c.why||'');}
 function syDayKey(t){var d=new Date(t);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function syAgo(t){var m=Math.round((Date.now()-new Date(t))/60000);if(m<60)return m+' min ago';var h=Math.round(m/60);if(h<36)return h+' hour'+(h>1?'s':'')+' ago';return Math.round(h/24)+' days ago';}
 function renderSync(){
@@ -2545,7 +2546,7 @@ function renderSync(){
     var m=s.match(/Checked (\d+) of (\d+)[^(]*\((\d+) failed\)/)||s.match(/(\d+) HerNest pages, (\d+) checked, (\d+) failed/)||s.match(/(\d+) of (\d+) SKUs?[^,]*, (\d+)/);
     var cov='';
     if(m&&sup==='modway')cov=dbNum(m[1])+' of '+dbNum(m[2])+' options checked ('+m[3]+' couldn\'t load — they\'re checked again next time)';
-    else if(sup==='alpine'&&(m=s.match(/Checked (\d+) of (\d+) Alpine options/)))cov=dbNum(m[1])+' of '+dbNum(m[2])+' Alpine options checked against today\'s inventory file';
+    else if(sup==='alpine'&&(m=s.match(/Checked (\d+) of (\d+) Alpine options/))){var sk=s.match(/Alpine: (\d+) SKUs/),so=s.match(/Origins: (\d+) SKUs/);var got='Inventory file received'+(sk?' ('+dbNum(sk[1])+' Alpine'+(so?' + '+dbNum(so[1])+' Origins':'')+' SKUs)':'');cov=+m[2]?got+' · '+dbNum(m[1])+' of '+dbNum(m[2])+' Alpine options checked':got+' · no Alpine products on the site yet';}
     else if(m&&sup==='hernest')cov=dbNum(m[2])+' of '+dbNum(m[1])+' product pages checked'+(+m[3]?' ('+m[3]+' failed)':'');
     else cov=dbEsc(s.slice(0,160));
     return '<div class="sy-sup"><h4><span class="sy-dot '+dot+'"></span>'+SY_NAMES[sup]+'</h4><p>'+(note?'<b style="color:var(--red)">'+note+'</b>':'')+'Last check '+syAgo(last.started_at)+' · '+SY_SCHEDULE[sup]+'<br>'+cov+'</p></div>';
