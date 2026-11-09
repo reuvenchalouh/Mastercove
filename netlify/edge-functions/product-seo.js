@@ -5,6 +5,9 @@
 // photo, price and stock status instead of "Product — Master Cove" and "Loading...".
 // If anything goes wrong (database slow, etc.) the normal page is sent unchanged.
 
+import { CAT_SLUG } from './lib/category-pages.js';
+// Breadcrumb link to the product's category page (mastercove.com/shop/...)
+const catHref = (c) => (CAT_SLUG[c] ? `/shop/${CAT_SLUG[c]}` : (c ? `/?cat=${encodeURIComponent(c)}` : '/'));
 const SB = 'https://slaffkwfwmudvernzjua.supabase.co/rest/v1/products';
 const KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsYWZma3dmd211ZHZlcm56anVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMzU4MDksImV4cCI6MjA5MTYxMTgwOX0.BEz8_GNKPTQB90LJBJTZFyJYFF-9ypdfbEsLAfEESqY';
 const SITE = 'https://mastercove.com';
@@ -161,7 +164,7 @@ export default async (request, context) => {
 
   // <body>: name, category, price, stock, description (the page's own script then takes over as usual)
   html = swap(html, '<span id="bc-name">Loading...</span>', `<span id="bc-name">${esc(name)}</span>`);
-  html = swap(html, '<a href="index.html" id="bc-cat">Shop</a>', `<a href="index.html?cat=${esc(encodeURIComponent(p.cat || ''))}" id="bc-cat">${esc(cat)}</a>`);
+  html = swap(html, "<a href='/' id='bc-cat'>Shop</a>", `<a href="${esc(catHref(p.cat))}" id="bc-cat">${esc(cat)}</a>`);
   html = swap(html, '<h1 class="pdp-title" id="pdp-title">Loading...</h1>', `<h1 class="pdp-title" id="pdp-title">${esc(name)}</h1>`);
   if (price) html = html.replace(/(<span class="pdp-price" id="pdp-price">)(<\/span>)/, (_, a, b) => a + money(price) + b);
   if (!available) html = swap(html, '<div class="tmini" id="stock-mini"><span>✓</span> In Stock</div>', '<div class="tmini" id="stock-mini"><span>✕</span> Out of Stock</div>');
