@@ -52,6 +52,7 @@ var _sb = null;
   gtag('js', new Date());
   gtag('config', 'G-D8LM0CQB38');
 </script>
+<script src="/mc-track.js"></script>
 <!-- Meta Pixel Code -->
 <script>
 !function(f,b,e,v,n,t,s)
@@ -769,6 +770,7 @@ function jumpToCat(cat){
   document.getElementById('section-title').innerHTML = getCatLabel(cat)+' <em>Collection</em>';
   document.getElementById('section-sub').textContent = 'All '+getCatLabel(cat).toLowerCase()+' pieces in our collection';
   renderProducts(); closeMegaDropdown();
+  if(window.mcTrackCat) mcTrackCat(cat);
   window.scrollTo(0,0);
 }
 function jumpToRoom(room){
@@ -783,6 +785,7 @@ function jumpToRoom(room){
   document.getElementById('section-title').innerHTML = (labels[room]||room)+' <em>Furniture</em>';
   document.getElementById('section-sub').textContent = 'Curated pieces for your '+(labels[room]||room).toLowerCase();
   renderProducts();
+  if(window.mcTrackCat) mcTrackCat('room:'+room);
   window.scrollTo(0,0);
 }
 document.addEventListener('click', function(e){
@@ -1317,6 +1320,7 @@ function setCat(btn, cat) {
   document.getElementById('section-title').innerHTML = cat==='all' ? 'Shop <em>All Furniture</em>' : getCatLabel(cat)+' <em>Collection</em>';
   document.getElementById('section-sub').textContent = cat==='all' ? 'Browse our full collection of furniture, built to last' : 'Our latest arrivals — updated regularly';
   renderProducts(); scrollToProducts();
+  if(window.mcTrackCat) mcTrackCat(cat);
 }
 
 function filterByRoom(room) {
@@ -1328,6 +1332,7 @@ function filterByRoom(room) {
   document.getElementById('section-title').innerHTML = (labels[room]||room)+' <em>Furniture</em>';
   document.getElementById('section-sub').textContent = 'Curated pieces for your '+(labels[room]||room).toLowerCase();
   renderProducts(); scrollToProducts();
+  if(window.mcTrackCat) mcTrackCat('room:'+room);
 }
 
 function setSort(val){ currentSort = val; if(val==='random')allProducts=shuffle(allProducts); visibleCount = PAGE_SIZE; renderProducts(); }
