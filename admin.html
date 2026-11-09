@@ -574,9 +574,12 @@ async function adminUpload(path, file){
         <button class="dr-tab active" data-sw="all" onclick="swSetFilter('all')">All swatches <span id="sw-n-all"></span></button>
         <button class="dr-tab" data-sw="mix" onclick="swSetFilter('mix')">Different swatches <span id="sw-n-mix"></span></button>
       </div>
-      <div class="search-bar"><input id="sw-search" placeholder="Search a fabric or color…" oninput="renderSwatches()"/></div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <div class="search-bar"><input id="sw-search" placeholder="Search a fabric or color…" oninput="renderSwatches()"/></div>
+        <button class="go-btn" onclick="swAddOpen()">+ Add swatch</button>
+      </div>
     </div>
-    <p style="font-size:12px;color:var(--mist);margin:-4px 0 16px;">Every fabric color used on your products, grouped by fabric type. Click one to replace its swatch — the new picture goes on <b style="font-weight:500;color:var(--slate)">every product</b> that uses that fabric and color. <b style="color:#9A6A12;font-weight:500">Orange</b> = not all products use the same picture.</p>
+    <p style="font-size:12px;color:var(--mist);margin:-4px 0 16px;">Every fabric color, grouped by fabric type. <b style="font-weight:500;color:var(--slate)">Add swatch</b> saves a picture to the library — any product with that vendor, fabric type and color gets it automatically, now and whenever a new product is saved. Click a swatch to replace it everywhere. <b style="color:#9A6A12;font-weight:500">Orange</b> = not all products use the same picture.</p>
     <div id="sw-list"></div>
   </div>
   <div class="sw-modal-bg" id="sw-modal" onclick="if(event.target===this)swClose()"><div class="sw-modal" id="sw-modal-body"></div></div>
@@ -2497,7 +2500,65 @@ function swBuild(){
     e.main=real[0]||'';e.ph=!!e.pics['(placeholder)'];e.mix=real.length>1;
     e.products=Object.keys(e.uses.reduce(function(a,x){a[x.id]=1;return a;},{})).length;
   });
+  // Saved library swatches: their picture is the one products get, even before any product uses them
+  (swLib||[]).forEach(function(s){
+    var k=swKey(s.vendor,s.type,s.name);
+    if(!lib[k])lib[k]={key:k,vendor:s.vendor||'No vendor',type:s.type||'Other fabrics',name:s.name,uses:[],pics:{},products:0,ph:false,mix:false};
+    lib[k].lib=s;lib[k].main=s.url;
+  });
   return lib;
+}
+// Library swatches saved in the database (table swatch_library)
+var swLib=[],swLibLoaded=false;
+async function swLoadLib(){
+  try{var r=await adminDb({action:'swatch_lib_list'});if(!r.error){swLib=r.data||[];swLibLoaded=true;}}catch(e){}
+}
+async function swLibSave(vendor,type,name,url){
+  var r=await adminDb({action:'swatch_lib_save',swatch:{vendor:vendor,type:type,name:name,url:url}});
+  if(r.error){showToast('Library save failed: '+r.error.message,'error');return false;}
+  await swLoadLib();return true;
+}
+async function swUploadFile(file){
+  var fileName='swatch-'+Date.now()+'-'+Math.floor(Math.random()*9999)+'.'+(file.name.split('.').pop()||'jpg');
+  var res=await adminUpload(fileName,file);
+  if(res.error)throw new Error(res.error.message);
+  return _sb.storage.from('product-images').getPublicUrl(fileName).data.publicUrl;
+}
+// "+ Add swatch": vendor + fabric type + color + picture → library, then onto every matching product
+function swAddOpen(pre){
+  pre=pre||{};
+  var vendors={},types={};(products||[]).forEach(function(p){if(p.brand)vendors[String(p.brand).trim()]=1;swFabrics(p,function(b){if(b.type)types[String(b.type).trim()]=1;});});
+  var opt=function(o){return Object.keys(o).sort().map(function(x){return '<option value="'+dbEsc(x)+'">';}).join('');};
+  var inp='width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:2px;font-family:Outfit,sans-serif;font-size:13px;margin:4px 0 12px;';
+  var lbl='font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--walnut);font-weight:600;';
+  document.getElementById('sw-modal-body').innerHTML='<div style="display:flex;justify-content:space-between;align-items:start;"><h3>Add a swatch to the library</h3><button class="dr-btn" onclick="swClose()">Close</button></div>'
+    +'<p class="db-note" style="margin:4px 0 14px">Products from this vendor with the same fabric type and color get this picture automatically.</p>'
+    +'<div style="'+lbl+'">Vendor</div><input id="swa-vendor" list="swa-vendors" style="'+inp+'" value="'+dbEsc(pre.vendor||'')+'" placeholder="e.g. Modway"><datalist id="swa-vendors">'+opt(vendors)+'</datalist>'
+    +'<div style="'+lbl+'">Fabric type</div><input id="swa-type" list="swa-types" style="'+inp+'" value="'+dbEsc(pre.type||'')+'" placeholder="e.g. Bouclé, Performance Velvet"><datalist id="swa-types">'+opt(types)+'</datalist>'
+    +'<div style="'+lbl+'">Color name</div><input id="swa-name" style="'+inp+'" value="'+dbEsc(pre.name||'')+'" placeholder="e.g. Ivory">'
+    +'<div style="'+lbl+'">Swatch picture</div><input id="swa-file" type="file" accept="image/*" style="margin:6px 0 16px;font-size:12px;">'
+    +'<div><button class="go-btn" id="swa-save" onclick="swAddSave()">Save to library</button></div>';
+  document.getElementById('sw-modal').classList.add('open');
+}
+async function swAddSave(){
+  var v=document.getElementById('swa-vendor').value.trim(),t=document.getElementById('swa-type').value.trim(),n=document.getElementById('swa-name').value.trim(),f=document.getElementById('swa-file').files[0];
+  if(!v||!n){showToast('Vendor and color name are required','error');return;}
+  if(!f){showToast('Choose a swatch picture','error');return;}
+  if(!_sb){showToast('Not connected — please refresh','error');return;}
+  var btn=document.getElementById('swa-save');btn.disabled=true;btn.textContent='Saving…';
+  try{
+    var url=await swUploadFile(f);
+    if(!(await swLibSave(v,t,n,url))){btn.disabled=false;btn.textContent='Save to library';return;}
+    var n2=await swPutOnProducts(swKey(v,t,n),url);
+    showToast('Saved to library'+(n2?' and added to '+n2+' product'+(n2>1?'s':''):' — new products with this fabric will get it automatically'),'success');
+    swClose();renderSwatches();
+  }catch(e){showToast('Upload error: '+e.message,'error');btn.disabled=false;btn.textContent='Save to library';}
+}
+async function swLibDelete(id){
+  if(!confirm('Remove this swatch from the library? Products keep the picture they already have.'))return;
+  var r=await adminDb({action:'swatch_lib_delete',id:id});
+  if(r.error){showToast('Delete failed: '+r.error.message,'error');return;}
+  await swLoadLib();swClose();renderSwatches();showToast('Removed from library','success');
 }
 function swSetFilter(f){swFilter=f;renderSwatches();}
 function renderSwatches(){
@@ -2558,6 +2619,16 @@ async function swApply(u){
   var url=decodeURIComponent(u),key=swOpenKey;if(!key||!url)return;
   var e=swBuild()[key];
   if(!confirm('Use this swatch on all '+(e?e.products:'')+' '+(e?e.vendor+' ':'')+'products with '+(e?e.type+' · '+e.name:'this fabric')+'?'))return;
+  // Also make it the library picture, so future products with this fabric get it too
+  if(e&&e.vendor&&e.vendor!=='No vendor')await swLibSave(e.vendor,e.type==='Other fabrics'?'':e.type,e.name,url);
+  var n=await swPutOnProducts(key,url);
+  if(n===0)showToast('Already using this swatch everywhere','success');
+  else if(n>0)showToast('Swatch updated on '+n+' product'+(n>1?'s':''),'success');
+  renderSwatches();swOpen(encodeURIComponent(key));
+}
+// Writes one swatch onto every product option with this vendor + fabric type + color and saves them.
+// Returns how many products changed (-1 if a save failed).
+async function swPutOnProducts(key,url){
   var ids=[];
   products.forEach(function(p){var hit=false;swFabrics(p,function(b){if(swKey(p.brand,b.type,b.name)===key&&b.swatch!==url)hit=true;});if(hit)ids.push(p.id);});
   if(ids.length)showToast('Loading the latest version of '+ids.length+' product'+(ids.length>1?'s':'')+'…','success');
@@ -2570,17 +2641,16 @@ async function swApply(u){
     swFabrics(p,function(b){if(swKey(p.brand,b.type,b.name)===key&&b.swatch!==url){b.swatch=url;hit=true;}});
     if(hit)changed.push(p);
   });
-  if(!changed.length){showToast('Already using this swatch everywhere','success');return;}
+  if(!changed.length)return 0;
   showToast('Saving '+changed.length+' product'+(changed.length>1?'s':'')+'…','success');
   // Save in small groups (one big request can be too large)
   for(var i=0;i<changed.length;i+=15){
     var rows=changed.slice(i,i+15).map(productToRow);
     var r=await adminDb({action:'products_upsert',rows:rows});
-    if(r.error){showToast('Save failed: '+r.error.message+' — refresh and try again','error');return;}
+    if(r.error){showToast('Save failed: '+r.error.message+' — refresh and try again','error');return -1;}
     rows.forEach(function(row){try{_savedSnap[row.id]=JSON.stringify(row);}catch(err){}});
   }
-  showToast('Swatch updated on '+changed.length+' product'+(changed.length>1?'s':''),'success');
-  renderSwatches();swOpen(encodeURIComponent(key));
+  return changed.length;
 }
 
 /* ── DRAFTS TO REVIEW ── */
