@@ -64,6 +64,7 @@ body{font-family:'Outfit',sans-serif;background:#F0EBE3;color:var(--ink);font-si
 .sw-flag.mix{background:#C98A1B;}
 .sw-name{font-size:12.5px;font-weight:600;margin-top:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink);}
 .sw-uses{font-size:11px;color:var(--mist);}
+.sw-vendor{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--walnut);font-weight:600;margin-top:2px;}
 .sw-modal-bg{position:fixed;inset:0;background:rgba(28,26,23,.45);z-index:300;display:none;align-items:center;justify-content:center;padding:16px;}
 .sw-modal-bg.open{display:flex;}
 .sw-modal{background:var(--white);border-radius:8px;width:min(640px,100%);max-height:88vh;overflow:auto;padding:20px 22px;}
@@ -2472,7 +2473,8 @@ function renderDashVisitors(d,R){
 // Replacing a swatch here writes the same picture onto every product that uses that fabric + color.
 var swFilter='all', swOpenKey=null;
 function swIsPh(u){return !u||String(u).indexOf('data:image/svg')===0;}
-function swKey(type,name){return String(type||'').trim().toLowerCase()+'|'+String(name||'').trim().toLowerCase();}
+// Each supplier has its own swatches, so the same fabric name from two suppliers is kept separate
+function swKey(vendor,type,name){return String(vendor||'').trim().toLowerCase()+'|'+String(type||'').trim().toLowerCase()+'|'+String(name||'').trim().toLowerCase();}
 function swFabrics(p,fn){
   (p.finishes||[]).forEach(function(f){(f&&f.fabrics||[]).forEach(function(b){if(b&&b.name)fn(b);});});
   (p.topSizes||[]).forEach(function(s){(s&&s.finishes||[]).forEach(function(f){(f&&f.fabrics||[]).forEach(function(b){if(b&&b.name)fn(b);});});});
@@ -2482,8 +2484,8 @@ function swBuild(){
   (products||[]).forEach(function(p){
     if(p.cat==='vanity')return; // basin colors and "cabinet only" are not fabrics
     swFabrics(p,function(b){
-      var k=swKey(b.type,b.name);
-      if(!lib[k])lib[k]={key:k,type:String(b.type||'').trim()||'Other fabrics',name:String(b.name).trim(),uses:[],pics:{}};
+      var k=swKey(p.brand,b.type,b.name);
+      if(!lib[k])lib[k]={key:k,vendor:String(p.brand||'').trim()||'No vendor',type:String(b.type||'').trim()||'Other fabrics',name:String(b.name).trim(),uses:[],pics:{}};
       var e=lib[k];var u=swIsPh(b.swatch)?'':b.swatch;
       if(!e.uses.some(function(x){return x.id===p.id&&x.swatch===u;}))e.uses.push({id:p.id,name:p.name,swatch:u});
       var pk=u||'(placeholder)';e.pics[pk]=(e.pics[pk]||0)+1;
@@ -2511,11 +2513,11 @@ function renderSwatches(){
   var box=document.getElementById('sw-list');
   if(!types.length){box.innerHTML='<div class="db-panel"><div class="db-empty" style="text-align:center;padding:30px 0;">'+(swFilter==='ph'?'No gray placeholders — every fabric has a real swatch. 🎉':swFilter==='mix'?'Every fabric color uses one picture everywhere.':'No fabrics found.')+'</div></div>';return;}
   box.innerHTML=types.map(function(t){
-    var es=byType[t].sort(function(a,b){return a.name.localeCompare(b.name);});
+    var es=byType[t].sort(function(a,b){return a.name.localeCompare(b.name)||a.vendor.localeCompare(b.vendor);});
     return '<div class="sw-type"><h3>'+dbEsc(t)+'<small>'+es.length+' color'+(es.length>1?'s':'')+'</small></h3><div class="sw-grid">'+es.map(function(e){
       var img=e.main?'<div class="sw-img" style="background-image:url(\''+dbEsc(e.main)+'\')">':'<div class="sw-img ph">';
       var flag=e.mix?'<span class="sw-flag mix">'+Object.keys(e.pics).length+' pictures</span>':'';
-      return '<button class="sw-tile" onclick="swOpen(\''+encodeURIComponent(e.key)+'\')">'+img+flag+'</div><div class="sw-name" title="'+dbEsc(e.name)+'">'+dbEsc(e.name)+'</div><div class="sw-uses">'+e.products+' product'+(e.products>1?'s':'')+'</div></button>';
+      return '<button class="sw-tile" onclick="swOpen(\''+encodeURIComponent(e.key)+'\')">'+img+flag+'</div><div class="sw-name" title="'+dbEsc(e.name)+'">'+dbEsc(e.name)+'</div><div class="sw-uses">'+e.products+' product'+(e.products>1?'s':'')+'</div><div class="sw-vendor">'+dbEsc(e.vendor)+'</div></button>';
     }).join('')+'</div></div>';
   }).join('');
 }
@@ -2530,7 +2532,7 @@ function swOpen(k){
   var prods=e.uses.slice().sort(function(a,b){return a.name.localeCompare(b.name);}).map(function(x){
     return '<div class="sw-prod"><i'+(x.swatch?' style="background-image:url(\''+dbEsc(x.swatch)+'\')"':' style="background:repeating-linear-gradient(45deg,#E4DDD2,#E4DDD2 4px,#EDE7DE 4px,#EDE7DE 8px)"')+'></i>'+dbEsc(x.name)+'</div>';
   }).join('');
-  document.getElementById('sw-modal-body').innerHTML='<div style="display:flex;justify-content:space-between;align-items:start;gap:10px;"><div><h3>'+dbEsc(e.type)+' · '+dbEsc(e.name)+'</h3><div class="db-note" style="margin:2px 0 0">Used on '+e.products+' product'+(e.products>1?'s':'')+'</div></div><button class="dr-btn" onclick="swClose()">Close</button></div>'
+  document.getElementById('sw-modal-body').innerHTML='<div style="display:flex;justify-content:space-between;align-items:start;gap:10px;"><div><h3>'+dbEsc(e.type)+' · '+dbEsc(e.name)+'</h3><div class="db-note" style="margin:2px 0 0">'+dbEsc(e.vendor)+' · used on '+e.products+' product'+(e.products>1?'s':'')+'</div></div><button class="dr-btn" onclick="swClose()">Close</button></div>'
     +'<div class="sw-variants">'+vars+'</div>'
     +(e.mix||e.ph?'<p class="db-note" style="margin:0 0 10px">'+(e.ph?'Some products still show the gray placeholder. ':'')+(e.mix?'Products use different pictures for this color. ':'')+'Pick one with “Use everywhere”, or upload a new one.</p>':'')
     +'<label class="go-btn" style="cursor:pointer;">Upload new swatch for all '+e.products+' product'+(e.products>1?'s':'')+'<input type="file" accept="image/*" style="display:none" onchange="swUpload(this)"></label>'
@@ -2555,9 +2557,9 @@ async function swUpload(input){
 async function swApply(u){
   var url=decodeURIComponent(u),key=swOpenKey;if(!key||!url)return;
   var e=swBuild()[key];
-  if(!confirm('Use this swatch on all '+(e?e.products:'')+' products with '+(e?e.type+' · '+e.name:'this fabric')+'?'))return;
+  if(!confirm('Use this swatch on all '+(e?e.products:'')+' '+(e?e.vendor+' ':'')+'products with '+(e?e.type+' · '+e.name:'this fabric')+'?'))return;
   var ids=[];
-  products.forEach(function(p){var hit=false;swFabrics(p,function(b){if(swKey(b.type,b.name)===key&&b.swatch!==url)hit=true;});if(hit)ids.push(p.id);});
+  products.forEach(function(p){var hit=false;swFabrics(p,function(b){if(swKey(p.brand,b.type,b.name)===key&&b.swatch!==url)hit=true;});if(hit)ids.push(p.id);});
   if(ids.length)showToast('Loading the latest version of '+ids.length+' product'+(ids.length>1?'s':'')+'…','success');
   // Reload each product first, so stock changes made by the nightly supplier checks aren't overwritten
   for(var j=0;j<ids.length;j++){await refreshProductFromDb(ids[j]);}
@@ -2565,7 +2567,7 @@ async function swApply(u){
   products.forEach(function(p){
     if(ids.indexOf(p.id)<0)return;
     var hit=false;
-    swFabrics(p,function(b){if(swKey(b.type,b.name)===key&&b.swatch!==url){b.swatch=url;hit=true;}});
+    swFabrics(p,function(b){if(swKey(p.brand,b.type,b.name)===key&&b.swatch!==url){b.swatch=url;hit=true;}});
     if(hit)changed.push(p);
   });
   if(!changed.length){showToast('Already using this swatch everywhere','success');return;}
