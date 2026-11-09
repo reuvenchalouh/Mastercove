@@ -30,6 +30,8 @@ exports.handler = async function(event) {
       { loc: '/privacy.html', priority: '0.3', changefreq: 'yearly' },
       { loc: '/collections.html', priority: '0.7', changefreq: 'weekly' }
     ];
+    // Category and room pages (same list as netlify/edge-functions/lib/category-pages.js)
+    ['sofas', 'sectionals', 'accent-chairs', 'ottomans', 'coffee-tables', 'side-tables', 'tv-stands', 'sideboards-buffets', 'bar-cabinets', 'dining-tables', 'dining-chairs', 'kitchen-islands', 'beds', 'nightstands', 'dressers', 'chests-of-drawers', 'bookcases', 'desks', 'bathroom-vanities', 'benches', 'shoe-cabinets', 'living-room-furniture', 'bedroom-furniture', 'dining-room-furniture', 'kitchen-furniture', 'entryway-furniture', 'bathroom-furniture', 'home-office-furniture'].forEach(function(s) { staticPages.push({ loc: '/shop/' + s, priority: '0.8', changefreq: 'daily' }); });
 
     let urls = staticPages.map(function(p) {
       return '  <url>\n    <loc>' + baseUrl + p.loc + '</loc>\n    <lastmod>' + today + '</lastmod>\n    <changefreq>' + p.changefreq + '</changefreq>\n    <priority>' + p.priority + '</priority>\n  </url>';
