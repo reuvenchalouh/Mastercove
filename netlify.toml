@@ -26,6 +26,13 @@
   status = 301
   force = true
 
+# Category and room pages: /shop/sofas, /shop/bedroom-furniture, ... show the shop page,
+# filled in for that category by netlify/edge-functions/category-seo.js
+[[redirects]]
+  from = "/shop/*"
+  to = "/index.html"
+  status = 200
+
 # Readable product URLs: /products/orson-nightstand shows the product page
 [[redirects]]
   from = "/products/*"
