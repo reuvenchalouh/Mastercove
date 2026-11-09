@@ -308,13 +308,13 @@ src="https://www.facebook.com/tr?id=2156219968568427&ev=PageView&noscript=1"
   </div>
   <nav class="mc-roomnav">
     <a href='/'>All Furniture</a>
-    <a href='/?room=bedroom'>Bedroom</a>
-    <a href='/?room=living'>Living Room</a>
-    <a href='/?room=entryway'>Entryway</a>
-    <a href='/?room=dining'>Dining</a>
-    <a href='/?room=kitchen'>Kitchen</a>
-    <a href='/?room=bathroom'>Bathroom</a>
-    <a href='/?room=office'>Office</a>
+    <a href='/shop/bedroom-furniture'>Bedroom</a>
+    <a href='/shop/living-room-furniture'>Living Room</a>
+    <a href='/shop/entryway-furniture'>Entryway</a>
+    <a href='/shop/dining-room-furniture'>Dining</a>
+    <a href='/shop/kitchen-furniture'>Kitchen</a>
+    <a href='/shop/bathroom-furniture'>Bathroom</a>
+    <a href='/shop/home-office-furniture'>Office</a>
     <a href='/collections'>Collections</a>
   </nav>
 </header>
@@ -489,11 +489,11 @@ src="https://www.facebook.com/tr?id=2156219968568427&ev=PageView&noscript=1"
       <div class="foot-col">
         <h5>Shop</h5>
         <a href='/'>All Furniture</a>
-        <a href='/?room=bedroom'>Bedroom</a>
-        <a href='/?room=living'>Living Room</a>
-        <a href='/?room=entryway'>Entryway</a>
-        <a href='/?room=dining'>Dining</a>
-        <a href='/?room=bathroom'>Bathroom</a>
+        <a href='/shop/bedroom-furniture'>Bedroom</a>
+        <a href='/shop/living-room-furniture'>Living Room</a>
+        <a href='/shop/entryway-furniture'>Entryway</a>
+        <a href='/shop/dining-room-furniture'>Dining</a>
+        <a href='/shop/bathroom-furniture'>Bathroom</a>
         <a href='/?room=outdoor'>Outdoor</a>
         <a href='/collections'>Collections</a>
       </div>
@@ -797,7 +797,7 @@ function renderProduct(p){
   document.title=p.name+' — Master Cove';
   var catLabels={dresser:'Dressers',chest:'Chests',sideboard:'Sideboards',tv:'TV Consoles',coffeetable:'Coffee Tables',diningtable:'Dining Tables',sidetable:'Side Tables',nightstand:'Nightstands',shoe:'Shoe Storage',bookcase:'Bookcases',desk:'Desks',chair:'Chairs',accentchair:'Accent Chairs',sofa:'Sofas',sectional:'Sectionals',armchair:'Lounge & Armchairs',bar:'Bars',bed:'Beds',bench:'Benches',ottoman:'Ottomans',vanity:'Vanities',outdoor:'Outdoor Furniture',island:'Kitchen Islands',wardrobe:'Wardrobes',other:'Shop'};
   var catLabel=catLabels[p.cat]||'Shop';
-  document.getElementById('bc-cat').textContent=catLabel;document.getElementById('bc-cat').href='index.html?cat='+encodeURIComponent(p.cat);
+  document.getElementById('bc-cat').textContent=catLabel;var CAT_SLUGS={sofa:'sofas',sectional:'sectionals',armchair:'accent-chairs',ottoman:'ottomans',coffeetable:'coffee-tables',sidetable:'side-tables',tv:'tv-stands',sideboard:'sideboards-buffets',bar:'bar-cabinets',diningtable:'dining-tables',chair:'dining-chairs',island:'kitchen-islands',bed:'beds',nightstand:'nightstands',dresser:'dressers',chest:'chests-of-drawers',bookcase:'bookcases',desk:'desks',vanity:'bathroom-vanities',bench:'benches',shoe:'shoe-cabinets'};document.getElementById('bc-cat').href=CAT_SLUGS[p.cat]?'/shop/'+CAT_SLUGS[p.cat]:'/?cat='+encodeURIComponent(p.cat);
   document.getElementById('bc-name').textContent=p.name;document.getElementById('pdp-title').textContent=p.name;
   var metaDesc=p.desc?p.desc.substring(0,155)+'...':'Shop the '+p.name+' at Master Cove. Quality furniture with free shipping.';
   var descEl=document.getElementById('meta-desc');if(descEl)descEl.setAttribute('content',metaDesc);
