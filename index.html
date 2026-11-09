@@ -124,7 +124,7 @@ header{background:var(--white);border-bottom:1px solid var(--border);position:st
 .mm-sub-links a{display:block;padding:11px 20px 11px 34px;font-size:13px;color:var(--slate);border-bottom:1px solid var(--border);text-decoration:none;}
 .cart-btn:hover{background:#2E2A26;}
 .cat-strip{background:var(--white);border-bottom:1px solid var(--border);position:sticky;top:68px;z-index:90;}
-.cat-strip-inner{max-width:1380px;margin:0 auto;padding:0 32px;display:flex;gap:0;overflow-x:auto;}
+.cat-strip-inner{max-width:1380px;margin:0 auto;padding:0 32px;display:flex;gap:0;overflow-x:auto;justify-content:center;justify-content:safe center;}
 .cat-strip-inner::-webkit-scrollbar{display:none;}
 .cat-btn{background:none;border:none;border-bottom:2px solid transparent;padding:14px 20px;font-size:14.5px;letter-spacing:0.03em;color:var(--slate);white-space:nowrap;transition:all .15s;font-weight:500;}
 .cat-btn:hover{color:var(--ink);}
@@ -360,28 +360,30 @@ footer{background:var(--ink);color:rgba(255,255,255,0.6);padding:48px 0 24px;}
 
 <div class="main">
   <div class="section" id="new-arrivals-section">
+    <!-- home-intro:start (removed on /shop/ pages by category-seo.js) -->
     <div class="home-intro">
       <div class="home-eyebrow">Online Furniture Store &middot; Free Shipping</div>
       <h1>Quality Furniture Online, <em>Built to Last</em></h1>
       <p>Master Cove is an online furniture store for real wood and upholstered pieces: sideboards, dressers, beds, dining chairs, kitchen islands, sofas and more. Every order ships free to your door, with 30-day returns and real people to answer your questions.</p>
       <nav class="home-cats" aria-label="Shop by category">
-        <a href="/?cat=sofa">Sofas</a>
-        <a href="/?cat=sectional">Sectionals</a>
-        <a href="/?cat=bed">Beds</a>
-        <a href="/?cat=dresser">Dressers</a>
-        <a href="/?cat=nightstand">Nightstands</a>
-        <a href="/?cat=chair">Dining Chairs &amp; Stools</a>
-        <a href="/?cat=diningtable">Dining Tables</a>
-        <a href="/?cat=sideboard">Sideboards</a>
-        <a href="/?cat=island">Kitchen Islands</a>
-        <a href="/?cat=coffeetable">Coffee Tables</a>
-        <a href="/?cat=desk">Desks</a>
-        <a href="/?cat=vanity">Bathroom Vanities</a>
+        <a href="/shop/sofas">Sofas</a>
+        <a href="/shop/sectionals">Sectionals</a>
+        <a href="/shop/beds">Beds</a>
+        <a href="/shop/dressers">Dressers</a>
+        <a href="/shop/nightstands">Nightstands</a>
+        <a href="/shop/dining-chairs">Dining Chairs &amp; Stools</a>
+        <a href="/shop/dining-tables">Dining Tables</a>
+        <a href="/shop/sideboards-buffets">Sideboards</a>
+        <a href="/shop/kitchen-islands">Kitchen Islands</a>
+        <a href="/shop/coffee-tables">Coffee Tables</a>
+        <a href="/shop/desks">Desks</a>
+        <a href="/shop/bathroom-vanities">Bathroom Vanities</a>
       </nav>
     </div>
+    <!-- home-intro:end -->
     <script>
       // Category, room or search links skip the homepage intro (the product list is shown instead)
-      (function(){ var q = new URLSearchParams(location.search); if (q.get('cat') || q.get('room') || q.get('search')) { var s = document.getElementById('new-arrivals-section'); if (s) s.style.display = 'none'; } })();
+      (function(){ var q = new URLSearchParams(location.search); if (q.get('cat') || q.get('room') || q.get('search') || location.pathname.indexOf('/shop/') === 0) { var s = document.getElementById('new-arrivals-section'); if (s) s.style.display = 'none'; } })();
     </script>
     <div class="sec-head">
       <div>
@@ -459,11 +461,13 @@ footer{background:var(--ink);color:rgba(255,255,255,0.6);padding:48px 0 24px;}
         <p>Questions before or after you buy? Reach us at <a href="mailto:Mastercovestore@gmail.com">Mastercovestore@gmail.com</a> or <a href="tel:+13472060372">(347) 206-0372</a>.</p>
       </div>
     </div>
+    <!-- home-about:start -->
     <div class="home-about">
       <h2>Shopping for Furniture Online at Master Cove</h2>
       <p>Master Cove is a small, Brooklyn-based online furniture store focused on pieces that are made to last. Our collection pairs real woods like oak, walnut, elm, ash and rubberwood with upholstered sofas, beds and dining chairs in performance velvet, bouclé, chenille and vegan leather.</p>
-      <p>Shop by room: <a href="/?room=bedroom">bedroom</a>, <a href="/?room=living">living room</a>, <a href="/?room=dining">dining room</a>, <a href="/?room=kitchen">kitchen</a>, <a href="/?room=bathroom">bathroom</a> and <a href="/?room=office">home office</a>. Or explore our <a href="/collections">furniture collections</a> of coordinated pieces designed to work together. Every product page lists real materials and dimensions, every order ships free with tracking, and you have 30 days to return.</p>
+      <p>Shop by room: <a href="/shop/bedroom-furniture">bedroom</a>, <a href="/shop/living-room-furniture">living room</a>, <a href="/shop/dining-room-furniture">dining room</a>, <a href="/shop/kitchen-furniture">kitchen</a>, <a href="/shop/bathroom-furniture">bathroom</a> and <a href="/shop/home-office-furniture">home office</a>. Or explore our <a href="/collections">furniture collections</a> of coordinated pieces designed to work together. Every product page lists real materials and dimensions, every order ships free with tracking, and you have 30 days to return.</p>
     </div>
+    <!-- home-about:end -->
   </div>
 </div>
 
@@ -479,11 +483,11 @@ footer{background:var(--ink);color:rgba(255,255,255,0.6);padding:48px 0 24px;}
       <div class="foot-col">
         <h5>Shop</h5>
         <a href="#products" onclick="setCat(document.querySelector('.cat-btn'),'all')">All Furniture</a>
-        <a href='/?room=bedroom'>Bedroom</a>
-        <a href='/?room=living'>Living Room</a>
-        <a href='/?room=entryway'>Entryway</a>
-        <a href='/?room=dining'>Dining</a>
-        <a href='/?room=bathroom'>Bathroom</a>
+        <a href='/shop/bedroom-furniture'>Bedroom</a>
+        <a href='/shop/living-room-furniture'>Living Room</a>
+        <a href='/shop/entryway-furniture'>Entryway</a>
+        <a href='/shop/dining-room-furniture'>Dining</a>
+        <a href='/shop/bathroom-furniture'>Bathroom</a>
         <a href='/?room=outdoor'>Outdoor</a>
         <a href='/collections'>Collections</a>
       </div>
@@ -561,6 +565,18 @@ var ROOM_MAP = {storage:['shoe','sideboard']};
 NAV_ROOMS.forEach(function(r){ ROOM_MAP[r.key] = r.cats; });
 Object.keys(HIDDEN_ROOMS).forEach(function(k){ ROOM_MAP[k] = HIDDEN_ROOMS[k]; });
 
+// Category and room pages (mastercove.com/shop/...). Same list as netlify/edge-functions/lib/category-pages.js
+var CAT_SLUGS = {sofa:'sofas',sectional:'sectionals',armchair:'accent-chairs',ottoman:'ottomans',coffeetable:'coffee-tables',sidetable:'side-tables',tv:'tv-stands',sideboard:'sideboards-buffets',bar:'bar-cabinets',diningtable:'dining-tables',chair:'dining-chairs',island:'kitchen-islands',bed:'beds',nightstand:'nightstands',dresser:'dressers',chest:'chests-of-drawers',bookcase:'bookcases',desk:'desks',vanity:'bathroom-vanities',bench:'benches',shoe:'shoe-cabinets'};
+var ROOM_SLUGS = {bedroom:'bedroom-furniture',living:'living-room-furniture',dining:'dining-room-furniture',kitchen:'kitchen-furniture',entryway:'entryway-furniture',bathroom:'bathroom-furniture',office:'home-office-furniture'};
+function catUrl(c){ return CAT_SLUGS[c] ? '/shop/' + CAT_SLUGS[c] : '/?cat=' + encodeURIComponent(c); }
+function roomUrl(r){ return ROOM_SLUGS[r] ? '/shop/' + ROOM_SLUGS[r] : '/?room=' + encodeURIComponent(r); }
+// Set by category-seo.js on /shop/ pages: {slug, cat, room, name}
+var CAT_PAGE = window.CAT_PAGE || null;
+function isCatPage(cat){ return !!(CAT_PAGE && CAT_PAGE.cat && CAT_PAGE.cat === cat); }
+function isRoomPage(room){ return !!(CAT_PAGE && CAT_PAGE.room && CAT_PAGE.room === room); }
+// Once the visitor moves away from the page's own category, its intro no longer applies
+function hideCatIntro(){ var el = document.getElementById('cat-intro'); if (el) el.style.display = 'none'; }
+
 function buildRoomNav(){
   var wrap = document.getElementById('room-nav');
   if(!wrap) return;
@@ -609,7 +625,7 @@ function toggleCollectionsDropdown(btn){
   panel.style.top = (rect.bottom + 4) + 'px';
   panel.style.left = rect.left + 'px';
   var names = getCollectionNames();
-  var html = '<a href="collections.html" class="mega-all">Shop All Collections</a><div class="mega-divider"></div>';
+  var html = '<a href="/collections.html" class="mega-all">Shop All Collections</a><div class="mega-divider"></div>';
   html += '<div class="mega-cols">' + names.map(function(name){
     return '<a href="#" data-collection="'+name.replace(/"/g,'&quot;')+'">'+name+'</a>';
   }).join('') + '</div>';
@@ -619,7 +635,7 @@ function toggleCollectionsDropdown(btn){
   var pw = panel.offsetWidth, vw = window.innerWidth;
   if(rect.left + pw > vw - 16) panel.style.left = Math.max(16, vw - 16 - pw) + 'px';
   panel.querySelectorAll('a[data-collection]').forEach(function(a){
-    a.addEventListener('click', function(e){ e.preventDefault(); window.location.href = 'collections.html?collection=' + encodeURIComponent(a.dataset.collection); });
+    a.addEventListener('click', function(e){ e.preventDefault(); window.location.href = '/collections.html?collection=' + encodeURIComponent(a.dataset.collection); });
   });
 }
 
@@ -629,7 +645,7 @@ function buildMobileMenu(){
   wrap.innerHTML = '';
 
   var allLink = document.createElement('a');
-  allLink.href = 'index.html';
+  allLink.href = '/';
   allLink.className = 'mm-all';
   allLink.textContent = 'All Furniture';
   wrap.appendChild(allLink);
@@ -641,7 +657,7 @@ function buildMobileMenu(){
     var head = document.createElement('div');
     head.className = 'mm-room-head';
     var label = document.createElement('a');
-    label.href = 'index.html?room=' + encodeURIComponent(room.key);
+    label.href = roomUrl(room.key);
     label.className = 'mm-room-label';
     label.textContent = room.label;
     head.appendChild(label);
@@ -650,7 +666,7 @@ function buildMobileMenu(){
     sub.className = 'mm-sub-links';
     room.cats.forEach(function(c){
       var subLink = document.createElement('a');
-      subLink.href = 'index.html?cat=' + encodeURIComponent(c);
+      subLink.href = catUrl(c);
       subLink.textContent = getCatLabel(c);
       sub.appendChild(subLink);
     });
@@ -676,7 +692,7 @@ function buildMobileMenu(){
   var collHead = document.createElement('div');
   collHead.className = 'mm-room-head';
   var collLabel = document.createElement('a');
-  collLabel.href = 'collections.html';
+  collLabel.href = '/collections.html';
   collLabel.className = 'mm-room-label';
   collLabel.textContent = 'Collections';
   collHead.appendChild(collLabel);
@@ -686,7 +702,7 @@ function buildMobileMenu(){
   var collNames = getCollectionNames();
   collNames.forEach(function(name){
     var subLink = document.createElement('a');
-    subLink.href = 'collections.html?collection=' + encodeURIComponent(name);
+    subLink.href = '/collections.html?collection=' + encodeURIComponent(name);
     subLink.textContent = name;
     collSub.appendChild(subLink);
   });
@@ -740,17 +756,17 @@ function toggleMegaDropdown(btn, room){
   var rect = btn.getBoundingClientRect();
   panel.style.top = (rect.bottom + 4) + 'px';
   panel.style.left = rect.left + 'px';
-  var html = '<a href="index.html?room='+encodeURIComponent(room.key)+'" class="mega-all" data-room="'+room.key+'">Shop All '+room.label+'</a><div class="mega-divider"></div>';
+  var html = '<a href="'+roomUrl(room.key)+'" class="mega-all" data-room="'+room.key+'">Shop All '+room.label+'</a><div class="mega-divider"></div>';
   html += room.cats.map(function(c){
-    return '<a href="index.html?cat='+encodeURIComponent(c)+'" data-cat="'+c+'">'+getCatLabel(c)+'</a>';
+    return '<a href="'+catUrl(c)+'" data-cat="'+c+'">'+getCatLabel(c)+'</a>';
   }).join('');
   panel.innerHTML = html;
   panel.classList.add('open');
   panel.querySelectorAll('a[data-room]').forEach(function(a){
-    a.addEventListener('click', function(e){ e.preventDefault(); window.location.href = 'index.html?room='+encodeURIComponent(a.dataset.room); });
+    a.addEventListener('click', function(e){ e.preventDefault(); window.location.href = roomUrl(a.dataset.room); });
   });
   panel.querySelectorAll('a[data-cat]').forEach(function(a){
-    a.addEventListener('click', function(e){ e.preventDefault(); window.location.href = 'index.html?cat='+encodeURIComponent(a.dataset.cat); });
+    a.addEventListener('click', function(e){ e.preventDefault(); window.location.href = catUrl(a.dataset.cat); });
   });
 }
 function closeMegaDropdown(){
@@ -767,8 +783,11 @@ function jumpToCat(cat){
   var bsSection = document.getElementById('best-sellers-section');
   if(naSection) naSection.style.display = 'none'; if(whySec) whySec.style.display = 'none';
   if(bsSection) bsSection.style.display = 'none';
-  document.getElementById('section-title').innerHTML = getCatLabel(cat)+' <em>Collection</em>';
-  document.getElementById('section-sub').textContent = 'All '+getCatLabel(cat).toLowerCase()+' pieces in our collection';
+  if (!isCatPage(cat)) {
+    hideCatIntro();
+    document.getElementById('section-title').innerHTML = getCatLabel(cat)+' <em>Collection</em>';
+    document.getElementById('section-sub').textContent = 'All '+getCatLabel(cat).toLowerCase()+' pieces in our collection';
+  }
   renderProducts(); closeMegaDropdown();
   if(window.mcTrackCat) mcTrackCat(cat);
   window.scrollTo(0,0);
@@ -782,8 +801,11 @@ function jumpToRoom(room){
   if(naSection) naSection.style.display = 'none'; if(whySec) whySec.style.display = 'none';
   if(bsSection) bsSection.style.display = 'none';
   var labels = {bedroom:'Bedroom',living:'Living Room',entryway:'Entryway',dining:'Dining',kitchen:'Kitchen',bathroom:'Bathroom',office:'Office',outdoor:'Outdoor'};
-  document.getElementById('section-title').innerHTML = (labels[room]||room)+' <em>Furniture</em>';
-  document.getElementById('section-sub').textContent = 'Curated pieces for your '+(labels[room]||room).toLowerCase();
+  if (!isRoomPage(room)) {
+    hideCatIntro();
+    document.getElementById('section-title').innerHTML = (labels[room]||room)+' <em>Furniture</em>';
+    document.getElementById('section-sub').textContent = 'Curated pieces for your '+(labels[room]||room).toLowerCase();
+  }
   renderProducts();
   if(window.mcTrackCat) mcTrackCat('room:'+room);
   window.scrollTo(0,0);
@@ -1313,6 +1335,7 @@ function buildCard(p, i) {
 }
 
 function setCat(btn, cat) {
+  if (CAT_PAGE && cat === 'all') { window.location.href = '/'; return; } // "All Furniture" from a category page
   document.querySelectorAll('.cat-btn').forEach(function(b){ b.classList.remove('active'); });
   btn.classList.add('active');
   currentCat = cat; currentRoom = null; visibleCount = PAGE_SIZE;
@@ -1324,6 +1347,7 @@ function setCat(btn, cat) {
 }
 
 function filterByRoom(room) {
+  if (CAT_PAGE && !isRoomPage(room)) { window.location.href = roomUrl(room); return; }
   currentRoom = room; currentCat = 'all'; visibleCount = PAGE_SIZE;
   resetFilters();
   document.querySelectorAll('.cat-btn').forEach(function(b){ b.classList.remove('active'); });
@@ -1341,7 +1365,8 @@ function onSearch(){
   var q = document.getElementById('search-input').value.trim();
   var naSection = document.getElementById('new-arrivals-section'); var whySec = document.getElementById('why-mc-section');
   var bsSection = document.getElementById('best-sellers-section');
-  var newUrl = window.location.pathname + (q ? ('?search=' + encodeURIComponent(q)) : '');
+  hideCatIntro();
+  var newUrl = (CAT_PAGE ? '/' : window.location.pathname) + (q ? ('?search=' + encodeURIComponent(q)) : '');
   window.history.replaceState({search:q}, '', newUrl);
   if(q){
     if(naSection) naSection.style.display = 'none'; if(whySec) whySec.style.display = 'none';
@@ -1360,10 +1385,10 @@ function onSearch(){
 }
 function scrollToProducts(){ setTimeout(function(){ var el=document.getElementById('products'); if(el)el.scrollIntoView({behavior:'smooth'}); },50); }
 function getCatLabel(cat){ var map={dresser:'Dresser',chest:'Chest',sideboard:'Sideboard',tv:'TV Console',coffeetable:'Coffee Table',diningtable:'Dining Table',sidetable:'Side Table',nightstand:'Nightstand',shoe:'Shoe Storage',bookcase:'Bookcase',desk:'Desk',chair:'Chair',accentchair:'Accent Chair',sofa:'Sofa',sectional:'Sectional',armchair:'Lounge & Armchairs',bar:'Bar',bed:'Bed',bench:'Bench',ottoman:'Ottoman',vanity:'Vanity',outdoor:'Outdoor Furniture',island:'Kitchen Island',wardrobe:'Wardrobe',other:'Other'}; return map[cat]||cat; }
-function productUrl(p){ return (p && p.slug) ? ('/products/' + p.slug) : ('product-detail.html?id=' + (p ? p.id : '')); }
+function productUrl(p){ return (p && p.slug) ? ('/products/' + p.slug) : ('/product-detail.html?id=' + (p ? p.id : '')); }
 function openProduct(id){
   var p = allProducts.find(function(x){ return String(x.id)===String(id); });
-  window.location.href = p ? productUrl(p) : ('product-detail.html?id=' + id);
+  window.location.href = p ? productUrl(p) : ('/product-detail.html?id=' + id);
 }
 
 function swapFinish(pid, ci) {
@@ -1456,7 +1481,7 @@ function removeFromCart(key) {
 function goToCheckout() {
   if(!cart.length){ showToast('Your cart is empty!'); return; }
   localStorage.setItem('mc_cart',JSON.stringify(cart));
-  window.location.href='checkout.html';
+  window.location.href='/checkout.html';
 }
 
 function updateCartUI() {
@@ -1630,7 +1655,9 @@ document.addEventListener('DOMContentLoaded', async function() {
   var urlRoom = urlParams.get('room');
   var urlSearch = urlParams.get('search');
   var urlFilters = readFiltersFromUrl();
-  if (urlSearch) {
+  if (CAT_PAGE && !urlSearch) {
+    if (CAT_PAGE.cat) jumpToCat(CAT_PAGE.cat); else jumpToRoom(CAT_PAGE.room);
+  } else if (urlSearch) {
     document.getElementById('search-input').value = urlSearch;
     onSearch();
   } else if (urlCat) {
@@ -1646,7 +1673,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     visibleCount = PAGE_SIZE;
     syncFiltersToUrl();
     renderProducts();
-    if (!urlCat && !urlRoom && !urlSearch) scrollToProducts();
+    if (!urlCat && !urlRoom && !urlSearch && !CAT_PAGE) scrollToProducts();
   }
   updateCartUI();
 });
