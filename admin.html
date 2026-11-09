@@ -457,7 +457,7 @@ async function adminUpload(path, file){
     </button>
     <button class="nav-btn" id="nav-swatches" onclick="showView('swatches')">
       <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg>
-      Swatch Library<span class="nav-count" id="nav-sw-count"></span>
+      Swatch Library
     </button>
     <div class="nav-label">Store</div>
     <a class='nav-btn' href='/' target='_blank'>
@@ -571,12 +571,11 @@ async function adminUpload(path, file){
     <div class="dr-bar">
       <div class="dr-tabs">
         <button class="dr-tab active" data-sw="all" onclick="swSetFilter('all')">All swatches <span id="sw-n-all"></span></button>
-        <button class="dr-tab" data-sw="ph" onclick="swSetFilter('ph')">Gray placeholders <span id="sw-n-ph"></span></button>
         <button class="dr-tab" data-sw="mix" onclick="swSetFilter('mix')">Different swatches <span id="sw-n-mix"></span></button>
       </div>
       <div class="search-bar"><input id="sw-search" placeholder="Search a fabric or color…" oninput="renderSwatches()"/></div>
     </div>
-    <p style="font-size:12px;color:var(--mist);margin:-4px 0 16px;">Every fabric color used on your products, grouped by fabric type. Click one to replace its swatch — the new picture goes on <b style="font-weight:500;color:var(--slate)">every product</b> that uses that fabric and color. <b style="color:var(--red);font-weight:500">Red</b> = gray placeholder · <b style="color:#9A6A12;font-weight:500">orange</b> = not all products use the same picture.</p>
+    <p style="font-size:12px;color:var(--mist);margin:-4px 0 16px;">Every fabric color used on your products, grouped by fabric type. Click one to replace its swatch — the new picture goes on <b style="font-weight:500;color:var(--slate)">every product</b> that uses that fabric and color. <b style="color:#9A6A12;font-weight:500">Orange</b> = not all products use the same picture.</p>
     <div id="sw-list"></div>
   </div>
   <div class="sw-modal-bg" id="sw-modal" onclick="if(event.target===this)swClose()"><div class="sw-modal" id="sw-modal-body"></div></div>
@@ -2050,7 +2049,6 @@ async function loadProductsFromSupabase(){
       products=res.data.map(rowToProduct);
       snapshotProducts();
       renderTable();updateStats();renderOOSTable();drUpdateCount();
-      try{var swl=swBuild(),swp=Object.keys(swl).filter(function(k){return swl[k].ph;}).length;var swn=document.getElementById('nav-sw-count');if(swn)swn.textContent=swp||'';}catch(e){}
       if(dbOrders)dbRerender();
     }
   }catch(e){console.log('Supabase load error:',e);}
@@ -2482,6 +2480,7 @@ function swFabrics(p,fn){
 function swBuild(){
   var lib={};
   (products||[]).forEach(function(p){
+    if(p.cat==='vanity')return; // basin colors and "cabinet only" are not fabrics
     swFabrics(p,function(b){
       var k=swKey(b.type,b.name);
       if(!lib[k])lib[k]={key:k,type:String(b.type||'').trim()||'Other fabrics',name:String(b.name).trim(),uses:[],pics:{}};
@@ -2503,9 +2502,7 @@ function renderSwatches(){
   var lib=swBuild(),all=Object.keys(lib).map(function(k){return lib[k];});
   var ph=all.filter(function(e){return e.ph;}),mix=all.filter(function(e){return e.mix;});
   document.getElementById('sw-n-all').textContent='('+all.length+')';
-  document.getElementById('sw-n-ph').textContent='('+ph.length+')';
   document.getElementById('sw-n-mix').textContent='('+mix.length+')';
-  var nc=document.getElementById('nav-sw-count');if(nc)nc.textContent=ph.length||'';
   document.querySelectorAll('[data-sw]').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-sw')===swFilter);});
   var q=(document.getElementById('sw-search').value||'').trim().toLowerCase();
   var list=(swFilter==='ph'?ph:swFilter==='mix'?mix:all).filter(function(e){return !q||(e.type+' '+e.name).toLowerCase().indexOf(q)>=0;});
@@ -2517,7 +2514,7 @@ function renderSwatches(){
     var es=byType[t].sort(function(a,b){return a.name.localeCompare(b.name);});
     return '<div class="sw-type"><h3>'+dbEsc(t)+'<small>'+es.length+' color'+(es.length>1?'s':'')+'</small></h3><div class="sw-grid">'+es.map(function(e){
       var img=e.main?'<div class="sw-img" style="background-image:url(\''+dbEsc(e.main)+'\')">':'<div class="sw-img ph">';
-      var flag=e.ph?'<span class="sw-flag">placeholder</span>':(e.mix?'<span class="sw-flag mix">'+Object.keys(e.pics).length+' pictures</span>':'');
+      var flag=e.mix?'<span class="sw-flag mix">'+Object.keys(e.pics).length+' pictures</span>':'';
       return '<button class="sw-tile" onclick="swOpen(\''+encodeURIComponent(e.key)+'\')">'+img+flag+'</div><div class="sw-name" title="'+dbEsc(e.name)+'">'+dbEsc(e.name)+'</div><div class="sw-uses">'+e.products+' product'+(e.products>1?'s':'')+'</div></button>';
     }).join('')+'</div></div>';
   }).join('');
@@ -2614,7 +2611,7 @@ function drIssues(p){
   if(!prices.length)bad.push('No price');
   var photos=!!p.img; drWalk(p,function(o){if((o.photos||[]).length)photos=true;});
   if(!photos)bad.push('No photos');
-  var ph=0; drWalk(p,function(o){if(typeof o.swatch==='string'&&o.swatch.indexOf('data:image/svg')===0)ph++;});
+  var ph=0; if(p.cat!=='vanity')drWalk(p,function(o){if(typeof o.swatch==='string'&&o.swatch.indexOf('data:image/svg')===0)ph++;});
   if(ph)bad.push(ph+' gray placeholder swatch'+(ph>1?'es':''));
   var noPhotoOpts=leaves.filter(function(l){return !(l.photos||[]).length;}).length;
   if(photos&&noPhotoOpts&&leaves.length>1)info.push(noPhotoOpts+' option'+(noPhotoOpts>1?'s':'')+' without photos');
