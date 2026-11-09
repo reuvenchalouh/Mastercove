@@ -270,6 +270,7 @@ footer.mc-foot{background:var(--ink);color:rgba(255,255,255,0.6);padding:48px 0 
 </style>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-D8LM0CQB38"></script>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-D8LM0CQB38');</script>
+<script src="/mc-track.js"></script>
 <!-- Meta Pixel Code -->
 <script>
 !function(f,b,e,v,n,t,s)
@@ -1457,8 +1458,20 @@ document.addEventListener('DOMContentLoaded',function(){
   fetch('https://slaffkwfwmudvernzjua.supabase.co/rest/v1/products?'+lookup+'&select=*',{
     headers:{'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsYWZma3dmd211ZHZlcm56anVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMzU4MDksImV4cCI6MjA5MTYxMTgwOX0.BEz8_GNKPTQB90LJBJTZFyJYFF-9ypdfbEsLAfEESqY','Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsYWZma3dmd211ZHZlcm56anVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMzU4MDksImV4cCI6MjA5MTYxMTgwOX0.BEz8_GNKPTQB90LJBJTZFyJYFF-9ypdfbEsLAfEESqY'}
   }).then(function(r){return r.json();}).then(function(data){
+    // Draft preview from the admin ("Preview" in Drafts to Review): drafts are hidden from the public,
+    // so the admin hands the draft to this page through this browser's storage. Customers never see it.
+    var isPreview=false;
+    if((!data||!data.length)&&params.get('preview')==='1'){
+      try{var pv=JSON.parse(localStorage.getItem('mc_preview')||'null');if(pv&&((slug&&pv.slug===slug)||(id&&String(pv.id)===String(id)))){data=[pv];isPreview=true;}}catch(e){}
+    }
+    if(isPreview){
+      var nm=document.createElement('meta');nm.name='robots';nm.content='noindex, nofollow';document.head.appendChild(nm);
+      var bn=document.createElement('div');bn.textContent='Draft preview — only you can see this page. Publish it in the admin to put it on the site.';
+      bn.style.cssText='position:sticky;top:0;z-index:999;background:#6B4C35;color:#fff;text-align:center;font:500 13px Outfit,sans-serif;padding:9px 14px;';
+      document.body.insertBefore(bn,document.body.firstChild);
+    }
     if(data&&data.length){var row=data[0];renderProduct({id:row.id,name:row.name,brand:row.brand,cat:row.cat,price:row.price,was:row.was,shippingCost:row.shipping_cost||0,desc:row.description,tagline:row.tagline||'',features:row.features||'',wood:row.wood,status:row.status,img:row.img,finishes:row.finishes||[],topSizes:row.top_sizes||[],variantMode:row.variant_mode||'finish',dims:row.dims,badge:row.badge,supplierLink:row.supplier_link,createdAt:row.created_at,rating:Number(row.rating)||0,reviewCount:Number(row.review_count)||0,slug:row.slug||'',collection:(row.collection||'').trim()});
-      if(row.slug){
+      if(row.slug&&!isPreview){
         var clean='/products/'+row.slug;
         if(window.location.pathname!==clean){try{history.replaceState(null,'',clean+window.location.hash);}catch(e){}}
         var cl=document.getElementById('canonical-link');if(cl)cl.href='https://mastercove.com'+clean;
