@@ -30,6 +30,11 @@ body{font-family:'Outfit',sans-serif;background:#F0EBE3;color:var(--ink);font-si
 .nav-btn{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;color:rgba(255,255,255,0.55);background:none;border:none;width:100%;text-align:left;font-family:'Outfit',sans-serif;cursor:pointer;transition:all 0.15s;border-left:2px solid transparent;text-decoration:none;}
 .nav-btn:hover{background:var(--sidebar-hover);color:rgba(255,255,255,0.9);}
 .nav-btn.active{background:var(--sidebar-hover);color:#fff;border-left-color:var(--maple);}
+.sidebar-nav{overflow-y:auto;}
+.ql-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:4px 14px 14px;}
+.ql{display:flex;align-items:center;gap:6px;padding:7px 8px;border-radius:4px;background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.7);font-size:11.5px;text-decoration:none;white-space:nowrap;overflow:hidden;}
+.ql:hover{background:var(--sidebar-hover);color:#fff;}
+.ql img{width:14px;height:14px;flex:none;border-radius:2px;}
 .sidebar-foot{padding:14px 20px;border-top:1px solid rgba(255,255,255,0.08);font-size:11px;color:rgba(255,255,255,0.25);}
 .main{margin-left:220px;flex:1;display:flex;flex-direction:column;min-height:100vh;}
 .topbar{background:var(--white);border-bottom:1px solid var(--border);padding:0 32px;height:62px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:40;}
@@ -45,6 +50,32 @@ body{font-family:'Outfit',sans-serif;background:#F0EBE3;color:var(--ink);font-si
 .view.active{display:block;}
 
 
+
+/* ── SWATCH LIBRARY ── */
+.sw-type{margin-bottom:22px;}
+.sw-type h3{font-family:'Playfair Display',serif;font-weight:400;font-size:19px;margin-bottom:10px;}
+.sw-type h3 small{font-family:'Outfit',sans-serif;font-size:12px;color:var(--mist);margin-left:6px;}
+.sw-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:10px;}
+.sw-tile{background:var(--white);border:1px solid var(--border);border-radius:6px;padding:8px;cursor:pointer;text-align:left;font-family:'Outfit',sans-serif;}
+.sw-tile:hover{border-color:var(--walnut);}
+.sw-img{width:100%;aspect-ratio:1/1;border-radius:4px;background:var(--linen) center/cover no-repeat;position:relative;}
+.sw-img.ph{background:repeating-linear-gradient(45deg,#E4DDD2,#E4DDD2 6px,#EDE7DE 6px,#EDE7DE 12px);}
+.sw-flag{position:absolute;left:5px;top:5px;font-size:10px;padding:2px 6px;border-radius:8px;background:var(--red);color:#fff;}
+.sw-flag.mix{background:#C98A1B;}
+.sw-name{font-size:12.5px;font-weight:600;margin-top:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink);}
+.sw-uses{font-size:11px;color:var(--mist);}
+.sw-modal-bg{position:fixed;inset:0;background:rgba(28,26,23,.45);z-index:300;display:none;align-items:center;justify-content:center;padding:16px;}
+.sw-modal-bg.open{display:flex;}
+.sw-modal{background:var(--white);border-radius:8px;width:min(640px,100%);max-height:88vh;overflow:auto;padding:20px 22px;}
+.sw-modal h3{font-size:16px;font-weight:600;}
+.sw-variants{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0;}
+.sw-var{width:96px;text-align:center;font-size:11px;color:var(--slate);}
+.sw-var .sw-img{border:2px solid transparent;}
+.sw-var.current .sw-img{border-color:var(--green);}
+.sw-var button{margin-top:5px;font-size:11px;padding:4px 6px;width:100%;}
+.sw-prodlist{border-top:1px solid var(--border);margin-top:12px;padding-top:10px;max-height:260px;overflow:auto;}
+.sw-prod{display:flex;align-items:center;gap:8px;font-size:12.5px;padding:4px 0;}
+.sw-prod i{width:22px;height:22px;border-radius:3px;background:var(--linen) center/cover;flex:none;display:inline-block;}
 /* ── DRAFTS TO REVIEW ── */
 .dr-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
 .dr-tabs{display:flex;gap:6px;flex-wrap:wrap;}
@@ -424,6 +455,10 @@ async function adminUpload(path, file){
       <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
       Drafts to Review<span class="nav-count" id="nav-drafts-count" style="background:var(--walnut)"></span>
     </button>
+    <button class="nav-btn" id="nav-swatches" onclick="showView('swatches')">
+      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg>
+      Swatch Library<span class="nav-count" id="nav-sw-count"></span>
+    </button>
     <div class="nav-label">Store</div>
     <a class='nav-btn' href='/' target='_blank'>
       <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
@@ -451,6 +486,15 @@ async function adminUpload(path, file){
       Subscribers<span class="nav-count" id="nav-subs-count"></span>
     </button>
   </nav>
+  <div class="nav-label" style="padding-top:8px;">Quick Links</div>
+  <div class="ql-grid">
+    <a class="ql" href="https://mail.google.com/mail/u/?authuser=mastercovestore@gmail.com" target="_blank" rel="noopener"><img src="https://www.google.com/s2/favicons?domain=mail.google.com&sz=32" alt="">Gmail</a>
+    <a class="ql" href="https://ads.google.com/aw/overview" target="_blank" rel="noopener"><img src="https://www.google.com/s2/favicons?domain=ads.google.com&sz=32" alt="">Google Ads</a>
+    <a class="ql" style="grid-column:1/-1" href="https://search.google.com/search-console" target="_blank" rel="noopener"><img src="https://www.google.com/s2/favicons?domain=search.google.com&sz=32" alt="">Search Console</a>
+    <a class="ql" href="https://app.netlify.com/" target="_blank" rel="noopener"><img src="https://www.google.com/s2/favicons?domain=netlify.com&sz=32" alt="">Netlify</a>
+    <a class="ql" href="https://github.com/reuvenchalouh/Mastercove" target="_blank" rel="noopener"><img src="https://www.google.com/s2/favicons?domain=github.com&sz=32" alt="">GitHub</a>
+    <a class="ql" style="grid-column:1/-1" href="https://supabase.com/dashboard/project/slaffkwfwmudvernzjua" target="_blank" rel="noopener"><img src="https://www.google.com/s2/favicons?domain=supabase.com&sz=32" alt="">Supabase</a>
+  </div>
   <div class="sidebar-foot">Master Cove v2.0</div>
 </aside>
 
@@ -522,6 +566,20 @@ async function adminUpload(path, file){
       <div class="db-panel"><h3>Devices &amp; locations</h3><p class="db-note">Visits by device · visitors by state</p><div id="db-devices"></div><div id="db-regions" style="margin-top:10px;"></div></div>
     </div>
   </div>
+
+  <div class="view" id="view-swatches">
+    <div class="dr-bar">
+      <div class="dr-tabs">
+        <button class="dr-tab active" data-sw="all" onclick="swSetFilter('all')">All swatches <span id="sw-n-all"></span></button>
+        <button class="dr-tab" data-sw="ph" onclick="swSetFilter('ph')">Gray placeholders <span id="sw-n-ph"></span></button>
+        <button class="dr-tab" data-sw="mix" onclick="swSetFilter('mix')">Different swatches <span id="sw-n-mix"></span></button>
+      </div>
+      <div class="search-bar"><input id="sw-search" placeholder="Search a fabric or color…" oninput="renderSwatches()"/></div>
+    </div>
+    <p style="font-size:12px;color:var(--mist);margin:-4px 0 16px;">Every fabric color used on your products, grouped by fabric type. Click one to replace its swatch — the new picture goes on <b style="font-weight:500;color:var(--slate)">every product</b> that uses that fabric and color. <b style="color:var(--red);font-weight:500">Red</b> = gray placeholder · <b style="color:#9A6A12;font-weight:500">orange</b> = not all products use the same picture.</p>
+    <div id="sw-list"></div>
+  </div>
+  <div class="sw-modal-bg" id="sw-modal" onclick="if(event.target===this)swClose()"><div class="sw-modal" id="sw-modal-body"></div></div>
 
   <div class="view" id="view-drafts">
     <div class="dr-bar">
@@ -1992,6 +2050,7 @@ async function loadProductsFromSupabase(){
       products=res.data.map(rowToProduct);
       snapshotProducts();
       renderTable();updateStats();renderOOSTable();drUpdateCount();
+      try{var swl=swBuild(),swp=Object.keys(swl).filter(function(k){return swl[k].ph;}).length;var swn=document.getElementById('nav-sw-count');if(swn)swn.textContent=swp||'';}catch(e){}
       if(dbOrders)dbRerender();
     }
   }catch(e){console.log('Supabase load error:',e);}
@@ -2257,10 +2316,11 @@ function renderOrders(){
 function showView(v){
   document.querySelectorAll('.view').forEach(function(el){el.classList.remove('active');});document.getElementById('view-'+v).classList.add('active');
   document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('active');});var nb=document.getElementById('nav-'+v);if(nb)nb.classList.add('active');
-  document.getElementById('page-title').innerHTML={dashboard:'Store <em>Dashboard</em>',drafts:'Drafts to <em>Review</em>',sync:'Supplier <em>Sync</em>',products:'Product <em>Catalog</em>',orders:'Customer <em>Orders</em>',oos:'Out of <em>Stock</em>',promos:'Promo <em>Codes</em>',subs:'Email <em>Subscribers</em>'}[v]||v;
+  document.getElementById('page-title').innerHTML={dashboard:'Store <em>Dashboard</em>',swatches:'Swatch <em>Library</em>',drafts:'Drafts to <em>Review</em>',sync:'Supplier <em>Sync</em>',products:'Product <em>Catalog</em>',orders:'Customer <em>Orders</em>',oos:'Out of <em>Stock</em>',promos:'Promo <em>Codes</em>',subs:'Email <em>Subscribers</em>'}[v]||v;
   if(v==='orders')loadOrdersFromSupabase();
   if(v==='dashboard')loadDashboard();
   if(v==='drafts')renderDrafts();
+  if(v==='swatches')renderSwatches();
   if(v==='sync')loadSync();
   if(v==='oos')renderOOSTable();
   if(v==='promos')loadPromos();
@@ -2407,6 +2467,121 @@ function renderDashVisitors(d,R){
   var devName={mobile:'Phone',desktop:'Computer',tablet:'Tablet',unknown:'Unknown'};
   dbRows('db-devices',d.devices,function(x){return devName[x.device]||x.device;},function(x){return x.sessions;},function(x){return dbNum(x.sessions)+' · '+dbPct(x.sessions,ses);});
   dbRows('db-regions',d.regions,function(x){return x.place;},function(x){return x.visitors;},function(x){return dbNum(x.visitors);});
+}
+
+/* ── SWATCH LIBRARY ── */
+// One entry per fabric type + color (e.g. "Bouclé · Ivory"), built from every product's fabrics.
+// Replacing a swatch here writes the same picture onto every product that uses that fabric + color.
+var swFilter='all', swOpenKey=null;
+function swIsPh(u){return !u||String(u).indexOf('data:image/svg')===0;}
+function swKey(type,name){return String(type||'').trim().toLowerCase()+'|'+String(name||'').trim().toLowerCase();}
+function swFabrics(p,fn){
+  (p.finishes||[]).forEach(function(f){(f&&f.fabrics||[]).forEach(function(b){if(b&&b.name)fn(b);});});
+  (p.topSizes||[]).forEach(function(s){(s&&s.finishes||[]).forEach(function(f){(f&&f.fabrics||[]).forEach(function(b){if(b&&b.name)fn(b);});});});
+}
+function swBuild(){
+  var lib={};
+  (products||[]).forEach(function(p){
+    swFabrics(p,function(b){
+      var k=swKey(b.type,b.name);
+      if(!lib[k])lib[k]={key:k,type:String(b.type||'').trim()||'Other fabrics',name:String(b.name).trim(),uses:[],pics:{}};
+      var e=lib[k];var u=swIsPh(b.swatch)?'':b.swatch;
+      if(!e.uses.some(function(x){return x.id===p.id&&x.swatch===u;}))e.uses.push({id:p.id,name:p.name,swatch:u});
+      var pk=u||'(placeholder)';e.pics[pk]=(e.pics[pk]||0)+1;
+    });
+  });
+  Object.keys(lib).forEach(function(k){
+    var e=lib[k],real=Object.keys(e.pics).filter(function(x){return x!=='(placeholder)';});
+    real.sort(function(a,b){return e.pics[b]-e.pics[a];});
+    e.main=real[0]||'';e.ph=!!e.pics['(placeholder)'];e.mix=real.length>1;
+    e.products=Object.keys(e.uses.reduce(function(a,x){a[x.id]=1;return a;},{})).length;
+  });
+  return lib;
+}
+function swSetFilter(f){swFilter=f;renderSwatches();}
+function renderSwatches(){
+  var lib=swBuild(),all=Object.keys(lib).map(function(k){return lib[k];});
+  var ph=all.filter(function(e){return e.ph;}),mix=all.filter(function(e){return e.mix;});
+  document.getElementById('sw-n-all').textContent='('+all.length+')';
+  document.getElementById('sw-n-ph').textContent='('+ph.length+')';
+  document.getElementById('sw-n-mix').textContent='('+mix.length+')';
+  var nc=document.getElementById('nav-sw-count');if(nc)nc.textContent=ph.length||'';
+  document.querySelectorAll('[data-sw]').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-sw')===swFilter);});
+  var q=(document.getElementById('sw-search').value||'').trim().toLowerCase();
+  var list=(swFilter==='ph'?ph:swFilter==='mix'?mix:all).filter(function(e){return !q||(e.type+' '+e.name).toLowerCase().indexOf(q)>=0;});
+  var byType={};list.forEach(function(e){(byType[e.type]=byType[e.type]||[]).push(e);});
+  var types=Object.keys(byType).sort(function(a,b){return a==='Other fabrics'?1:b==='Other fabrics'?-1:a.localeCompare(b);});
+  var box=document.getElementById('sw-list');
+  if(!types.length){box.innerHTML='<div class="db-panel"><div class="db-empty" style="text-align:center;padding:30px 0;">'+(swFilter==='ph'?'No gray placeholders — every fabric has a real swatch. 🎉':swFilter==='mix'?'Every fabric color uses one picture everywhere.':'No fabrics found.')+'</div></div>';return;}
+  box.innerHTML=types.map(function(t){
+    var es=byType[t].sort(function(a,b){return a.name.localeCompare(b.name);});
+    return '<div class="sw-type"><h3>'+dbEsc(t)+'<small>'+es.length+' color'+(es.length>1?'s':'')+'</small></h3><div class="sw-grid">'+es.map(function(e){
+      var img=e.main?'<div class="sw-img" style="background-image:url(\''+dbEsc(e.main)+'\')">':'<div class="sw-img ph">';
+      var flag=e.ph?'<span class="sw-flag">placeholder</span>':(e.mix?'<span class="sw-flag mix">'+Object.keys(e.pics).length+' pictures</span>':'');
+      return '<button class="sw-tile" onclick="swOpen(\''+encodeURIComponent(e.key)+'\')">'+img+flag+'</div><div class="sw-name" title="'+dbEsc(e.name)+'">'+dbEsc(e.name)+'</div><div class="sw-uses">'+e.products+' product'+(e.products>1?'s':'')+'</div></button>';
+    }).join('')+'</div></div>';
+  }).join('');
+}
+function swOpen(k){
+  swOpenKey=decodeURIComponent(k);
+  var e=swBuild()[swOpenKey];if(!e)return;
+  var pics=Object.keys(e.pics).sort(function(a,b){return e.pics[b]-e.pics[a];});
+  var vars=pics.map(function(u){
+    var real=u!=='(placeholder)';
+    return '<div class="sw-var'+(real&&u===e.main&&!e.mix&&!e.ph?' current':'')+'"><div class="sw-img'+(real?'':' ph')+'"'+(real?' style="background-image:url(\''+dbEsc(u)+'\')"':'')+'></div>'+e.pics[u]+' use'+(e.pics[u]>1?'s':'')+(real&&(e.mix||e.ph)?'<button class="dr-btn" onclick="swApply(\''+encodeURIComponent(u)+'\')">Use everywhere</button>':'')+'</div>';
+  }).join('');
+  var prods=e.uses.slice().sort(function(a,b){return a.name.localeCompare(b.name);}).map(function(x){
+    return '<div class="sw-prod"><i'+(x.swatch?' style="background-image:url(\''+dbEsc(x.swatch)+'\')"':' style="background:repeating-linear-gradient(45deg,#E4DDD2,#E4DDD2 4px,#EDE7DE 4px,#EDE7DE 8px)"')+'></i>'+dbEsc(x.name)+'</div>';
+  }).join('');
+  document.getElementById('sw-modal-body').innerHTML='<div style="display:flex;justify-content:space-between;align-items:start;gap:10px;"><div><h3>'+dbEsc(e.type)+' · '+dbEsc(e.name)+'</h3><div class="db-note" style="margin:2px 0 0">Used on '+e.products+' product'+(e.products>1?'s':'')+'</div></div><button class="dr-btn" onclick="swClose()">Close</button></div>'
+    +'<div class="sw-variants">'+vars+'</div>'
+    +(e.mix||e.ph?'<p class="db-note" style="margin:0 0 10px">'+(e.ph?'Some products still show the gray placeholder. ':'')+(e.mix?'Products use different pictures for this color. ':'')+'Pick one with “Use everywhere”, or upload a new one.</p>':'')
+    +'<label class="go-btn" style="cursor:pointer;">Upload new swatch for all '+e.products+' product'+(e.products>1?'s':'')+'<input type="file" accept="image/*" style="display:none" onchange="swUpload(this)"></label>'
+    +'<div class="sw-prodlist">'+prods+'</div>';
+  document.getElementById('sw-modal').classList.add('open');
+}
+function swClose(){document.getElementById('sw-modal').classList.remove('open');swOpenKey=null;}
+async function swUpload(input){
+  var file=input.files[0];if(!file||!swOpenKey)return;
+  if(!_sb){showToast('Not connected — please refresh','error');return;}
+  showToast('Uploading swatch…','success');
+  try{
+    var fileName='swatch-'+Date.now()+'-'+Math.floor(Math.random()*9999)+'.'+(file.name.split('.').pop()||'jpg');
+    var res=await adminUpload(fileName,file);
+    if(res.error){showToast('Upload failed: '+res.error.message,'error');return;}
+    var url=_sb.storage.from('product-images').getPublicUrl(fileName).data.publicUrl;
+    await swApply(encodeURIComponent(url));
+  }catch(e){showToast('Upload error: '+e.message,'error');}
+  input.value='';
+}
+// Puts one swatch picture on every product option with this fabric type + color, then saves those products
+async function swApply(u){
+  var url=decodeURIComponent(u),key=swOpenKey;if(!key||!url)return;
+  var e=swBuild()[key];
+  if(!confirm('Use this swatch on all '+(e?e.products:'')+' products with '+(e?e.type+' · '+e.name:'this fabric')+'?'))return;
+  var ids=[];
+  products.forEach(function(p){var hit=false;swFabrics(p,function(b){if(swKey(b.type,b.name)===key&&b.swatch!==url)hit=true;});if(hit)ids.push(p.id);});
+  if(ids.length)showToast('Loading the latest version of '+ids.length+' product'+(ids.length>1?'s':'')+'…','success');
+  // Reload each product first, so stock changes made by the nightly supplier checks aren't overwritten
+  for(var j=0;j<ids.length;j++){await refreshProductFromDb(ids[j]);}
+  var changed=[];
+  products.forEach(function(p){
+    if(ids.indexOf(p.id)<0)return;
+    var hit=false;
+    swFabrics(p,function(b){if(swKey(b.type,b.name)===key&&b.swatch!==url){b.swatch=url;hit=true;}});
+    if(hit)changed.push(p);
+  });
+  if(!changed.length){showToast('Already using this swatch everywhere','success');return;}
+  showToast('Saving '+changed.length+' product'+(changed.length>1?'s':'')+'…','success');
+  // Save in small groups (one big request can be too large)
+  for(var i=0;i<changed.length;i+=15){
+    var rows=changed.slice(i,i+15).map(productToRow);
+    var r=await adminDb({action:'products_upsert',rows:rows});
+    if(r.error){showToast('Save failed: '+r.error.message+' — refresh and try again','error');return;}
+    rows.forEach(function(row){try{_savedSnap[row.id]=JSON.stringify(row);}catch(err){}});
+  }
+  showToast('Swatch updated on '+changed.length+' product'+(changed.length>1?'s':''),'success');
+  renderSwatches();swOpen(encodeURIComponent(key));
 }
 
 /* ── DRAFTS TO REVIEW ── */
