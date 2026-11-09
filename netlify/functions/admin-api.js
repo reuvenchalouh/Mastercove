@@ -71,6 +71,23 @@ exports.handler = async function(event) {
       return json(200, { path: data.path, token: data.token });
     }
 
+    // ---- Dashboard: visitor stats from mc-track.js (site_events table) ----
+    if (action === 'dashboard') {
+      const from = new Date(body.from), to = new Date(body.to || Date.now());
+      if (isNaN(from) || isNaN(to) || to <= from) return json(400, { error: 'Bad date range.' });
+      const { data, error } = await supabase.rpc('admin_dashboard', { p_from: from.toISOString(), p_to: to.toISOString() });
+      if (error) throw error;
+      return json(200, { data: data || {} });
+    }
+
+    // ---- Supplier sync report: what the nightly stock checks changed ----
+    if (action === 'sync_report') {
+      const days = Math.min(Math.max(parseInt(body.days, 10) || 14, 1), 90);
+      const { data, error } = await supabase.rpc('admin_sync_report', { p_days: days });
+      if (error) throw error;
+      return json(200, { data: data || {} });
+    }
+
     // ---- Email subscribers (signup popup) ----
     if (action === 'subscribers_list') {
       const { data, error } = await supabase.from('subscribers').select('id,email,source,page,created_at').order('created_at', { ascending: false });
