@@ -724,6 +724,10 @@ async function adminUpload(path, file){
           </div>
           <div class="frow" id="features-row-wrap"><label>Key Features <span id="features-mode-hint" style="font-size:9px;color:var(--mist);text-transform:none;letter-spacing:0;">one per line</span></label><textarea class="finput" id="f-features" placeholder="Solid wood construction&#10;Soft-close drawer glides&#10;Easy assembly included" style="height:90px;"></textarea></div>
           <div class="frow" id="desc-row-wrap"><label>Description <span id="desc-mode-hint" style="font-size:9px;color:var(--mist);text-transform:none;letter-spacing:0;"></span></label><textarea class="finput" id="f-desc" placeholder="Brief product description…"></textarea></div>
+          <div class="frow" id="assembly-row-wrap"><label>Assembly Instructions <span style="font-size:9px;color:var(--mist);text-transform:none;letter-spacing:0;">optional · PDF · one per line, “Label | link” to name it · sizes can have their own</span></label>
+            <textarea class="finput" id="f-assembly" placeholder="Upload a PDF, or paste a link" style="height:52px;font-size:12px;"></textarea>
+            <label class="fin-upload-lbl" style="margin-top:6px;cursor:pointer;">📄 Upload PDF<input type="file" accept="application/pdf" style="display:none;" onchange="asmUpload(this,'f-assembly')"/></label>
+          </div>
           <div class="frow"><label>Collection <span style="font-size:9px;color:var(--mist);text-transform:none;letter-spacing:0;">optional</span></label><input class="finput" id="f-collection" type="text" placeholder="e.g. Dark Wood Edit, Scandinavian Edit…"/></div>
           <div class="frow" id="collection-cover-wrap" style="display:none;">
             <label>Collection Cover Photo</label>
@@ -1265,10 +1269,11 @@ function convertSizeToFinish(){
 }
 function clearTopSizes(){document.getElementById('size-builder-top').innerHTML='';}
 
-function addTopSize(sizeName,price,dims,outOfStock,finishes,componentDims,sku,link,desc,features){
+function addTopSize(sizeName,price,dims,outOfStock,finishes,componentDims,sku,link,desc,features,assembly){
   sizeName=sizeName||'';price=price||'';dims=dims||{};outOfStock=outOfStock||false;finishes=finishes||[];componentDims=componentDims||[];sku=sku||'';link=link||'';desc=desc||'';features=features||'';
   var id='tsz'+Date.now()+Math.floor(Math.random()*9999);
   var card=document.createElement('div');card.className='finish-card';card.id=id;card.style.cssText='border-color:#9B7A5A;margin-bottom:10px;';
+  card.dataset.sku=sku;card.dataset.link=link; // kept as-is when the product is saved
   var head=document.createElement('div');head.className='fin-head';head.style.background='#F5EDE0';head.onclick=function(){toggleFin(id);};
   var icon=document.createElement('div');icon.style.cssText='width:20px;height:20px;border-radius:4px;background:var(--linen);border:1px solid var(--maple);display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--walnut);font-weight:700;flex-shrink:0;';icon.textContent='SZ';
   var title=document.createElement('div');title.className='fin-title';title.id='ft'+id;title.textContent=sizeName||'New Size';
@@ -1295,6 +1300,12 @@ function addTopSize(sizeName,price,dims,outOfStock,finishes,componentDims,sku,li
   var featLbl=document.createElement('span');featLbl.style.cssText='font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--mist);font-weight:500;display:block;margin-bottom:4px;';featLbl.innerHTML='Key Features <span style="text-transform:none;letter-spacing:0;">— optional, one per line, overrides the main features for this configuration</span>';
   var featInp=document.createElement('textarea');featInp.id='tszfeatures'+id;featInp.value=features;featInp.placeholder='Leave blank to use the main product key features';featInp.style.cssText='width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:2px;font-family:Outfit,sans-serif;font-size:12px;outline:none;margin-bottom:10px;min-height:70px;resize:vertical;';
   body.appendChild(featLbl);body.appendChild(featInp);
+
+  var asmLbl=document.createElement('span');asmLbl.style.cssText='font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--mist);font-weight:500;display:block;margin-bottom:4px;';asmLbl.innerHTML='Assembly Instructions <span style="text-transform:none;letter-spacing:0;">— optional PDF for this size, overrides the main one</span>';
+  var asmInp=document.createElement('textarea');asmInp.id='tszasm'+id;asmInp.value=asmText(assembly);asmInp.placeholder='Upload a PDF, or paste a link';asmInp.style.cssText='width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:2px;font-family:Outfit,sans-serif;font-size:12px;outline:none;margin-bottom:6px;min-height:40px;resize:vertical;';
+  var asmUp=document.createElement('label');asmUp.className='fin-upload-lbl';asmUp.style.cssText='cursor:pointer;margin-bottom:10px;';asmUp.textContent='📄 Upload PDF';
+  var asmFile=document.createElement('input');asmFile.type='file';asmFile.accept='application/pdf';asmFile.style.display='none';asmFile.onchange=function(){asmUpload(this,'tszasm'+id);};asmUp.appendChild(asmFile);
+  body.appendChild(asmLbl);body.appendChild(asmInp);body.appendChild(asmUp);
 
   var compLbl=document.createElement('span');compLbl.style.cssText='font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--mist);font-weight:500;display:block;margin-bottom:4px;';compLbl.innerHTML='Item Dimensions <span style="text-transform:none;letter-spacing:0;">— e.g. Chair, Table</span>';
   var compBuilder=document.createElement('div');compBuilder.id='tsz-comp-builder-'+id;
@@ -1450,7 +1461,14 @@ function getTopSizes(){
         if(lblVal)componentDims.push({label:lblVal,w:w?w.value.trim():'',d:d?d.value.trim():'',h:h?h.value.trim():''});
       });
     }
-    if(sname)result.push({name:sname,price:sprice,outOfStock:soos,dims:{},desc:sdesc,features:sfeatures,finishes:finishes,componentDims:componentDims});
+    if(sname){
+      var szObj={name:sname,price:sprice,outOfStock:soos,dims:{},desc:sdesc,features:sfeatures,finishes:finishes,componentDims:componentDims};
+      if(card.dataset&&card.dataset.sku)szObj.sku=card.dataset.sku;
+      if(card.dataset&&card.dataset.link)szObj.link=card.dataset.link;
+      var sasm=asmParse(document.getElementById('tszasm'+id)?document.getElementById('tszasm'+id).value:'');
+      if(sasm.length)szObj.assembly=sasm;
+      result.push(szObj);
+    }
   });
   return result;
 }
@@ -1674,7 +1692,8 @@ function submitProduct(){
   var collection=document.getElementById('f-collection')?document.getElementById('f-collection').value.trim():'';
   var collectionCover=document.getElementById('f-collection-cover-url')?document.getElementById('f-collection-cover-url').value.trim():'';
   var features=document.getElementById('f-features')?document.getElementById('f-features').value.trim():'';
-  var product={id:editingId||Date.now(),name:name,brand:brand,cat:cat,price:price,was:was,shippingCost:shippingCost,desc:desc,tagline:tagline,features:features,wood:'',status:status,img:img,finishes:finishes,topSizes:topSizes,variantMode:variantMode,dims:dims,badge:selectedBadge,supplierLink:supLink,collection:collection,collectionCover:collectionCover,createdAt:editingId?(products.find(function(p){return p.id===editingId;})||{}).createdAt||Date.now():Date.now()};
+  var assembly=asmParse(document.getElementById('f-assembly')?document.getElementById('f-assembly').value:'');
+  var product={assembly:assembly,id:editingId||Date.now(),name:name,brand:brand,cat:cat,price:price,was:was,shippingCost:shippingCost,desc:desc,tagline:tagline,features:features,wood:'',status:status,img:img,finishes:finishes,topSizes:topSizes,variantMode:variantMode,dims:dims,badge:selectedBadge,supplierLink:supLink,collection:collection,collectionCover:collectionCover,createdAt:editingId?(products.find(function(p){return p.id===editingId;})||{}).createdAt||Date.now():Date.now()};
   if(editingId&&_editOriginal&&_editOriginal.id===editingId){
     keepHiddenFields(product.topSizes,_editOriginal.topSizes);
     keepHiddenFields(product.finishes,_editOriginal.finishes);
@@ -1689,7 +1708,7 @@ function submitProduct(){
 // Always edit the latest copy from the database, so a page left open for hours can't
 // undo the daily stock checks (or other changes) when you save.
 var _editOriginal=null;
-function rowToProduct(p){return{id:p.id,name:p.name,brand:p.brand,cat:p.cat,price:p.price,was:p.was,shippingCost:p.shipping_cost||0,desc:p.description||'',tagline:p.tagline||'',features:p.features||'',wood:p.wood||'',status:p.status,img:p.img||'',finishes:p.finishes||[],topSizes:p.top_sizes||[],variantMode:p.variant_mode||'finish',dims:p.dims||'',badge:p.badge||'',supplierLink:p.supplier_link||'',collection:p.collection||'',collectionCover:p.collection_cover||'',slug:p.slug||'',createdAt:p.created_at};}
+function rowToProduct(p){return{id:p.id,name:p.name,brand:p.brand,cat:p.cat,price:p.price,was:p.was,shippingCost:p.shipping_cost||0,desc:p.description||'',tagline:p.tagline||'',features:p.features||'',wood:p.wood||'',status:p.status,img:p.img||'',finishes:p.finishes||[],topSizes:p.top_sizes||[],variantMode:p.variant_mode||'finish',dims:p.dims||'',badge:p.badge||'',supplierLink:p.supplier_link||'',collection:p.collection||'',collectionCover:p.collection_cover||'',slug:p.slug||'',createdAt:p.created_at,assembly:Array.isArray(p.assembly)?p.assembly:[]};}
 async function refreshProductFromDb(id){
   try{
     var res=await adminDb({action:'products_list',id:id});
@@ -1726,6 +1745,7 @@ function fillEditForm(id){
   document.getElementById('f-features').value=p.features||'';
   document.getElementById('f-status').value=p.status;
   document.getElementById('f-supplier-link').value=p.supplierLink||'';
+  if(document.getElementById('f-assembly'))document.getElementById('f-assembly').value=asmText(p.assembly);
   if(document.getElementById('f-collection')){document.getElementById('f-collection').value=p.collection||'';var ccw=document.getElementById('collection-cover-wrap');if(ccw)ccw.style.display=p.collection?'block':'none';}
   if(document.getElementById('f-collection-cover-url')){document.getElementById('f-collection-cover-url').value=p.collectionCover||'';if(p.collectionCover){document.getElementById('collection-cover-img').src=p.collectionCover;document.getElementById('collection-cover-preview').style.display='block';}}
   ['f-w','f-d','f-h'].forEach(function(k){document.getElementById(k).value='';});
@@ -1734,7 +1754,7 @@ function fillEditForm(id){
   var pmode=p.variantMode||(p.topSizes&&p.topSizes.length?'size':'finish');
   setVariantMode(pmode);
   if(pmode==='size'){
-    if(p.topSizes&&p.topSizes.length){p.topSizes.forEach(function(s){addTopSize(s.name||'',s.price||'',s.dims||{},s.outOfStock||false,s.finishes||[],s.componentDims||[],s.sku||'',s.link||'',s.desc||'',s.features||'');});}
+    if(p.topSizes&&p.topSizes.length){p.topSizes.forEach(function(s){addTopSize(s.name||'',s.price||'',s.dims||{},s.outOfStock||false,s.finishes||[],s.componentDims||[],s.sku||'',s.link||'',s.desc||'',s.features||'',s.assembly||[]);});}
     else{addTopSize();}
   } else {
     if(p.finishes&&p.finishes.length){p.finishes.forEach(function(f){addFinish(f.color||'',f.name||'',f.photos||[],f.sku||'',f.outOfStock||false,f.link||'',f.fabrics||[],f.price||'');});}
@@ -1968,7 +1988,7 @@ function renderOOSTable(){
 
 function clearForm(){
   editingId=null;currentFilterCat='';
-  ['f-name','f-brand','f-price','f-was','f-desc','f-tagline','f-features','f-w','f-d','f-h','f-supplier-link','f-collection','f-collection-cover-url'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+  ['f-name','f-brand','f-price','f-was','f-desc','f-tagline','f-features','f-w','f-d','f-h','f-supplier-link','f-collection','f-collection-cover-url','f-assembly'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('f-shipping').value=0;
   clearCollectionCover();var ccw=document.getElementById('collection-cover-wrap');if(ccw)ccw.style.display='none';
   document.getElementById('f-cat').value='';document.getElementById('f-status').value='active';
@@ -2015,7 +2035,9 @@ function productToRow(p){
         return Object.assign({},s,{finishes:cleanSFin});
       });
       var cleanImg=(p.img&&!p.img.startsWith('data:'))?p.img:'';
-      return{id:p.id,name:p.name,brand:p.brand,cat:p.cat,price:p.price,was:p.was||null,shipping_cost:p.shippingCost||0,description:p.desc||'',tagline:p.tagline||'',features:p.features||'',wood:p.wood||'',status:p.status,img:cleanImg,finishes:cleanFinishes,top_sizes:cleanTopSizes,variant_mode:p.variantMode||'finish',dims:p.dims||'',badge:p.badge||'',supplier_link:p.supplierLink||'',collection:p.collection||'',collection_cover:p.collectionCover||'',created_at:p.createdAt||Date.now()};
+      var row={id:p.id,name:p.name,brand:p.brand,cat:p.cat,price:p.price,was:p.was||null,shipping_cost:p.shippingCost||0,description:p.desc||'',tagline:p.tagline||'',features:p.features||'',wood:p.wood||'',status:p.status,img:cleanImg,finishes:cleanFinishes,top_sizes:cleanTopSizes,variant_mode:p.variantMode||'finish',dims:p.dims||'',badge:p.badge||'',supplier_link:p.supplierLink||'',collection:p.collection||'',collection_cover:p.collectionCover||'',created_at:p.createdAt||Date.now()};
+      row.assembly=Array.isArray(p.assembly)?p.assembly:[];
+      return row;
 }
 function snapshotProducts(){_savedSnap={};products.forEach(function(p){try{_savedSnap[p.id]=JSON.stringify(productToRow(p));}catch(e){}});}
 async function save(){
@@ -2061,6 +2083,36 @@ async function loadProductsFromSupabase(){
 async function deleteProductFromSupabase(id){try{var r=await adminDb({action:'products_delete',id:id});if(r.error)showToast('Delete failed: '+r.error.message,'error');}catch(e){console.log('Delete error:',e);}}
 
 document.getElementById('f-collection').addEventListener('input',function(){var wrap=document.getElementById('collection-cover-wrap');if(wrap)wrap.style.display=this.value.trim()?'block':'none';});
+
+/* ── ASSEMBLY INSTRUCTIONS (PDFs) ── */
+// Stored as a list of {label, url}. In the form: one per line, "Label | link" or just the link.
+function asmParse(text){
+  return String(text||'').split('\n').map(function(l){return l.trim();}).filter(Boolean).map(function(l){
+    var i=l.lastIndexOf('|');var label=i>=0?l.slice(0,i).trim():'';var url=(i>=0?l.slice(i+1):l).trim();
+    return {label:label,url:url};
+  }).filter(function(a){return /^https?:\/\//i.test(a.url);});
+}
+function asmText(list){
+  if(typeof list==='string')return list;
+  return (Array.isArray(list)?list:[]).map(function(a){return a&&a.url?((a.label?a.label+' | ':'')+a.url):'';}).filter(Boolean).join('\n');
+}
+async function asmUpload(input,targetId){
+  var file=input.files[0];if(!file)return;
+  if(!_sb){showToast('Not connected — please refresh','error');return;}
+  if(!/pdf$/i.test(file.type||'')&&!/\.pdf$/i.test(file.name)){showToast('Please choose a PDF file','error');input.value='';return;}
+  showToast('Uploading PDF…','success');
+  try{
+    var base=file.name.replace(/\.pdf$/i,'').replace(/[^A-Za-z0-9_-]+/g,'-').slice(0,60)||'instructions';
+    var fileName='assembly-'+base+'-'+Date.now()+'.pdf';
+    var res=await adminUpload(fileName,file);
+    if(res.error){showToast('Upload failed: '+res.error.message,'error');input.value='';return;}
+    var url=_sb.storage.from('product-images').getPublicUrl(fileName).data.publicUrl;
+    var ta=document.getElementById(targetId);
+    if(ta){ta.value=(ta.value.trim()?ta.value.trim()+'\n':'')+url;}
+    showToast('PDF uploaded — save the product to keep it','success');
+  }catch(e){showToast('Upload error: '+e.message,'error');}
+  input.value='';
+}
 
 async function uploadCollectionCover(input){
   var file=input.files[0];if(!file)return;
@@ -2322,7 +2374,7 @@ function showView(v){
   if(v==='orders')loadOrdersFromSupabase();
   if(v==='dashboard')loadDashboard();
   if(v==='drafts')renderDrafts();
-  if(v==='swatches')renderSwatches();
+  if(v==='swatches'){renderSwatches();swLoadLib().then(renderSwatches);}
   if(v==='sync')loadSync();
   if(v==='oos')renderOOSTable();
   if(v==='promos')loadPromos();
@@ -2578,7 +2630,7 @@ function renderSwatches(){
     return '<div class="sw-type"><h3>'+dbEsc(t)+'<small>'+es.length+' color'+(es.length>1?'s':'')+'</small></h3><div class="sw-grid">'+es.map(function(e){
       var img=e.main?'<div class="sw-img" style="background-image:url(\''+dbEsc(e.main)+'\')">':'<div class="sw-img ph">';
       var flag=e.mix?'<span class="sw-flag mix">'+Object.keys(e.pics).length+' pictures</span>':'';
-      return '<button class="sw-tile" onclick="swOpen(\''+encodeURIComponent(e.key)+'\')">'+img+flag+'</div><div class="sw-name" title="'+dbEsc(e.name)+'">'+dbEsc(e.name)+'</div><div class="sw-uses">'+e.products+' product'+(e.products>1?'s':'')+'</div><div class="sw-vendor">'+dbEsc(e.vendor)+'</div></button>';
+      return '<button class="sw-tile" onclick="swOpen(\''+encodeURIComponent(e.key)+'\')">'+img+flag+'</div><div class="sw-name" title="'+dbEsc(e.name)+'">'+dbEsc(e.name)+'</div><div class="sw-uses">'+(e.products?e.products+' product'+(e.products>1?'s':''):'Not used yet')+(e.lib?' · in library':'')+'</div><div class="sw-vendor">'+dbEsc(e.vendor)+'</div></button>';
     }).join('')+'</div></div>';
   }).join('');
 }
@@ -2596,7 +2648,8 @@ function swOpen(k){
   document.getElementById('sw-modal-body').innerHTML='<div style="display:flex;justify-content:space-between;align-items:start;gap:10px;"><div><h3>'+dbEsc(e.type)+' · '+dbEsc(e.name)+'</h3><div class="db-note" style="margin:2px 0 0">'+dbEsc(e.vendor)+' · used on '+e.products+' product'+(e.products>1?'s':'')+'</div></div><button class="dr-btn" onclick="swClose()">Close</button></div>'
     +'<div class="sw-variants">'+vars+'</div>'
     +(e.mix||e.ph?'<p class="db-note" style="margin:0 0 10px">'+(e.ph?'Some products still show the gray placeholder. ':'')+(e.mix?'Products use different pictures for this color. ':'')+'Pick one with “Use everywhere”, or upload a new one.</p>':'')
-    +'<label class="go-btn" style="cursor:pointer;">Upload new swatch for all '+e.products+' product'+(e.products>1?'s':'')+'<input type="file" accept="image/*" style="display:none" onchange="swUpload(this)"></label>'
+    +(e.lib?'<p class="db-note" style="margin:0 0 10px">Saved in the library — new products with this fabric get it automatically. <a href="#" onclick="swLibDelete('+Number(e.lib.id)+');return false;" style="color:#A33">Remove from library</a></p>':'<p class="db-note" style="margin:0 0 10px">Not in the library yet. Uploading a swatch here (or “Use everywhere”) saves it to the library.</p>')
+    +'<label class="go-btn" style="cursor:pointer;">Upload new swatch'+(e.products?' for all '+e.products+' product'+(e.products>1?'s':''):'')+'<input type="file" accept="image/*" style="display:none" onchange="swUpload(this)"></label>'
     +'<div class="sw-prodlist">'+prods+'</div>';
   document.getElementById('sw-modal').classList.add('open');
 }
@@ -2606,10 +2659,7 @@ async function swUpload(input){
   if(!_sb){showToast('Not connected — please refresh','error');return;}
   showToast('Uploading swatch…','success');
   try{
-    var fileName='swatch-'+Date.now()+'-'+Math.floor(Math.random()*9999)+'.'+(file.name.split('.').pop()||'jpg');
-    var res=await adminUpload(fileName,file);
-    if(res.error){showToast('Upload failed: '+res.error.message,'error');return;}
-    var url=_sb.storage.from('product-images').getPublicUrl(fileName).data.publicUrl;
+    var url=await swUploadFile(file);
     await swApply(encodeURIComponent(url));
   }catch(e){showToast('Upload error: '+e.message,'error');}
   input.value='';
@@ -2622,7 +2672,7 @@ async function swApply(u){
   // Also make it the library picture, so future products with this fabric get it too
   if(e&&e.vendor&&e.vendor!=='No vendor')await swLibSave(e.vendor,e.type==='Other fabrics'?'':e.type,e.name,url);
   var n=await swPutOnProducts(key,url);
-  if(n===0)showToast('Already using this swatch everywhere','success');
+  if(n===0)showToast(e&&!e.products?'Saved to the library':'Already using this swatch everywhere','success');
   else if(n>0)showToast('Swatch updated on '+n+' product'+(n>1?'s':''),'success');
   renderSwatches();swOpen(encodeURIComponent(key));
 }
