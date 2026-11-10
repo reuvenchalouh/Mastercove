@@ -226,6 +226,16 @@ footer{background:var(--ink);color:rgba(255,255,255,.5);padding:52px 40px 28px;}
 #pdp-features-list li::before{content:'✓';color:var(--walnut);font-weight:600;flex-shrink:0;font-family:'Outfit',sans-serif;}
 #pdp-features-list-left li::before{content:'✓';color:var(--walnut);font-weight:700;flex-shrink:0;font-family:'Outfit',sans-serif;font-style:normal;margin-top:2px;}
 #pdp-description,#pdp-description-left{font-family:'Outfit',sans-serif;}
+.asm-item{border:1px solid var(--border);border-radius:2px;margin-bottom:8px;background:#fff;}
+.asm-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;flex-wrap:wrap;}
+.asm-name{font-size:14px;color:var(--ink);}
+.asm-btns{display:flex;gap:8px;}
+.asm-btn{font-family:'Outfit',sans-serif;font-size:12px;padding:7px 12px;border:1px solid var(--ink);background:#fff;color:var(--ink);border-radius:2px;cursor:pointer;text-decoration:none;line-height:1.2;}
+.asm-btn.asm-dl{background:var(--ink);color:#fff;}
+.asm-view{display:none;border-top:1px solid var(--border);}
+.asm-view.open{display:block;}
+.asm-view iframe{width:100%;height:70vh;max-height:760px;border:0;display:block;background:var(--sand);}
+.asm-open{display:block;text-align:right;font-size:12px;color:var(--walnut);padding:6px 12px;}
 /* Full site header + footer on product pages */
 .mc-search{flex:1;max-width:340px;margin:0 24px;display:flex;align-items:center;background:var(--sand);border:1px solid var(--border);border-radius:2px;}
 .mc-search input{flex:1;border:none;background:transparent;padding:9px 12px;font-family:'Outfit',sans-serif;font-size:13px;color:var(--ink);outline:none;min-width:0;}
@@ -436,6 +446,10 @@ src="https://www.facebook.com/tr?id=2156219968568427&ev=PageView&noscript=1"
     <div id="pdp-left-description" style="margin-top:28px;display:none;">
       <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:8px;">Description</div>
       <div id="pdp-description-left" style="font-size:16px;color:var(--slate);line-height:1.9;font-weight:300;"></div>
+    </div>
+    <div id="pdp-assembly" style="margin-top:28px;display:none;grid-column:1 / -1;">
+      <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:8px;">Assembly Instructions</div>
+      <div class="asm-list"></div>
     </div>
   </div>
 </div>
@@ -903,7 +917,7 @@ function renderProduct(p){
   }
 
   if(p.dims&&p.dims.trim()){var parts=p.dims.split(/[×xX]/).map(function(s){return s.trim();});document.getElementById('dim-w').textContent=(parts[0]||'—')+(parts[0]?'"':'');document.getElementById('dim-d').textContent=(parts[1]||'—')+(parts[1]?'"':'');document.getElementById('dim-h').textContent=(parts[2]||'—')+(parts[2]?'"':'');}
-  if(!isSizeMode)renderDescFeatures(p.desc,p.features);
+  if(!isSizeMode){renderDescFeatures(p.desc,p.features);renderAssembly(p.assembly,'');}
 
   try{loadCollectionRow(p);}catch(e){}
   fetch('https://slaffkwfwmudvernzjua.supabase.co/rest/v1/products?cat=eq.'+encodeURIComponent(p.cat)+'&status=eq.active&id=neq.'+encodeURIComponent(p.id)+'&select=id,name,slug,cat,price,img,finishes&limit=12',{
@@ -1131,7 +1145,7 @@ function showTopPrice(){
 }
 function renderTopSizeMode(topSizes,fallbackImg){
   var sizes=(topSizes||[]).map(function(s){
-    return{name:s.name||'',price:s.price||0,outOfStock:s.outOfStock||false,dims:s.dims||{},sku:s.sku||'',componentDims:s.componentDims||[],desc:s.desc||'',features:s.features||'',
+    return{name:s.name||'',price:s.price||0,outOfStock:s.outOfStock||false,dims:s.dims||{},sku:s.sku||'',componentDims:s.componentDims||[],desc:s.desc||'',features:s.features||'',assembly:Array.isArray(s.assembly)?s.assembly:[],
       delivery:s.delivery||null,finishes:(s.finishes||[]).map(function(f){return{color:f.color||'#C4976A',name:f.name||'',outOfStock:f.outOfStock||false,photos:f.photos||[],sku:f.sku||'',price:Number(f.price)||0,delivery:f.delivery||null,fabrics:(f.fabrics||[]).map(function(fab){return{name:fab.name||'',outOfStock:fab.outOfStock||false,photos:fab.photos||[],swatch:fab.swatch||'',type:fab.type||'',price:Number(fab.price)||0,delivery:fab.delivery||null};})};})};
   });
   var grid=document.getElementById('top-size-grid');grid.innerHTML='';
@@ -1174,6 +1188,32 @@ function renderDescFeatures(desc,features){
   }
 }
 
+// Assembly instructions: a list of {label, url} PDFs (the product's, or the selected size's own).
+// Each one can be opened right on the page or downloaded.
+function renderAssembly(list,sizeName){
+  var wrap=document.getElementById('pdp-assembly');if(!wrap)return;
+  list=(Array.isArray(list)?list:[]).filter(function(a){return a&&/^https?:\/\//i.test(a.url||'');});
+  if(!list.length){wrap.style.display='none';wrap.querySelector('.asm-list').innerHTML='';return;}
+  var esc=function(s){return String(s||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+  var dl=function(u,name){return /supabase\.co\/storage\//.test(u)?u+(u.indexOf('?')>=0?'&':'?')+'download='+encodeURIComponent(name):u;};
+  var base=(currentProduct&&currentProduct.name?currentProduct.name.replace(/^The\s+/i,''):'Product')+(sizeName?' '+sizeName:'');
+  wrap.querySelector('.asm-list').innerHTML=list.map(function(a,i){
+    var label=a.label||(list.length>1?'Instructions '+(i+1):'Assembly instructions');
+    var file=(base+(a.label?' '+a.label:'')+' Assembly Instructions').replace(/[^A-Za-z0-9 _-]+/g,'').replace(/\s+/g,' ').trim()+'.pdf';
+    return '<div class="asm-item"><div class="asm-row"><span class="asm-name">📄 '+esc(label)+'</span>'
+      +'<span class="asm-btns"><button type="button" class="asm-btn" onclick="toggleAssembly(this,'+i+')">View</button>'
+      +'<a class="asm-btn asm-dl" href="'+esc(dl(a.url,file))+'" target="_blank" rel="noopener" download="'+esc(file)+'">Download PDF</a></span></div>'
+      +'<div class="asm-view" data-url="'+esc(a.url)+'"></div></div>';
+  }).join('');
+  wrap.style.display='block';
+}
+function toggleAssembly(btn,i){
+  var item=btn.closest('.asm-item');var box=item.querySelector('.asm-view');
+  if(box.classList.contains('open')){box.classList.remove('open');box.innerHTML='';btn.textContent='View';return;}
+  box.innerHTML='<iframe src="'+box.getAttribute('data-url')+'#view=FitH" title="Assembly instructions" loading="lazy"></iframe><a class="asm-open" href="'+box.getAttribute('data-url')+'" target="_blank" rel="noopener">Open full screen ↗</a>';
+  box.classList.add('open');btn.textContent='Hide';
+}
+
 function selectTopSize(el,sz,fallbackImg){
   document.querySelectorAll('#top-size-grid .sz-opt').forEach(function(s){s.classList.remove('active');});
   if(el)el.classList.add('active');
@@ -1190,6 +1230,7 @@ function selectTopSize(el,sz,fallbackImg){
     (sz.desc&&sz.desc.trim())?sz.desc:(currentProduct?currentProduct.desc:''),
     (sz.features&&sz.features.trim())?sz.features:(currentProduct?currentProduct.features:'')
   );
+  renderAssembly((Array.isArray(sz.assembly)&&sz.assembly.length)?sz.assembly:(currentProduct?currentProduct.assembly:[]),sz.name||'');
 
   var finRow=document.getElementById('top-size-finish-row');
   var finGrid=document.getElementById('top-size-finish-grid');
@@ -1470,7 +1511,7 @@ document.addEventListener('DOMContentLoaded',function(){
       bn.style.cssText='position:sticky;top:0;z-index:999;background:#6B4C35;color:#fff;text-align:center;font:500 13px Outfit,sans-serif;padding:9px 14px;';
       document.body.insertBefore(bn,document.body.firstChild);
     }
-    if(data&&data.length){var row=data[0];renderProduct({id:row.id,name:row.name,brand:row.brand,cat:row.cat,price:row.price,was:row.was,shippingCost:row.shipping_cost||0,desc:row.description,tagline:row.tagline||'',features:row.features||'',wood:row.wood,status:row.status,img:row.img,finishes:row.finishes||[],topSizes:row.top_sizes||[],variantMode:row.variant_mode||'finish',dims:row.dims,badge:row.badge,supplierLink:row.supplier_link,createdAt:row.created_at,rating:Number(row.rating)||0,reviewCount:Number(row.review_count)||0,slug:row.slug||'',collection:(row.collection||'').trim()});
+    if(data&&data.length){var row=data[0];renderProduct({id:row.id,name:row.name,brand:row.brand,cat:row.cat,price:row.price,was:row.was,shippingCost:row.shipping_cost||0,desc:row.description,tagline:row.tagline||'',features:row.features||'',wood:row.wood,status:row.status,img:row.img,finishes:row.finishes||[],topSizes:row.top_sizes||[],variantMode:row.variant_mode||'finish',dims:row.dims,badge:row.badge,supplierLink:row.supplier_link,createdAt:row.created_at,rating:Number(row.rating)||0,reviewCount:Number(row.review_count)||0,slug:row.slug||'',collection:(row.collection||'').trim(),assembly:Array.isArray(row.assembly)?row.assembly:[]});
       if(row.slug&&!isPreview){
         var clean='/products/'+row.slug;
         if(window.location.pathname!==clean){try{history.replaceState(null,'',clean+window.location.hash);}catch(e){}}
