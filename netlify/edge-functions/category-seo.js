@@ -87,10 +87,13 @@ export default async (request, context) => {
     `<meta property="og:url" content="${canonical}"/>`,
     `<link rel="canonical" href="${canonical}"/>`,
     `<script type="application/ld+json">${JSON.stringify(schema).replace(/</g, '\\u003c')}</script>`,
-    `<script>window.CAT_PAGE=${JSON.stringify({ slug: page.slug, cat: page.cat || null, room: page.room || null, name: page.name })};</script>`,
     `<style>#new-arrivals-section,#best-sellers-section,#why-mc-section{display:none!important}h1.sec-title{margin:0;font-weight:400}.cat-intro{max-width:760px;margin:10px 0 0;font-size:14px;line-height:1.7;color:var(--slate)}</style>`
   ].join('\n');
   html = html.replace('</head>', head + '\n</head>');
+  // Which category this page is: set at the very top of <head>, so the visitor stats script
+  // (loaded early in <head>) records the real category instead of the page address
+  const catScript = `<script>window.CAT_PAGE=${JSON.stringify({ slug: page.slug, cat: page.cat || null, room: page.room || null, name: page.name })};</script>`;
+  html = html.replace(/<head[^>]*>/i, (m) => m + '\n' + catScript);
 
   // Body: no homepage intro / about text (it has its own heading); category heading + intro instead
   html = cut(html, '<!-- home-intro:start', '<!-- home-intro:end -->');
