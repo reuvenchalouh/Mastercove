@@ -523,7 +523,7 @@ async function adminUpload(path, file){
       </div>
       <div style="display:flex;align-items:center;gap:14px;">
         <div class="db-live"><i></i><span id="db-live">— on the site now</span></div>
-        <button class="db-refresh" onclick="loadDashboard()">↻ Refresh</button>
+        <button class="db-refresh" onclick="refreshTab(this,loadDashboard)">↻ Refresh</button>
       </div>
     </div>
 
@@ -610,7 +610,7 @@ async function adminUpload(path, file){
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <div class="search-bar"><input id="sy-search" placeholder="Search a product…" oninput="renderSync()"/></div>
-        <button class="db-refresh" onclick="loadSync()">↻ Refresh</button>
+        <button class="db-refresh" onclick="refreshTab(this,loadSync)">↻ Refresh</button>
       </div>
     </div>
     <div class="sy-status" id="sy-status"></div>
@@ -827,7 +827,7 @@ async function adminUpload(path, file){
         <option value="shipped">Shipped</option>
         <option value="delivered">Delivered</option>
       </select>
-      <button onclick="loadOrdersFromSupabase()" style="padding:7px 14px;background:var(--walnut);color:#fff;border:none;border-radius:2px;font-family:'Outfit',sans-serif;font-size:12px;cursor:pointer;">↻ Refresh</button>
+      <button onclick="refreshTab(this,loadOrdersFromSupabase)" style="padding:7px 14px;background:var(--walnut);color:#fff;border:none;border-radius:2px;font-family:'Outfit',sans-serif;font-size:12px;cursor:pointer;">↻ Refresh</button>
     </div>
     <div id="orders-list"></div>
   </div>
@@ -2070,6 +2070,17 @@ async function adminProductsAll(){
   }
   var seen={};all=all.filter(function(p){if(seen[p.id])return false;seen[p.id]=1;return true;});
   return {data:all,error:null};
+}
+// Refresh buttons (Dashboard, Orders, Supplier Sync): reload this tab AND the product list
+// (stock, drafts, counts at the top), and show that it happened.
+async function refreshTab(btn,loadFn){
+  if(!btn||btn.disabled)return;
+  var label=btn.innerHTML;btn.disabled=true;btn.style.opacity='.6';btn.innerHTML='↻ Refreshing…';
+  try{
+    await Promise.all([loadProductsFromSupabase(),Promise.resolve().then(loadFn)]);
+    btn.innerHTML='✓ Updated';showToast('Updated '+new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}),'success');
+  }catch(e){btn.innerHTML=label;showToast('Could not refresh: '+(e&&e.message||'try again'),'error');}
+  setTimeout(function(){btn.innerHTML=label;btn.disabled=false;btn.style.opacity='';},1500);
 }
 async function loadProductsFromSupabase(){
   try{
