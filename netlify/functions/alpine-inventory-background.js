@@ -235,6 +235,36 @@ async function runSync(feeds) {
   const { data: lockRows } = await supabase.from('stock_locks').select('supplier_pid,locked_out');
   const locks = Object.fromEntries((lockRows || []).filter(r => String(r.supplier_pid).startsWith('al:')).map(r => [normSku(String(r.supplier_pid).slice(3)), r.locked_out !== false]));
 
+  // 2b. Alpine's nightly file only lists its warehouse stock. Items it leaves out are checked on
+  //     the Alpine / Origins website instead (the product page says whether each SKU can be ordered).
+  const webPages = new Map(); // link -> Promise<{ bySku, single }>
+  const webPage = (link) => {
+    if (!webPages.has(link)) webPages.set(link, (async () => {
+      try {
+        const u = new URL(link);
+        const m = u.pathname.match(/\/products\/([^/?#]+)/);
+        if (!m) return null;
+        const r = await fetch(`${u.origin}/products/${m[1]}.js`, { headers: { 'User-Agent': 'Mozilla/5.0 (MasterCove stock check)' } });
+        if (!r.ok) return { gone: r.status === 404 };
+        const j = await r.json();
+        const bySku = {};
+        (j.variants || []).forEach(v => { if (v.sku) bySku[normSku(v.sku)] = !!v.available; });
+        const vs = j.variants || [];
+        return { bySku, single: vs.length === 1 ? !!vs[0].available : null };
+      } catch (e) { return null; }
+    })());
+    return webPages.get(link);
+  };
+  const webVerdict = async (o, sku) => {
+    const page = await webPage(o.obj.link);
+    if (!page) return null;
+    if (page.gone) return { out: true, why: 'Page removed from ' + BRAND_NAME[o.brand] + "'s website" };
+    let ok = page.bySku[sku];
+    if (ok === undefined && o.skus.length === 1 && page.single !== null) ok = page.single;
+    if (ok === undefined) return null;
+    return ok ? { out: false, web: true } : { out: true, web: true, why: 'Sold out on ' + BRAND_NAME[o.brand] + "'s website" };
+  };
+
   // 3. Decide
   const decisions = [];
   const notInFeed = [];
@@ -244,8 +274,14 @@ async function runSync(feeds) {
     const feed = inv[o.brand];
     if (!feed) continue; // that brand's file didn't come today: leave alone
     const parts = o.skus.map(s => ({ s, v: verdict(feed[s], today) }));
+    for (const x of parts) if (!x.v) x.v = await webVerdict(o, x.s);
+    // A combo page (dresser + mirror) may list one combined SKU instead of each piece
+    if (parts.some(x => !x.v) && o.skus.length > 1) {
+      const page = await webPage(o.obj.link);
+      if (page && page.single !== null) parts.forEach(x => { if (!x.v) x.v = page.single ? { out: false, web: true } : { out: true, web: true, why: 'Sold out on ' + BRAND_NAME[o.brand] + "'s website" }; });
+    }
     const missing = parts.filter(x => !x.v).map(x => x.s);
-    if (missing.length) { notInFeed.push({ product: o.product.name, label: o.label, why: 'SKU ' + missing.join(', ') + ' not in ' + BRAND_NAME[o.brand] + '\'s feed' }); continue; }
+    if (missing.length) { notInFeed.push({ product: o.product.name, label: o.label, why: 'SKU ' + missing.join(', ') + ' not in ' + BRAND_NAME[o.brand] + '\'s feed or on its website' }); continue; }
     const outPart = parts.find(x => x.v.out);
     const restocks = parts.map(x => x.v.restock).filter(Boolean).sort();
     decisions.push({ o, out: !!outPart, why: outPart ? (o.skus.length > 1 ? outPart.s + ': ' : '') + outPart.v.why : (parts.find(x => x.v.why) || {}).v?.why, restock: restocks.length ? restocks[restocks.length - 1] : null,
@@ -320,7 +356,7 @@ async function runSync(feeds) {
        ${attention.length ? `<p><b>Couldn't check (${attention.length}):</b> left unchanged.</p><ul>${rowsHtml(attention)}</ul>` : ''}
        <p style="color:#A8A09A;">${escapeHtml(feedNotes.join(' · '))}</p>`);
   }
-  const summary = `Checked ${decisions.length} of ${options.length} Alpine options against ${feedNotes.join('; ')}. ${wentOut.length} marked out, ${cameBack.length} back in, ${closeouts.length} discontinued, ${removed.length} removed, ${attention.length} couldn't be checked, ${changed.size} products updated.`;
+  const summary = `Checked ${decisions.length} of ${options.length} Alpine options against ${feedNotes.join('; ')} (${webPages.size} product pages checked on the website for items not in the file). ${wentOut.length} marked out, ${cameBack.length} back in, ${closeouts.length} discontinued, ${removed.length} removed, ${attention.length} couldn't be checked, ${changed.size} products updated.`;
   console.log(summary);
   // "review" holds whole listings and options that couldn't be checked, so the admin shows them under "Needs your attention"
   return { summary, details: { errors: {}, wentOut, cameBack, closeouts, removed, review: review.concat(attention) } };
