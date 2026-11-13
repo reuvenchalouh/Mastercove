@@ -209,7 +209,8 @@ async function runSync(feeds) {
     try { parsed = readFeed(f.csv); } catch (e) { feedNotes.push(`${BRAND_NAME[brand]} file unreadable (${e.message})`); continue; }
     const n = Object.keys(parsed).length;
     if (n < MIN_FEED_ROWS) { feedNotes.push(`${BRAND_NAME[brand]} file had only ${n} SKUs — ignored`); continue; }
-    inv[brand] = parsed;
+    // Alpine may send more than one file per brand (regular feed + comprehensive feed): combine them
+    inv[brand] = Object.assign(inv[brand] || {}, parsed);
     feedNotes.push(`${BRAND_NAME[brand]}: ${n} SKUs (email ${f.date || 'today'})`);
     // Keep a copy (admin and future checks can look up any SKU)
     const rows = Object.values(parsed).map(r => ({ brand, ...r, feed_date: f.date || new Date().toISOString() }));
