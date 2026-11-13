@@ -84,6 +84,10 @@ header{background:var(--white);border-bottom:1px solid var(--border);position:st
 .collection-card-imgs.three .ci:first-child{grid-row:1/-1;}
 .ci{background:var(--sand);overflow:hidden;display:flex;align-items:center;justify-content:center;}
 .ci img{width:100%;height:100%;object-fit:cover;object-position:center top;}
+.collection-card-imgs.cover{height:auto;aspect-ratio:3/2;display:block;background:var(--linen);}
+.collection-card-imgs.cover .ci{position:relative;width:100%;height:100%;background:var(--linen);}
+.collection-card-imgs.cover .ci img.cv-bg{position:absolute;inset:0;object-fit:cover;filter:blur(18px) brightness(1.05);transform:scale(1.15);opacity:.55;}
+.collection-card-imgs.cover .ci img.cv{position:relative;object-fit:contain;object-position:center;}
 .collection-card-info{padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
 .collection-name{font-family:'Playfair Display',serif;font-size:18px;font-weight:400;margin:0;white-space:nowrap;}
 .collection-name em{color:var(--walnut);font-style:italic;}
@@ -368,8 +372,8 @@ function renderCollections(){
     }
     var imgClass, imgsHTML;
     if(coverPhoto){
-      imgClass = 'one';
-      imgsHTML = '<div class="ci"><img src="'+coverPhoto+'" onerror="this.style.display=\'none\'"/></div>';
+      imgClass = 'one cover';
+      imgsHTML = '<div class="ci"><img class="cv-bg" src="'+coverPhoto+'" alt="" aria-hidden="true" onerror="this.style.display=\'none\'"/><img class="cv" src="'+coverPhoto+'" onerror="this.style.display=\'none\'"/></div>';
     } else {
       var imgs = products.slice(0,4).map(function(p){ return getActiveImg(p); }).filter(Boolean);
       var imgCount = Math.min(imgs.length, 4);
