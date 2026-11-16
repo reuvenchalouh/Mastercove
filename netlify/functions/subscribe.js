@@ -20,6 +20,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 // and gets NO email. Blocked attempts are logged in the table blocked_signups.
 const JUNK_DOMAINS = /\.(de|ru|cn|jp|nl|fr|se|uk|ua|pl|it|es|at|ch|br|in|kr|tw|by|kz|cz|hu|ro|be|dk|no|fi|pt|gr|tr|il|au|nz|za|mx|ar|vn|id|ph|my|sg|hk)$/;
 const JUNK_EXACT = new Set(['qq.com','163.com','126.com','yandex.com','mail.com','vtext.com','tmomail.net','txt.att.net','messaging.sprintpcs.com','gmx.com','gmx.net','web.de']);
+const STRICT_EMAIL = /^[a-z0-9._%+-]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/;
 const MAX_PER_IP_PER_DAY = 2;
 const MAX_TOTAL_PER_HOUR = 15;
 const tokenFor = (t) => ((Number(t) * 7 + 1337) % 100003).toString(36);
@@ -34,6 +35,9 @@ async function botReason(event, body, email) {
   if (!Number.isFinite(t) || t < 2500) return 'too fast / no popup timing';
   if (String(body.k || '') !== tokenFor(t)) return 'bad token';
   const dom = email.split('@')[1] || '';
+  const local = email.split('@')[0] || '';
+  if (!STRICT_EMAIL.test(email) || /\.\./.test(local) || /^\.|\.$/.test(local)) return 'invalid address';
+  if ((dom === 'gmail.com' || dom === 'googlemail.com') && (local.match(/\./g) || []).length >= 3) return 'dotted gmail (bot pattern)';
   if (JUNK_DOMAINS.test(dom) || JUNK_EXACT.has(dom)) return 'junk domain';
   const ip = ipOf(event);
   const dayAgo = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
