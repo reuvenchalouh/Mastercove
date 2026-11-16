@@ -10,6 +10,43 @@ const WELCOME_CODE = 'WELCOME10';
 const json = (code, obj) => ({ statusCode: code, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(obj) });
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
+// ---- Bot protection ----
+// Bots were posting straight to this function (Nov 2026), signing up hundreds of real people's
+// addresses who never visited the site. A real sign-up comes from the popup, which sends:
+//   hp  - a hidden field people can't see (must be empty)
+//   t   - milliseconds the popup was open before submitting (people take a few seconds)
+//   k   - a small token the popup computes from t
+// Anything that fails is answered with a normal "ok" (so bots don't adapt) but is NOT saved
+// and gets NO email. Blocked attempts are logged in the table blocked_signups.
+const JUNK_DOMAINS = /\.(de|ru|cn|jp|nl|fr|se|uk|ua|pl|it|es|at|ch|br|in|kr|tw|by|kz|cz|hu|ro|be|dk|no|fi|pt|gr|tr|il|au|nz|za|mx|ar|vn|id|ph|my|sg|hk)$/;
+const JUNK_EXACT = new Set(['qq.com','163.com','126.com','yandex.com','mail.com','vtext.com','tmomail.net','txt.att.net','messaging.sprintpcs.com','gmx.com','gmx.net','web.de']);
+const MAX_PER_IP_PER_DAY = 2;
+const MAX_TOTAL_PER_HOUR = 15;
+const tokenFor = (t) => ((Number(t) * 7 + 1337) % 100003).toString(36);
+const ipOf = (event) => {
+  const h = event.headers || {};
+  return String(h['x-nf-client-connection-ip'] || h['client-ip'] || (h['x-forwarded-for'] || '').split(',')[0] || '').trim().slice(0, 64);
+};
+
+async function botReason(event, body, email) {
+  if (body.hp) return 'honeypot';
+  const t = Number(body.t);
+  if (!Number.isFinite(t) || t < 2500) return 'too fast / no popup timing';
+  if (String(body.k || '') !== tokenFor(t)) return 'bad token';
+  const dom = email.split('@')[1] || '';
+  if (JUNK_DOMAINS.test(dom) || JUNK_EXACT.has(dom)) return 'junk domain';
+  const ip = ipOf(event);
+  const dayAgo = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+  const hourAgo = new Date(Date.now() - 3600 * 1000).toISOString();
+  if (ip) {
+    const { count } = await supabase.from('subscribers').select('id', { count: 'exact', head: true }).eq('ip', ip).gte('created_at', dayAgo);
+    if ((count || 0) >= MAX_PER_IP_PER_DAY) return 'too many from this IP';
+  }
+  const { count: hourCount } = await supabase.from('subscribers').select('id', { count: 'exact', head: true }).gte('created_at', hourAgo);
+  if ((hourCount || 0) >= MAX_TOTAL_PER_HOUR) return 'hourly limit';
+  return null;
+}
+
 function welcomeEmail() {
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"/></head>
   <body style="font-family:'Helvetica Neue',Arial,sans-serif;background:#F0EBE3;margin:0;padding:0;">
@@ -42,10 +79,18 @@ exports.handler = async function(event) {
     if (!EMAIL_RE.test(email) || email.length > 200) return json(400, { error: 'Please enter a valid email address.' });
     const source = String(body.source || 'popup').slice(0, 40);
     const page = String(body.page || '').slice(0, 300);
+    const ip = ipOf(event);
+    const ua = String((event.headers || {})['user-agent'] || '').slice(0, 300);
+
+    const reason = await botReason(event, body, email);
+    if (reason) {
+      try { await supabase.from('blocked_signups').insert({ email, ip, ua, reason }); } catch (e) {}
+      return json(200, { ok: true, code: WELCOME_CODE, already: false });
+    }
 
     const { data: existing } = await supabase.from('subscribers').select('id').eq('email', email).maybeSingle();
     if (!existing) {
-      const { error } = await supabase.from('subscribers').insert({ email, source, page });
+      const { error } = await supabase.from('subscribers').insert({ email, source, page, ip, ua });
       if (error && !/duplicate/i.test(error.message)) throw error;
       try {
         await resend.emails.send({
