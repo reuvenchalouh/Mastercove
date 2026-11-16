@@ -882,6 +882,15 @@ async function adminUpload(path, file){
   <div class="view" id="view-subs">
     <div class="panel" style="margin-bottom:20px;">
       <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div><h3>Promo Email — 5% off (COMPLETE5)</h3><p id="camp-status">Sends from orders@mastercove.com, one email per subscriber, with an unsubscribe link. Never sends to the same person twice.</p></div>
+        <div style="display:flex;gap:8px;">
+          <button onclick="campaignTest()" style="padding:8px 14px;background:var(--white);border:1px solid var(--border);border-radius:2px;font-family:'Outfit',sans-serif;font-size:12.5px;cursor:pointer;">Send test to me</button>
+          <button id="camp-send-btn" onclick="campaignSendAll()" style="padding:8px 14px;background:var(--walnut);color:#fff;border:none;border-radius:2px;font-family:'Outfit',sans-serif;font-size:12.5px;cursor:pointer;">Send to all subscribers</button>
+        </div>
+      </div>
+    </div>
+    <div class="panel" style="margin-bottom:20px;">
+      <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
         <div><h3>Customers Who Ordered <span id="subs-cust-total" style="font-weight:400;color:var(--mist);"></span></h3><p>Subscribers who have placed an order. Send a thank-you offer to help them complete their collection.</p></div>
         <div style="display:flex;gap:8px;align-items:center;">
           <label class="promo-lbl" style="margin:0;">Offer code</label>
@@ -2921,7 +2930,21 @@ async function fetchOrdersQuiet(){
     return (j.orders||[]).map(function(o){return{email:String(o.email||'').trim().toLowerCase(),customer:o.customer||'',orderNumber:o.order_number||'',product:o.product||'',createdAt:o.created_at||'',items:Array.isArray(o.items)?o.items:[],productIds:Array.isArray(o.product_ids)?o.product_ids:[]};});
   }catch(e){return [];}
 }
+async function campaignCall(payload){var r=await fetch('/.netlify/functions/send-campaign',{method:'POST',headers:{'Content-Type':'application/json','x-admin-password':ADMIN_PW},body:JSON.stringify(Object.assign({campaign:'complete5'},payload))});var j={};try{j=await r.json();}catch(e){}if(!r.ok||!j.ok)throw new Error(j.error||('Error '+r.status));return j;}
+async function campaignStatus(){var el=document.getElementById('camp-status');if(!el)return;try{var j=await campaignCall({action:'status'});el.textContent='Sent to '+j.sent+' so far · '+j.remaining+' still to send. From orders@mastercove.com with an unsubscribe link; never sends to the same person twice.';}catch(e){el.textContent='Could not check status: '+e.message;}}
+async function campaignTest(){try{var j=await campaignCall({action:'test',testTo:'mastercovestore@gmail.com'});showToast('Test sent to '+j.test,'success');}catch(e){showToast('Test failed: '+e.message,'error');}}
+async function campaignSendAll(){
+  var st;try{st=await campaignCall({action:'status'});}catch(e){showToast('Could not check status: '+e.message,'error');return;}
+  if(!st.remaining){showToast('Everyone already got this email','success');return;}
+  if(!confirm('Send the 5% off email to '+st.remaining+' subscribers now? This cannot be undone.'))return;
+  var btn=document.getElementById('camp-send-btn');btn.disabled=true;var total=0;
+  try{while(true){btn.textContent='Sending… '+total+' sent';var j=await campaignCall({action:'send'});total+=j.sentNow;if(!j.remaining||!j.sentNow)break;await new Promise(function(r){setTimeout(r,1200);});}
+    showToast('Promo email sent to '+total+' subscribers','success');}
+  catch(e){showToast('Stopped after '+total+': '+e.message+' — press Send again to continue','error');}
+  finally{btn.disabled=false;btn.textContent='Send to all subscribers';campaignStatus();}
+}
 async function loadSubscribers(){
+  campaignStatus();
   try{var saved=localStorage.getItem('mc_offer_code');if(saved)document.getElementById('subs-offer-code').value=saved;}catch(e){}
   var r=await adminDb({action:'subscribers_list'});
   if(r.error){document.getElementById('subs-tbody').innerHTML='<tr><td colspan="4" style="color:var(--red);">Could not load subscribers: '+subEsc(r.error.message)+'</td></tr>';return;}
