@@ -71,7 +71,9 @@ async function pending(campaign) {
   if (error) throw error;
   const { data: sent } = await supabase.from('campaign_sends').select('email').eq('campaign', campaign);
   const done = new Set((sent || []).map((r) => r.email));
-  return [...new Set((subs || []).map((s) => String(s.email).toLowerCase()))].filter((e) => !done.has(e));
+  // Skip addresses the email service would reject (one bad address fails the whole batch).
+  const valid = (e) => /^[a-z0-9._%+-]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/.test(e) && !/\.\.|^\.|\.@/.test(e);
+  return [...new Set((subs || []).map((s) => String(s.email).trim().toLowerCase()))].filter((e) => valid(e) && !done.has(e));
 }
 
 exports.handler = async function (event) {
