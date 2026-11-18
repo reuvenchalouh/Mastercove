@@ -177,6 +177,10 @@ body{font-family:'Outfit',sans-serif;background:#F0EBE3;color:var(--ink);font-si
 .db-todo b.hot{color:var(--red);}
 @media(max-width:1100px){.db-kpis{grid-template-columns:repeat(2,minmax(0,1fr));}.db-grid{grid-template-columns:minmax(0,1fr);}}
 @media(max-width:640px){.db-funnel{grid-template-columns:repeat(2,minmax(0,1fr));}.db-kpi-val{font-size:24px;}}
+.db-gbars{position:relative;}
+.db-gbars svg{display:block;width:100%;height:auto;overflow:visible;}
+.db-gbars text{font-family:'Outfit',sans-serif;font-size:11px;fill:var(--mist);}
+.db-gbars .gb-g{cursor:default;}
 .db-dates{font-size:12px;color:var(--mist);margin-top:7px;padding-left:2px;}
 .db-kpis5{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:12px;margin-bottom:16px;}
 .db-k{background:var(--white);border:1px solid var(--border);border-radius:8px;padding:16px 16px 14px;display:flex;gap:12px;align-items:flex-start;min-width:0;}
@@ -618,7 +622,7 @@ async function adminUpload(path, file){
     </div>
 
     <div class="db-panel" style="margin-bottom:16px;" id="db-chart-panel">
-      <div class="db-ph"><h3 id="db-chart-title">Visitors per day</h3><div class="db-legend"><span><i style="background:var(--maple)"></i>Visitors</span><span><i style="background:var(--walnut)"></i>Added to cart</span><span><i class="prev-key"></i><span id="db-prev-lbl">Same days the week before</span></span></div></div>
+      <div class="db-ph"><h3 id="db-chart-title">Visitors per day</h3><div class="db-legend"><span><i style="background:#B8895A;border-radius:50%"></i><span id="db-cur-lbl">This period</span></span><span><i style="background:#8FB89A;border-radius:50%"></i><span id="db-prev-lbl">Same days the week before</span></span></div></div>
       <div class="db-chart" id="db-chart"></div>
       <div class="db-axis" id="db-axis"></div>
     </div>
@@ -2507,8 +2511,12 @@ function dbOrderDate(t){
 function dbPrevRange(R){
   if(R.days<2){var f1=new Date(R.from);f1.setDate(f1.getDate()-7);var t1=new Date(R.to);t1.setDate(t1.getDate()-7);return {from:f1,to:t1,shift:7,day:true};}
   if(R.year){var f=new Date(R.from);f.setFullYear(f.getFullYear()-1);var t=new Date(R.to);t.setFullYear(t.getFullYear()-1);return {from:f,to:t,shift:'year'};}
-  var sh=Math.ceil(R.days/7)*7, f2=new Date(R.from);f2.setDate(f2.getDate()-sh);var t2=new Date(f2);t2.setDate(t2.getDate()+R.days);return {from:f2,to:t2,shift:sh};
+  if(R.days===7){var f3=new Date(R.from);f3.setDate(f3.getDate()-7);var t3=new Date(R.to);t3.setDate(t3.getDate()-7);return {from:f3,to:t3,shift:7};}
+  // 30 days: same dates last month (Nov 3 vs Oct 3). 90 days: same dates 3 months earlier.
+  var m=R.days>=90?3:1;return {from:dbShiftMonths(R.from,m),to:dbShiftMonths(R.to,m),months:m};
 }
+// Same date m months earlier (Mar 31 -> Feb 28), keeping the time of day
+function dbShiftMonths(d,m){var y=d.getFullYear(),mo=d.getMonth()-m,last=new Date(y,mo+1,0).getDate();var r=new Date(d);r.setDate(1);r.setFullYear(y,mo,Math.min(d.getDate(),last));return r;}
 function dbDayKey(t){return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');}
 function dbSetRange(r){dbRange=r;try{localStorage.setItem('mc_db_range',r);}catch(e){}loadDashboard();}
 function dbRows(el,list,nameFn,valFn,labelFn,linkFn){
@@ -2540,7 +2548,7 @@ async function loadDashboard(){
   var st=await statsP, all=await ordersP, pv=await prevP;
   dbOrders=all;
   var pd=(pv&&!pv.error&&pv.data)||null;
-  R.prev={from:P.from,to:P.to,shift:P.shift,day:!!P.day,daily:(pd&&pd.daily)||[]};
+  R.prev={from:P.from,to:P.to,shift:P.shift,months:P.months||0,day:!!P.day,daily:(pd&&pd.daily)||[]};
   var d=st.error?null:(st.data||{});
   dbLast={d:d,R:R,pd:pd};
   renderDashTodo(all);
@@ -2594,7 +2602,7 @@ var DB_IC={
 function dbPeriodWord(R){
   if(R.days===1)return dbRange==='today'?'vs same time last week':'vs same day last week';
   if(R.year)return 'vs the 12 months before';
-  return 'vs previous '+R.days+' days';
+  return R.days>=90?'vs same dates 3 months earlier':R.days===7?'vs same days last week':'vs same dates last month';
 }
 function dbFmtShort(n){n=Number(n)||0;var a=Math.abs(n);return (n<0?'-$':'$')+(a>=1e6?(Math.round(a/1e5)/10)+'M':a>=1e3?(Math.round(a/100)/10)+'k':Math.round(a));}
 function renderDash(all,R,d,pd){
@@ -2734,34 +2742,62 @@ function renderDashVisitors(d,R){
     var by={};(d.daily||[]).forEach(function(x){by[x.d_day]=x;});
     var pby={};((R.prev&&R.prev.daily)||[]).forEach(function(x){pby[x.d_day]=x;});
     var hasPrev=!!R.prev;
-    var days=[],t=new Date(R.from),pt=hasPrev?new Date(R.prev.from):null;
+    var days=[],t=new Date(R.from),pt=null;
     for(var i=0;i<R.days;i++){
+      if(hasPrev){if(R.prev.months)pt=dbShiftMonths(t,R.prev.months);else{pt=new Date(t);pt.setDate(pt.getDate()-7);}}
       var key=dbDayKey(t),pkey=pt?dbDayKey(pt):'';
       days.push({key:key,date:new Date(t),pdate:pt?new Date(pt):null,v:(by[key]||{}).visitors||0,c:(by[key]||{}).carts||0,p:(pby[pkey]||{}).visitors||0});
-      t.setDate(t.getDate()+1);if(pt)pt.setDate(pt.getDate()+1);
+      t.setDate(t.getDate()+1);
     }
-    var bars=days, fmtTip, fmt;
+    // Group the days: 7 days = one group per day, 30/90 days = one group per week, yearly = one per month
+    var bars=[], fd=function(dt,o){return dt.toLocaleDateString('en-US',o);};
     if(R.year){
-      // Yearly: one bar per month, shadow = same month last year
-      var mo={};bars=[];
-      days.forEach(function(x){var k=x.key.slice(0,7);if(!mo[k]){mo[k]={key:k,date:new Date(x.date.getFullYear(),x.date.getMonth(),1),v:0,c:0,p:0};bars.push(mo[k]);}mo[k].v+=x.v;mo[k].c+=x.c;});
+      var mo={};
+      days.forEach(function(x){var k=x.key.slice(0,7);if(!mo[k]){mo[k]={date:new Date(x.date.getFullYear(),x.date.getMonth(),1),v:0,c:0,p:0};bars.push(mo[k]);}mo[k].v+=x.v;mo[k].c+=x.c;});
       (R.prev.daily||[]).forEach(function(x){var y=+x.d_day.slice(0,4)+1,k=y+x.d_day.slice(4,7);if(mo[k])mo[k].p+=+x.visitors||0;});
-      fmtTip=function(x){return x.date.toLocaleDateString('en-US',{month:'long',year:'numeric'})+' · '+x.v+' visitor'+(x.v===1?'':'s')+(x.c?' · '+x.c+' cart':'')+' · same month last year: '+x.p;};
-      fmt=function(dt){return dt.toLocaleDateString('en-US',{month:'short',year:'2-digit'});};
+      bars.forEach(function(b){b.lbl=fd(b.date,{month:'short'});b.tip=fd(b.date,{month:'long',year:'numeric'});b.ptip='Same month last year';});
+    }else if(R.days<=7){
+      days.forEach(function(x){bars.push({lbl:fd(x.date,{weekday:'short'}),tip:fd(x.date,{weekday:'short',month:'short',day:'numeric'}),ptip:x.pdate?fd(x.pdate,{weekday:'short',month:'short',day:'numeric'}):'',v:x.v,c:x.c,p:x.p});});
     }else{
-      fmtTip=function(x){return x.date.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})+' · '+x.v+' visitor'+(x.v===1?'':'s')+(x.c?' · '+x.c+' cart':'')+(x.pdate?' · '+x.pdate.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})+': '+x.p:'');};
-      fmt=function(dt){return dt.toLocaleDateString('en-US',{month:'short',day:'numeric'});};
+      for(var w=0;w<days.length;w+=7){
+        var g=days.slice(w,w+7),a=g[0],z=g[g.length-1];
+        var rng=function(s,e){return s?fd(s,{month:'short',day:'numeric'})+(e&&e!==s?' – '+fd(e,{month:'short',day:'numeric'}):''):'';};
+        bars.push({lbl:fd(a.date,{month:'short',day:'numeric'}),tip:'Week '+(w/7+1)+' · '+rng(a.date,z.date),ptip:rng(a.pdate,z.pdate),
+          v:g.reduce(function(s,x){return s+x.v;},0),c:g.reduce(function(s,x){return s+x.c;},0),p:g.reduce(function(s,x){return s+x.p;},0)});
+      }
     }
-    var max=Math.max.apply(null,bars.map(function(x){return Math.max(x.v,hasPrev?x.p:0);}))||1;
-    document.getElementById('db-chart').innerHTML=bars.map(function(x){
-      return '<div class="db-col"><div class="v" style="height:'+(x.v/max*100)+'%"></div>'+(hasPrev&&x.p?'<div class="p" style="height:'+(x.p/max*100)+'%"></div>':'')+'<div class="c" style="height:'+(x.c/max*100)+'%"></div><div class="tip">'+fmtTip(x)+'</div></div>';
-    }).join('');
-    document.getElementById('db-chart-title').textContent=R.year?'Visitors per month':'Visitors per day';
+    // Grouped bars: this period next to the previous period
+    var box=document.getElementById('db-chart');box.className='db-gbars';
+    var W=Math.max(300,Math.round(box.clientWidth||900)),H=W<600?220:250,L=44,Rp=6,T=10,B=26,n=bars.length;
+    var mx=Math.max.apply(null,bars.map(function(x){return Math.max(x.v,x.p);}))||1;
+    var step=Math.pow(10,Math.floor(Math.log10(mx/4)));[1,2,2.5,5,10].some(function(f){if(mx/(step*f)<=4){step*=f;return true;}return false;});if(step<1)step=1;
+    var top=step*Math.ceil(mx/step);
+    var Y=function(v){return T+(top-v)/top*(H-T-B);},gw=(W-L-Rp)/n,bw=Math.min(46,gw*0.36),gap=Math.max(2,bw*0.08);
+    var s='';
+    for(var v=0;v<=top+1e-9;v+=step)s+='<line x1="'+L+'" x2="'+(W-Rp)+'" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="'+(v?'#EDE5D8':'#DDD5C8')+'" stroke-dasharray="'+(v?'3 4':'')+'"/><text x="'+(L-8)+'" y="'+(Y(v)+3.5)+'" text-anchor="end">'+dbNum(v)+'</text>';
+    var bar=function(x,v,col){var h=Math.max(0,Y(0)-Y(v));if(!h)return '';var r=Math.min(5,bw/2,h);return '<path d="M'+x+' '+Y(0)+'V'+(Y(v)+r)+'Q'+x+' '+Y(v)+' '+(x+r)+' '+Y(v)+'H'+(x+bw-r)+'Q'+(x+bw)+' '+Y(v)+' '+(x+bw)+' '+(Y(v)+r)+'V'+Y(0)+'Z" fill="'+col+'"/>';};
+    var every=Math.ceil(n/Math.max(4,Math.floor(W/64)));
+    bars.forEach(function(b,i){
+      var cx=L+gw*i+gw/2,x1=cx-bw-gap/2,x2=cx+gap/2;
+      s+='<g class="gb-g" data-i="'+i+'"><rect x="'+(L+gw*i)+'" y="'+T+'" width="'+gw+'" height="'+(H-T-B)+'" fill="transparent" class="gb-hit"/>'+bar(x1,b.v,'#B8895A')+(hasPrev?bar(x2,b.p,'#8FB89A'):'')+'</g>';
+      if(i%every===0)s+='<text x="'+cx+'" y="'+(H-8)+'" text-anchor="middle">'+b.lbl+'</text>';
+    });
+    box.innerHTML='<svg viewBox="0 0 '+W+' '+H+'">'+s+'</svg><div class="db-tt" id="db-gb-tt"></div>';
+    var tt=document.getElementById('db-gb-tt'),svg=box.querySelector('svg');
+    svg.querySelectorAll('.gb-g').forEach(function(g){
+      g.onmouseenter=function(){var b=bars[+g.getAttribute('data-i')],r=svg.getBoundingClientRect(),i=+g.getAttribute('data-i');
+        g.querySelector('.gb-hit').setAttribute('fill','rgba(184,137,90,.08)');
+        tt.innerHTML='<b>'+b.tip+'</b><br>'+dbNum(b.v)+' visitor'+(b.v===1?'':'s')+(b.c?' · '+b.c+' added to cart':'')+(hasPrev?'<br>'+b.ptip+': '+dbNum(b.p):'');
+        tt.style.display='block';var px=(L+gw*i+gw/2)/W*r.width;tt.style.left=Math.max(0,Math.min(r.width-tt.offsetWidth,px-tt.offsetWidth/2))+'px';tt.style.top='-8px';};
+      g.onmouseleave=function(){g.querySelector('.gb-hit').setAttribute('fill','transparent');tt.style.display='none';};
+    });
+    document.getElementById('db-chart-title').textContent=R.year?'Visitors per month':R.days<=7?'Visitors per day':'Visitors per week';
     var tv=bars.reduce(function(a,x){return a+x.v;},0),tp=bars.reduce(function(a,x){return a+x.p;},0);
     var chg=tp?Math.round((tv-tp)/tp*100):null;
-    var pl=R.year?'Same months last year':(R.days===7?'Same days the week before':'Previous '+R.days+' days (same weekdays)');
-    document.getElementById('db-prev-lbl').innerHTML=pl+(hasPrev?' · '+dbNum(tp)+' visitors'+(chg===null?'':' (<b style="color:'+(chg>=0?'var(--green)':'#b4442f')+'">'+(chg>=0?'+':'')+chg+'%</b> now)'):'');
-    document.getElementById('db-axis').innerHTML='<span>'+fmt(bars[0].date)+'</span>'+(bars.length>2?'<span>'+fmt(bars[Math.floor(bars.length/2)].date)+'</span>':'')+'<span>'+fmt(bars[bars.length-1].date)+'</span>';
+    var pl=R.year?'Same months last year':(R.days===7?'Same days the week before':(R.prev&&R.prev.months===3?'Same dates 3 months earlier':'Same dates last month'));
+    document.getElementById('db-prev-lbl').innerHTML=pl+(hasPrev?' · '+dbNum(tp)+(chg===null?'':' (<b style="color:'+(chg>=0?'var(--green)':'#b4442f')+'">'+(chg>=0?'+':'')+chg+'%</b> now)'):'');
+    document.getElementById('db-cur-lbl').textContent='This period · '+dbNum(tv);
+    document.getElementById('db-axis').innerHTML='';
   }
   dbRows('db-cats',(d.categories||[]).slice(0,10),function(x){return dbCatName(x.cat);},function(x){return x.visitors;},function(x){return dbNum(x.visitors)+' visitor'+(x.visitors===1?'':'s');});
   var devName={mobile:'Phone',desktop:'Computer',tablet:'Tablet',unknown:'Unknown'};
