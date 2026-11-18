@@ -252,7 +252,7 @@ var urlCollection = urlParams.get('collection');
 
 document.addEventListener('DOMContentLoaded', async function(){
   try {
-    var res = await _sb.from('products').select('id,name,slug,cat,price,was,img,finishes,dims,badge,collection,collection_cover,tagline,top_sizes,variant_mode,shipping_cost,rating,review_count').eq('status','active');
+    var res = await (async function(){var all=[],from=0;while(true){var r=await _sb.from('products').select('id,name,slug,cat,price,was,img,finishes,dims,badge,collection,collection_cover,tagline,top_sizes,variant_mode,shipping_cost,rating,review_count').eq('status','active').order('id',{ascending:true}).range(from,from+999);if(r.error)return r;all=all.concat(r.data||[]);if(!r.data||r.data.length<1000)break;from+=1000;}return {data:all};})();
     if(res.data && res.data.length){
       allProducts = res.data.map(function(p){
         return {
