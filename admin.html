@@ -622,7 +622,7 @@ async function adminUpload(path, file){
     </div>
 
     <div class="db-panel" style="margin-bottom:16px;" id="db-chart-panel">
-      <div class="db-ph"><h3 id="db-chart-title">Visitors per day</h3><div class="db-legend"><span><i style="background:#B8895A;border-radius:50%"></i><span id="db-cur-lbl">This period</span></span><span><i style="background:#8FB89A;border-radius:50%"></i><span id="db-prev-lbl">Same days the week before</span></span></div></div>
+      <div class="db-ph"><h3 id="db-chart-title">Visitors per day</h3><div class="db-legend"><span><i style="background:#6B4C35;border-radius:50%"></i><span id="db-cur-lbl">This period</span></span><span><i style="background:#D4AA7D;border-radius:50%"></i><span id="db-prev-lbl">Same days the week before</span></span></div></div>
       <div class="db-chart" id="db-chart"></div>
       <div class="db-axis" id="db-axis"></div>
     </div>
@@ -2779,7 +2779,7 @@ function renderDashVisitors(d,R){
     var every=Math.ceil(n/Math.max(4,Math.floor(W/64)));
     bars.forEach(function(b,i){
       var cx=L+gw*i+gw/2,x1=cx-bw-gap/2,x2=cx+gap/2;
-      s+='<g class="gb-g" data-i="'+i+'"><rect x="'+(L+gw*i)+'" y="'+T+'" width="'+gw+'" height="'+(H-T-B)+'" fill="transparent" class="gb-hit"/>'+bar(x1,b.v,'#B8895A')+(hasPrev?bar(x2,b.p,'#8FB89A'):'')+'</g>';
+      s+='<g class="gb-g" data-i="'+i+'"><rect x="'+(L+gw*i)+'" y="'+T+'" width="'+gw+'" height="'+(H-T-B)+'" fill="transparent" class="gb-hit"/>'+bar(x1,b.v,'#6B4C35')+(hasPrev?bar(x2,b.p,'#D4AA7D'):'')+'</g>';
       if(i%every===0)s+='<text x="'+cx+'" y="'+(H-8)+'" text-anchor="middle">'+b.lbl+'</text>';
     });
     box.innerHTML='<svg viewBox="0 0 '+W+' '+H+'">'+s+'</svg><div class="db-tt" id="db-gb-tt"></div>';
