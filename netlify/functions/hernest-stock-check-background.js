@@ -242,6 +242,22 @@ async function emailOwner(subject, bodyHtml) {
   } catch (e) { console.error('Email failed:', e.message); }
 }
 
+
+// Supabase returns at most 1000 rows per request, so read the products table in pages.
+async function selectAllProducts(cols, active) {
+  let all = [], from = 0;
+  for (;;) {
+    let q = supabase.from('products').select(cols).order('id', { ascending: true }).range(from, from + 999);
+    if (active) q = q.eq('status', 'active');
+    const { data, error } = await q;
+    if (error) return { data: null, error };
+    all = all.concat(data || []);
+    if (!data || data.length < 1000) break;
+    from += 1000;
+  }
+  return { data: all, error: null };
+}
+
 exports.handler = async function(event) {
   if (!(await isAllowed(event))) return { statusCode: 401, body: 'Not authorized' };
   const started = Date.now();
@@ -257,7 +273,7 @@ exports.handler = async function(event) {
   const runId = run && run.id;
 
   try {
-    const { data: products, error } = await supabase.from('products').select('id,name,status,finishes,top_sizes,supplier_link');
+    const { data: products, error } = await selectAllProducts('id,name,status,finishes,top_sizes,supplier_link');
     if (error) throw new Error('Could not load products: ' + error.message);
 
     const options = [];
