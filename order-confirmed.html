@@ -118,13 +118,20 @@ h1{font-family:'Playfair Display',serif;font-size:28px;font-weight:400;margin-bo
 
 <script>
 var params  = new URLSearchParams(window.location.search);
-var order   = params.get('order');
-var name    = params.get('name');
-var address = params.get('address');
-var product = params.get('product');
-var total   = params.get('total');
-var value   = params.get('value');
-var itemsRaw = params.get('items');
+// Order details come from the checkout in this same tab (older links still carry them in the address)
+var conf = null;
+try { conf = JSON.parse(sessionStorage.getItem('mc_conf') || 'null'); } catch(e){}
+if (conf && params.get('order') && String(conf.order) !== String(params.get('order'))) conf = null;
+var pick = function(k){ return (conf && conf[k] != null && conf[k] !== '') ? String(conf[k]) : params.get(k); };
+var order   = params.get('order') || (conf && conf.order);
+var name    = pick('name');
+var address = pick('address');
+var product = pick('product');
+var total   = pick('total');
+var value   = pick('value');
+var itemsRaw = pick('items');
+// Old-style links: drop the personal details from the address bar
+if (params.get('name') || params.get('address')) { try { history.replaceState(null, '', location.pathname + (order ? '?order=' + encodeURIComponent(order) : '')); } catch(e){} }
 
 if(order) document.getElementById('order-num').textContent = order;
 
