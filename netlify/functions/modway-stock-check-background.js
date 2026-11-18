@@ -294,6 +294,22 @@ async function isAllowed(event) {
   return !error && data === true;
 }
 
+
+// Supabase returns at most 1000 rows per request, so read the products table in pages.
+async function selectAllProducts(cols, active) {
+  let all = [], from = 0;
+  for (;;) {
+    let q = supabase.from('products').select(cols).order('id', { ascending: true }).range(from, from + 999);
+    if (active) q = q.eq('status', 'active');
+    const { data, error } = await q;
+    if (error) return { data: null, error };
+    all = all.concat(data || []);
+    if (!data || data.length < 1000) break;
+    from += 1000;
+  }
+  return { data: all, error: null };
+}
+
 exports.handler = async function(event) {
   if (!(await isAllowed(event))) return { statusCode: 401, body: 'Not authorized' };
   const { data: run } = await supabase.from('stock_check_runs').insert({ supplier: 'modway', mode: 'apply', summary: 'running' }).select('id').single();
@@ -312,7 +328,7 @@ exports.handler = async function(event) {
 
 async function runSync() {
   const started = Date.now();
-  const { data: products, error } = await supabase.from('products').select('id,name,status,finishes,top_sizes');
+  const { data: products, error } = await selectAllProducts('id,name,status,finishes,top_sizes');
   if (error) {
     console.error(error);
     await emailFailure('Could not load products from the database', error.message);
