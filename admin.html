@@ -2726,6 +2726,9 @@ function renderDashVisitors(d,R){
   document.getElementById('db-funnel').innerHTML='<div class="db-fun">'+steps.map(function(s,i){
     return '<div class="db-fun-row"><div class="db-fun-bar" style="width:'+(100-i*13)+'%;background:'+cols[i]+'">'+s[0]+'</div><div class="db-fun-num">'+dbNum(s[1])+'<small>'+(i?dbPct(s[1],ses):'100%')+'</small></div></div>';
   }).join('')+'</div><p class="db-note" style="margin:12px 0 0">'+dbNum(d.visitors)+' visitors · '+dbNum(d.page_views)+' pages viewed · average visit '+dbTime(d.avg_secs)+' (typical '+dbTime(d.median_secs)+')</p>';
+  // Checkout problems: messages shoppers saw at checkout (card declined, missing field, etc.)
+  var ce=d.checkout_errors||[];
+  if(ce.length)document.getElementById('db-funnel').insertAdjacentHTML('beforeend','<div class="db-subh" style="font-size:12.5px">Checkout problems shoppers hit</div>'+ce.map(function(x){return '<div class="db-row" style="padding:4px 0"><div class="db-row-name" title="'+dbEsc(x.message)+'">'+dbEsc(x.message||'(no message)')+'</div><div class="db-row-val">'+x.n+'×</div></div>';}).join(''));
   // Traffic sources donut: top 5 + everything else
   var src=(d.sources||[]).map(function(x){return {l:x.source||'Direct',v:+x.sessions||0};});
   var top5=src.slice(0,5),rest=src.slice(5).reduce(function(a,x){return a+x.v;},0);if(rest)top5.push({l:'Other',v:rest});
