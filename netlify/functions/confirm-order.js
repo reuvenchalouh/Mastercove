@@ -375,7 +375,7 @@ async function saveOrder({ email, name, phone, address, city, state, zip, items,
       return i.name + (qty > 1 ? ' x' + qty : '');
     }).join(', ');
     const revenue = Math.round(amount) / 100;
-    const now = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const now = new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }); // New York time, like the rest of the store
 
     await supabase.from('orders').insert({
       id: Date.now(),
