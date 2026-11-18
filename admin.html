@@ -161,6 +161,10 @@ body{font-family:'Outfit',sans-serif;background:#F0EBE3;color:var(--ink);font-si
 .db-col .v{background:var(--maple);border-radius:3px 3px 0 0;min-height:2px;}
 .db-col .c{background:var(--walnut);border-radius:3px 3px 0 0;position:absolute;left:25%;right:25%;bottom:0;min-height:0;}
 .db-col:hover .v{background:var(--oak);}
+.db-col .v{position:relative;z-index:1;opacity:.92;}
+.db-col .p{position:absolute;left:-1px;right:-1px;bottom:0;border:1.5px dashed var(--slate);border-bottom:none;border-radius:3px 3px 0 0;background:rgba(120,110,100,.10);z-index:2;pointer-events:none;}
+.db-col .c{z-index:3;}
+.db-legend .prev-key{border:1.5px dashed var(--slate);background:rgba(120,110,100,.10);box-sizing:border-box;}
 .db-col .tip{display:none;position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;font-size:11px;padding:5px 8px;border-radius:3px;white-space:nowrap;z-index:5;}
 .db-col:hover .tip{display:block;}
 .db-axis{display:flex;justify-content:space-between;font-size:10.5px;color:var(--mist);margin-top:5px;}
@@ -522,6 +526,7 @@ async function adminUpload(path, file){
         <button class="db-range active" data-r="7" onclick="dbSetRange('7')">Last 7 days</button>
         <button class="db-range" data-r="30" onclick="dbSetRange('30')">Last 30 days</button>
         <button class="db-range" data-r="90" onclick="dbSetRange('90')">Last 90 days</button>
+        <button class="db-range" data-r="year" onclick="dbSetRange('year')">Yearly</button>
       </div>
       <div style="display:flex;align-items:center;gap:14px;">
         <div class="db-live"><i></i><span id="db-live">— on the site now</span></div>
@@ -554,8 +559,8 @@ async function adminUpload(path, file){
     </div>
 
     <div class="db-panel" style="margin-bottom:16px;" id="db-chart-panel">
-      <h3>Visitors per day</h3>
-      <div class="db-legend"><span><i style="background:var(--maple)"></i>Visitors</span><span><i style="background:var(--walnut)"></i>Added to cart</span></div>
+      <h3 id="db-chart-title">Visitors per day</h3>
+      <div class="db-legend"><span><i style="background:var(--maple)"></i>Visitors</span><span><i style="background:var(--walnut)"></i>Added to cart</span><span><i class="prev-key"></i><span id="db-prev-lbl">Same days the week before</span></span></div>
       <div class="db-chart" id="db-chart"></div>
       <div class="db-axis" id="db-axis"></div>
     </div>
@@ -2432,6 +2437,7 @@ function dbRangeDates(r){
   var now=new Date(),start=new Date(now);start.setHours(0,0,0,0);
   if(r==='today')return {from:start,to:now,days:1};
   if(r==='yesterday'){var y=new Date(start);y.setDate(y.getDate()-1);return {from:y,to:start,days:1};}
+  if(r==='year'){var f0=new Date(start.getFullYear(),start.getMonth()-11,1);return {from:f0,to:now,days:Math.round((start-f0)/864e5)+1,year:true};}
   var n=parseInt(r,10)||7;var f=new Date(start);f.setDate(f.getDate()-(n-1));return {from:f,to:now,days:n};
 }
 // Order dates are saved like "Nov 2, 2026, 02:14 AM"
@@ -2440,6 +2446,12 @@ function dbOrderDate(t){
   if(m){var mo='janfebmaraprmayjunjulaugsepoctnovdec'.indexOf(m[1].toLowerCase())/3;var h=+m[4];if(m[6]){var pm=/pm/i.test(m[6]);if(h===12)h=pm?12:0;else if(pm)h+=12;}return new Date(+m[3],mo,+m[2],h,+m[5]);}
   var d=new Date(t);return isNaN(d)?null:d;
 }
+function dbPrevRange(R){
+  if(R.days<2)return null;
+  if(R.year){var f=new Date(R.from);f.setFullYear(f.getFullYear()-1);var t=new Date(R.to);t.setFullYear(t.getFullYear()-1);return {from:f,to:t,shift:'year'};}
+  var sh=Math.ceil(R.days/7)*7, f2=new Date(R.from);f2.setDate(f2.getDate()-sh);var t2=new Date(f2);t2.setDate(t2.getDate()+R.days);return {from:f2,to:t2,shift:sh};
+}
+function dbDayKey(t){return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');}
 function dbSetRange(r){dbRange=r;try{localStorage.setItem('mc_db_range',r);}catch(e){}loadDashboard();}
 function dbRows(el,list,nameFn,valFn,labelFn,linkFn){
   var box=document.getElementById(el);if(!box)return;
@@ -2462,12 +2474,15 @@ async function loadDashboard(){
   document.querySelectorAll('.db-range').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-r')===dbRange);});
   var R=dbRangeDates(dbRange);
   var statsP=adminDb({action:'dashboard',from:R.from.toISOString(),to:new Date(R.to.getTime()+60000).toISOString()});
+  // Previous period for the "shadow" bars: weekday-aligned (7 days back, 35 for 30 days, 91 for 90) or the same months last year
+  var P=dbPrevRange(R), prevP=P?adminDb({action:'dashboard',from:P.from.toISOString(),to:P.to.toISOString()}):Promise.resolve(null);
   var ordersP=dbFetchOrders();
-  var st=await statsP, all=await ordersP;
+  var st=await statsP, all=await ordersP, pv=await prevP;
   dbOrders=all;
   renderDashSales(all,R);
   renderDashTodo(all);
   if(st.error){document.getElementById('db-live').textContent='Visitor stats unavailable';return;}
+  R.prev=P?{from:P.from,shift:P.shift,daily:(pv&&!pv.error&&pv.data&&pv.data.daily)||[]}:null;
   dbLast={d:st.data||{},R:R};
   renderDashVisitors(dbLast.d,R);
   clearInterval(dbTimer);
@@ -2499,7 +2514,7 @@ function renderDashSales(all,R){
   });
   var n=inR.length;
   document.getElementById('db-sales').textContent=dbMoney(rev);
-  document.getElementById('db-sales-sub').innerHTML=R.days===1?(dbRange==='today'?'So far today':'Yesterday'):'Last '+R.days+' days';
+  document.getElementById('db-sales-sub').innerHTML=R.days===1?(dbRange==='today'?'So far today':'Yesterday'):(R.year?'Last 12 months':'Last '+R.days+' days');
   // Profit only counts orders where you've entered the supplier cost
   document.getElementById('db-profit').textContent=costKnown?dbMoney(costRev-cost):'—';
   document.getElementById('db-profit-sub').innerHTML=costKnown?('<b>'+dbPct(costRev-cost,costRev)+'</b> margin'+(costKnown<n?' · '+(n-costKnown)+' order'+(n-costKnown===1?'':'s')+' missing cost':'')):(n?'Add the supplier cost on each order':'&nbsp;');
@@ -2530,15 +2545,36 @@ function renderDashVisitors(d,R){
   else{
     panel.style.display='';
     var by={};(d.daily||[]).forEach(function(x){by[x.d_day]=x;});
-    var days=[],t=new Date(R.from);
-    for(var i=0;i<R.days;i++){var key=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');days.push({key:key,date:new Date(t),v:(by[key]||{}).visitors||0,c:(by[key]||{}).carts||0});t.setDate(t.getDate()+1);}
-    var max=Math.max.apply(null,days.map(function(x){return x.v;}))||1;
-    document.getElementById('db-chart').innerHTML=days.map(function(x){
-      var lbl=x.date.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
-      return '<div class="db-col"><div class="v" style="height:'+(x.v/max*100)+'%"></div><div class="c" style="height:'+(x.c/max*100)+'%"></div><div class="tip">'+lbl+' · '+x.v+' visitor'+(x.v===1?'':'s')+(x.c?' · '+x.c+' cart':'')+'</div></div>';
+    var pby={};((R.prev&&R.prev.daily)||[]).forEach(function(x){pby[x.d_day]=x;});
+    var hasPrev=!!R.prev;
+    var days=[],t=new Date(R.from),pt=hasPrev?new Date(R.prev.from):null;
+    for(var i=0;i<R.days;i++){
+      var key=dbDayKey(t),pkey=pt?dbDayKey(pt):'';
+      days.push({key:key,date:new Date(t),pdate:pt?new Date(pt):null,v:(by[key]||{}).visitors||0,c:(by[key]||{}).carts||0,p:(pby[pkey]||{}).visitors||0});
+      t.setDate(t.getDate()+1);if(pt)pt.setDate(pt.getDate()+1);
+    }
+    var cols=days, fmtTip, fmt;
+    if(R.year){
+      // Yearly: one bar per month, shadow = same month last year
+      var mo={};cols=[];
+      days.forEach(function(x){var k=x.key.slice(0,7);if(!mo[k]){mo[k]={key:k,date:new Date(x.date.getFullYear(),x.date.getMonth(),1),v:0,c:0,p:0};cols.push(mo[k]);}mo[k].v+=x.v;mo[k].c+=x.c;});
+      (R.prev.daily||[]).forEach(function(x){var y=+x.d_day.slice(0,4)+1,k=y+x.d_day.slice(4,7);if(mo[k])mo[k].p+=+x.visitors||0;});
+      fmtTip=function(x){return x.date.toLocaleDateString('en-US',{month:'long',year:'numeric'})+' · '+x.v+' visitor'+(x.v===1?'':'s')+(x.c?' · '+x.c+' cart':'')+' · same month last year: '+x.p;};
+      fmt=function(dt){return dt.toLocaleDateString('en-US',{month:'short',year:'2-digit'});};
+    }else{
+      fmtTip=function(x){return x.date.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})+' · '+x.v+' visitor'+(x.v===1?'':'s')+(x.c?' · '+x.c+' cart':'')+(x.pdate?' · '+x.pdate.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})+': '+x.p:'');};
+      fmt=function(dt){return dt.toLocaleDateString('en-US',{month:'short',day:'numeric'});};
+    }
+    var max=Math.max.apply(null,cols.map(function(x){return Math.max(x.v,hasPrev?x.p:0);}))||1;
+    document.getElementById('db-chart').innerHTML=cols.map(function(x){
+      return '<div class="db-col"><div class="v" style="height:'+(x.v/max*100)+'%"></div>'+(hasPrev&&x.p?'<div class="p" style="height:'+(x.p/max*100)+'%"></div>':'')+'<div class="c" style="height:'+(x.c/max*100)+'%"></div><div class="tip">'+fmtTip(x)+'</div></div>';
     }).join('');
-    var fmt=function(dt){return dt.toLocaleDateString('en-US',{month:'short',day:'numeric'});};
-    document.getElementById('db-axis').innerHTML='<span>'+fmt(days[0].date)+'</span>'+(days.length>2?'<span>'+fmt(days[Math.floor(days.length/2)].date)+'</span>':'')+'<span>'+fmt(days[days.length-1].date)+'</span>';
+    document.getElementById('db-chart-title').textContent=R.year?'Visitors per month':'Visitors per day';
+    var tv=cols.reduce(function(a,x){return a+x.v;},0),tp=cols.reduce(function(a,x){return a+x.p;},0);
+    var chg=tp?Math.round((tv-tp)/tp*100):null;
+    var pl=R.year?'Same months last year':(R.days===7?'Same days the week before':'Previous '+R.days+' days (same weekdays)');
+    document.getElementById('db-prev-lbl').innerHTML=pl+(hasPrev?' · '+dbNum(tp)+' visitors'+(chg===null?'':' (<b style="color:'+(chg>=0?'var(--green)':'#b4442f')+'">'+(chg>=0?'+':'')+chg+'%</b> now)'):'');
+    document.getElementById('db-axis').innerHTML='<span>'+fmt(cols[0].date)+'</span>'+(cols.length>2?'<span>'+fmt(cols[Math.floor(cols.length/2)].date)+'</span>':'')+'<span>'+fmt(cols[cols.length-1].date)+'</span>';
   }
   dbRows('db-cats',(d.categories||[]).slice(0,12),function(x){return dbCatName(x.cat);},function(x){return x.visitors;},function(x){return dbNum(x.visitors)+' visitor'+(x.visitors===1?'':'s');});
   dbRows('db-sources',d.sources,function(x){return x.source||'Direct';},function(x){return x.sessions;},function(x){return dbNum(x.sessions)+' · '+dbPct(x.sessions,ses);});
