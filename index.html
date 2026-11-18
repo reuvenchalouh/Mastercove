@@ -137,8 +137,11 @@ header{background:var(--white);border-bottom:1px solid var(--border);position:st
 .mega-dropdown a:hover{background:var(--sand);color:var(--ink);}
 .mega-dropdown .mega-all{font-weight:600;color:var(--walnut);}
 .mega-dropdown .mega-divider{height:1px;background:var(--border);margin:6px 0;}
-.mega-dropdown .mega-cols{column-count:3;column-gap:0;}
-.mega-dropdown .mega-cols a{break-inside:avoid;padding:8px 20px;}
+.mega-dropdown .mega-cols{column-count:5;column-gap:0;}
+.mega-dropdown .mega-cols a{break-inside:avoid;padding:6px 18px;}
+.mega-dropdown.coll-open{overflow-y:auto;}
+@media(max-width:1200px){.mega-dropdown .mega-cols{column-count:4;}}
+@media(max-width:950px){.mega-dropdown .mega-cols{column-count:3;}}
 @media(max-width:700px){.mega-dropdown .mega-cols{column-count:2;}}
 .main{max-width:1380px;margin:0 auto;padding:0 32px;}
 .section{padding:48px 0;}
@@ -630,8 +633,9 @@ function toggleCollectionsDropdown(btn){
     return '<a href="#" data-collection="'+name.replace(/"/g,'&quot;')+'">'+name+'</a>';
   }).join('') + '</div>';
   panel.innerHTML = html;
-  panel.classList.add('open');
-  // Keep the 3-column panel fully on screen
+  panel.classList.add('open','coll-open');
+  // Keep the panel fully on screen: never wider or taller than the window (scrolls if the list is ever too long)
+  panel.style.maxHeight = Math.max(200, window.innerHeight - rect.bottom - 16) + 'px';
   var pw = panel.offsetWidth, vw = window.innerWidth;
   if(rect.left + pw > vw - 16) panel.style.left = Math.max(16, vw - 16 - pw) + 'px';
   panel.querySelectorAll('a[data-collection]').forEach(function(a){
@@ -761,6 +765,7 @@ function toggleMegaDropdown(btn, room){
     return '<a href="'+catUrl(c)+'" data-cat="'+c+'">'+getCatLabel(c)+'</a>';
   }).join('');
   panel.innerHTML = html;
+  panel.classList.remove('coll-open'); panel.style.maxHeight = '';
   panel.classList.add('open');
   panel.querySelectorAll('a[data-room]').forEach(function(a){
     a.addEventListener('click', function(e){ e.preventDefault(); window.location.href = roomUrl(a.dataset.room); });
@@ -1631,7 +1636,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   try { wishlist = JSON.parse(localStorage.getItem('mc_wishlist')||'[]'); } catch(e){ wishlist = []; }
   updateWishlistCount();
   try {
-    var res = await _sb.from('products').select('*').eq('status','active');
+    var res = await (async function(){var all=[],from=0;while(true){var r=await _sb.from('products').select('*').eq('status','active').order('id',{ascending:true}).range(from,from+999);if(r.error)return r;all=all.concat(r.data||[]);if(!r.data||r.data.length<1000)break;from+=1000;}return {data:all};})();
     if(res.data && res.data.length){
       allProducts = res.data.map(function(p){
         return {
