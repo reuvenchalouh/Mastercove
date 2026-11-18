@@ -8,7 +8,7 @@ const supabase = createClient(
 // Saves one anonymous visitor event from mc-track.js (page view, category, product view,
 // add to cart, checkout, purchase, time on page) for the admin Dashboard.
 // No IP address, name or email is stored — only the state/country Netlify detects.
-const TYPES = new Set(['view', 'cat', 'product', 'cart', 'checkout', 'purchase', 'time']);
+const TYPES = new Set(['view', 'cat', 'product', 'cart', 'checkout', 'purchase', 'time', 'payerr']);
 const BOT = /bot|crawl|spider|slurp|preview|lighthouse|headless|facebookexternalhit|pingdom|monitor/i;
 
 const str = (v, n) => (v === undefined || v === null || v === '') ? null : String(v).slice(0, n);
