@@ -105,15 +105,55 @@ function getMaterials(p, already) {
   return found;
 }
 
-// e.g. "The Orson Nightstand" -> "Orson Fluted Oak Nightstand – Espresso"
+// Main wood, read from the product's own description / features ("solid oak", "solid mango wood"...).
+// Only "solid ..." wording counts, so a finish color like "oak finish" never turns into a material claim.
+const WOOD_NAMES = { oak:'Solid Oak', 'white oak':'Solid White Oak', walnut:'Solid Walnut', teak:'Solid Teak', mango:'Solid Mango Wood',
+  acacia:'Solid Acacia Wood', pine:'Solid Pine', ash:'Solid Ash', cherry:'Solid Cherry', maple:'Solid Maple', birch:'Solid Birch' };
+function getWood(p) {
+  const sz = firstSize(p);
+  const text = [p.description, p.features, sz && sz.desc, sz && sz.features].map(cleanText).join(' ').toLowerCase();
+  const counts = {};
+  const re = /solid (white oak|oak|walnut|teak|mango|acacia|pine|ash|cherry|maple|birch|rubberwood|hardwood|wood|elm|beech|poplar)\b/g;
+  let m;
+  while ((m = re.exec(text))) counts[m[1]] = (counts[m[1]] || 0) + 1;
+  const species = Object.keys(counts).filter(k => WOOD_NAMES[k]).sort((a, b) => counts[b] - counts[a]);
+  if (species.length) return WOOD_NAMES[species[0]];
+  return Object.keys(counts).length ? 'Solid Wood' : '';
+}
+// Upholstery fabric from the product's fabric options (e.g. Bouclé, Velvet, Leather)
+function getFabric(p) {
+  const types = [];
+  const scan = fins => (fins || []).forEach(f => ((f && f.fabrics) || []).forEach(b => { if (b && b.type) types.push(String(b.type)); }));
+  scan(p.finishes); (p.top_sizes || []).forEach(s => scan(s && s.finishes));
+  const t = types.join(' ').toLowerCase();
+  const pick = [['bouclé','Bouclé'],['boucle','Bouclé'],['velvet','Velvet'],['faux leather','Faux Leather'],['vegan leather','Vegan Leather'],['leather','Leather'],['linen','Linen'],['chenille','Chenille'],['slub','Slub Weave']].find(x => t.indexOf(x[0]) !== -1);
+  return pick ? pick[1] : '';
+}
+
+// Searchable titles for Google Shopping only (the site keeps "The [Name] [type]"):
+// "The Astor Nightstand" -> "Astor Solid Oak Nightstand – Black / White"
 function buildTitle(p) {
   let base = String(p.name || '').replace(/^the\s+/i, '').trim();
   const lower = base.toLowerCase();
   const noun = CATEGORY_NOUN[p.cat];
   if (noun && !noun[1].some(w => lower.indexOf(w) !== -1)) base += ' ' + noun[0];
-  const mats = getMaterials(p, lower);
+  // Material words go right after the collection name: "Astor" + "Solid Oak" + "Nightstand"
+  let mats = getMaterials(p, lower);
+  // Fabric words only on upholstered pieces; frame wood is skipped on sofas and lounge seating
+  const UPH = ['sofa','sectional','armchair','accentchair','chair','bed','ottoman','bench'];
+  const SOFT = ['sofa','sectional','armchair','accentchair','ottoman'];
+  const fabric = UPH.indexOf(p.cat) !== -1 ? getFabric(p) : '';
+  const wood = SOFT.indexOf(p.cat) !== -1 ? '' : getWood(p);
+  const lead = [];
+  if (fabric && lower.indexOf(fabric.toLowerCase()) === -1) lead.push(fabric);
+  else if (wood && !mats.some(x => /oak|walnut|teak|mango|acacia/i.test(x)) && lower.indexOf(wood.replace(/^solid /i, '').toLowerCase()) === -1) lead.push(wood);
+  if (lead.length) {
+    const sp = base.indexOf(' ');
+    base = sp > 0 ? base.slice(0, sp) + ' ' + lead.join(' ') + base.slice(sp) : lead.join(' ') + ' ' + base;
+    mats = mats.filter(x => lead.join(' ').toLowerCase().indexOf(x.toLowerCase()) === -1);
+  }
   if (mats.length) base += ' – ' + mats.join(' ');
-  const used = (lower + ' ' + mats.join(' ')).toLowerCase();
+  const used = (base + ' ' + mats.join(' ')).toLowerCase();
   const colors = getColors(p).filter(c => used.indexOf(c.toLowerCase()) === -1).slice(0, 2);
   if (colors.length) base += (mats.length ? ', ' : ' – ') + colors.join(' / ');
   return base.slice(0, 150);
