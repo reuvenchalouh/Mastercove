@@ -193,9 +193,25 @@ function getBrand(p) {
   return 'Master Cove';
 }
 
+
+// Supabase returns at most 1000 rows per request, so read the products table in pages.
+async function selectAllProducts(cols, active) {
+  let all = [], from = 0;
+  for (;;) {
+    let q = supabase.from('products').select(cols).order('id', { ascending: true }).range(from, from + 999);
+    if (active) q = q.eq('status', 'active');
+    const { data, error } = await q;
+    if (error) return { data: null, error };
+    all = all.concat(data || []);
+    if (!data || data.length < 1000) break;
+    from += 1000;
+  }
+  return { data: all, error: null };
+}
+
 exports.handler = async function(event, context) {
   try {
-    const res = await supabase.from('products').select('*').eq('status', 'active');
+    const res = await selectAllProducts('*', true);
     if (res.error) throw res.error;
     const products = res.data || [];
 
