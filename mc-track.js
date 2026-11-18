@@ -93,6 +93,7 @@
       else if (name === 'add_to_cart') { var b = item(p); send('cart', { product_id: +b.item_id || null, product_name: b.item_name, cat: b.item_category, value: p.value }); }
       else if (name === 'begin_checkout') send('checkout', { value: p.value });
       else if (name === 'purchase') send('purchase', { value: p.value });
+      else if (name === 'checkout_error') send('payerr', { product_name: p.message });
     }
     function wrap() {
       var g = window.gtag;
