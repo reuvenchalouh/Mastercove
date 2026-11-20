@@ -401,7 +401,7 @@ footer{background:var(--ink);color:rgba(255,255,255,0.6);padding:48px 0 24px;}
     <div class="sec-head">
       <div>
         <div class="sec-title">Our <em>Favorites</em></div>
-        <div class="sec-sub">Hand-picked pieces we love</div>
+        <div class="sec-sub">The pieces our visitors keep coming back to</div>
       </div>
     </div>
     <div class="prod-grid" id="best-sellers-grid"></div>
@@ -1609,6 +1609,7 @@ function isFullyOutOfStock(p){
   return fin.length ? fin.every(optionOut) : false;
 }
 
+var favoriteIds = [];
 function renderHomeSections(){
   var naGrid = document.getElementById('new-arrivals-grid');
   var bsGrid = document.getElementById('best-sellers-grid');
@@ -1619,8 +1620,18 @@ function renderHomeSections(){
     newest.forEach(function(p,i){ naGrid.appendChild(buildCard(p,i)); });
   }
   if(bsGrid && bsSection){
-    var best = allProducts.filter(function(p){ return p.badge==='best'; })
-      .sort(function(a,b){ return (b.createdAt||0) - (a.createdAt||0); }).slice(0,9);
+    // Favorites = the pieces visitors open most (last 30 days); falls back to hand-picked ones
+    var best = [];
+    if(favoriteIds && favoriteIds.length){
+      var byId = {}; allProducts.forEach(function(p){ byId[String(p.id)] = p; });
+      favoriteIds.forEach(function(id){ var p = byId[String(id)]; if(p && !isFullyOutOfStock(p) && best.length < 9) best.push(p); });
+    }
+    if(best.length < 9){
+      var have = {}; best.forEach(function(p){ have[String(p.id)] = 1; });
+      allProducts.filter(function(p){ return p.badge==='best' && !have[String(p.id)] && !isFullyOutOfStock(p); })
+        .sort(function(a,b){ return (b.createdAt||0) - (a.createdAt||0); })
+        .slice(0, 9 - best.length).forEach(function(p){ best.push(p); });
+    }
     if(best.length){
       bsGrid.innerHTML = '';
       best.forEach(function(p,i){ bsGrid.appendChild(buildCard(p,i)); });
@@ -1633,6 +1644,7 @@ function renderHomeSections(){
 
 document.addEventListener('DOMContentLoaded', async function() {
   cart = loadMcCart();
+  var favP = (async function(){ try { var r = await _sb.rpc('mc_favorites', {p_days:30, p_limit:24}); return (r && r.data) || []; } catch(e){ return []; } })();
   try { wishlist = JSON.parse(localStorage.getItem('mc_wishlist')||'[]'); } catch(e){ wishlist = []; }
   updateWishlistCount();
   try {
@@ -1653,6 +1665,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       allProducts = shuffle(allProducts);
     }
   } catch(e) { console.log('Supabase load error:', e); }
+  try { favoriteIds = (await favP).map(function(x){ return (x && typeof x === 'object') ? (x.mc_favorites || x.product_id) : x; }); } catch(e){ favoriteIds = []; }
   buildRoomNav();
   buildMobileMenu();
   var urlParams = new URLSearchParams(window.location.search);
