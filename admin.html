@@ -610,7 +610,7 @@ async function adminUpload(path, file){
 
     <div class="db-grid db-g21">
       <div class="db-panel">
-        <div class="db-ph"><h3>Sales &amp; profit</h3><div class="db-legend"><span><i style="background:var(--walnut)"></i>Sales</span><span><i style="background:var(--green)"></i>Profit</span></div></div>
+        <div class="db-ph"><h3>Sales &amp; profit</h3><div class="db-legend"><span><i style="background:var(--walnut)"></i>Sales</span><span><i style="background:var(--maple)"></i>Profit</span></div></div>
         <p class="db-note" id="db-trend-note">&nbsp;</p>
         <div id="db-trend"></div>
       </div>
@@ -2660,7 +2660,7 @@ function renderDashTrend(S,R){
   g+='<defs><linearGradient id="dbSalesFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6B4C35" stop-opacity=".22"/><stop offset="1" stop-color="#6B4C35" stop-opacity="0"/></linearGradient></defs>';
   g+='<path d="'+sl+'L'+X(n-1).toFixed(1)+' '+Y(0)+'L'+X(0).toFixed(1)+' '+Y(0)+'Z" fill="url(#dbSalesFill)"/>';
   g+='<path d="'+sl+'" fill="none" stroke="#6B4C35" stroke-width="2" stroke-linejoin="round"/>';
-  if(hasCost)g+='<path d="'+line('p')+'" fill="none" stroke="#4A7A5A" stroke-width="2" stroke-linejoin="round"/>';
+  if(hasCost)g+='<path d="'+line('p')+'" fill="none" stroke="#D4AA7D" stroke-width="2.5" stroke-linejoin="round"/>';
   b.forEach(function(x,i){if(x.s>0)g+='<circle cx="'+X(i)+'" cy="'+Y(x.s)+'" r="3" fill="#6B4C35"/>';});
   g+='<line id="db-tr-x" x1="0" x2="0" y1="'+T+'" y2="'+(H-B)+'" stroke="#A8A09A" stroke-dasharray="3 3" style="display:none"/>';
   box.style.position='relative';
@@ -2686,7 +2686,7 @@ function renderDashCatSales(S){
   dbRows('db-catsales',list,function(x){return x.c;},function(x){return x.v;},function(x){return dbMoney(x.v)+' · '+dbPct(x.v,tot);});
   if(!list.length)document.getElementById('db-catsales').innerHTML='<div class="db-empty">No sales in this period yet.</div>';
 }
-var DB_PAL=['#6B4C35','#B8895A','#D4AA7D','#4A7A5A','#8C8278','#E3CFB4','#9A6A12','#C9BBA8'];
+var DB_PAL=['#6B4C35','#B8895A','#D4AA7D','#8F6A4B','#E3CFB4','#4A3426','#C9BBA8','#A8805C'];
 function dbDonut(el,items,center,centerLbl){
   var box=document.getElementById(el),tot=items.reduce(function(a,x){return a+x.v;},0);
   if(!tot){box.innerHTML='<div class="db-empty">No data yet for this period.</div>';return;}
@@ -2787,7 +2787,7 @@ function renderDashVisitors(d,R){
     var bar=function(x,v,col){var h=Math.max(0,Y(0)-Y(v));if(!h)return '';var r=Math.min(5,bw/2,h);return '<path d="M'+x+' '+Y(0)+'V'+(Y(v)+r)+'Q'+x+' '+Y(v)+' '+(x+r)+' '+Y(v)+'H'+(x+bw-r)+'Q'+(x+bw)+' '+Y(v)+' '+(x+bw)+' '+(Y(v)+r)+'V'+Y(0)+'Z" fill="'+col+'"/>';};
     var every=Math.ceil(n/Math.max(4,Math.floor(W/64)));
     bars.forEach(function(b,i){
-      var cx=L+gw*i+gw/2,x1=cx-bw-gap/2,x2=cx+gap/2;
+      var cx=L+gw*i+gw/2,x2=cx-bw-gap/2,x1=hasPrev?cx+gap/2:cx-bw/2; // previous period on the left (light), this period on the right (dark)
       s+='<g class="gb-g" data-i="'+i+'"><rect x="'+(L+gw*i)+'" y="'+T+'" width="'+gw+'" height="'+(H-T-B)+'" fill="transparent" class="gb-hit"/>'+bar(x1,b.v,'#6B4C35')+(hasPrev?bar(x2,b.p,'#D4AA7D'):'')+'</g>';
       // Each bar gets its own date underneath; when the bars are too narrow, one date per pair
       if(hasPrev&&bw>=20){var lng=bw>=40,l1=lng?b.lbl:b.slbl,l2=lng?b.plbl:b.splbl;s+='<text class="bl'+(lng?'':' sm')+'" x="'+(x1+bw/2)+'" y="'+(H-10)+'" text-anchor="middle">'+l1+'</text><text class="bl'+(lng?'':' sm')+'" x="'+(x2+bw/2)+'" y="'+(H-10)+'" text-anchor="middle">'+l2+'</text>';}
