@@ -869,7 +869,7 @@ function renderProduct(p){
     var fins=(p.finishes||[]).map(function(f){
       return typeof f==='string'
         ?{color:f,name:'Default',photos:[],outOfStock:false,fabrics:[],sizes:[]}
-        :{color:f.color||'#C4976A',name:(f.name&&String(f.name).trim())?String(f.name).trim():'Default',photos:f.photos||[],outOfStock:f.outOfStock||false,price:Number(f.price)||0,delivery:f.delivery||null,
+        :{color:f.color||'#C4976A',name:(f.name&&String(f.name).trim())?String(f.name).trim():'Default',photos:f.photos||[],outOfStock:f.outOfStock||false,price:Number(f.price)||0,delivery:f.delivery||null,swatch:f.swatch||'',
           fabrics:(f.fabrics||[]).map(function(fab){return{name:fab.name||'',outOfStock:fab.outOfStock||false,photos:fab.photos||[],swatch:fab.swatch||'',type:fab.type||'',price:Number(fab.price)||0,delivery:fab.delivery||null};}),
           sizes:(f.sizes||[]).map(function(sz){return{name:sz.name||'',price:sz.price||0,outOfStock:sz.outOfStock||false,photos:sz.photos||[],dims:sz.dims||{}};})};
     }); // keep the order set in admin (the first finish is what the page opens on)
@@ -886,7 +886,7 @@ function renderProduct(p){
       fgrid.innerHTML='';
       fins.forEach(function(f,j){
         var div=document.createElement('div');div.className='fin-opt'+(j===0&&!f.outOfStock?' active':'')+(f.outOfStock?' oos':'');
-        var sw=document.createElement('div');sw.className='fin-swatch';sw.style.background=f.color;
+        var sw=document.createElement('div');sw.className='fin-swatch';sw.style.background=f.color;if(f.swatch){sw.style.backgroundImage='url("'+String(f.swatch).replace(/"/g,'%22')+'")';sw.style.backgroundSize='cover';sw.style.backgroundPosition='center';}
         var lb=document.createElement('span');lb.className='fin-name';lb.textContent=f.name+(f.outOfStock?' — Out of Stock':'');
         div.appendChild(sw);div.appendChild(lb);
         div._fobj=f;div._photos=f.photos;div._name=f.name;div._color=f.color;div._fabrics=f.fabrics||[];div._sizes=f.sizes||[];div._price=Number(f.price)||0;
@@ -1154,7 +1154,7 @@ function showTopPrice(){
 function renderTopSizeMode(topSizes,fallbackImg){
   var sizes=(topSizes||[]).map(function(s){
     return{name:s.name||'',price:s.price||0,outOfStock:s.outOfStock||false,dims:s.dims||{},sku:s.sku||'',componentDims:s.componentDims||[],desc:s.desc||'',features:s.features||'',assembly:Array.isArray(s.assembly)?s.assembly:[],
-      delivery:s.delivery||null,finishes:(s.finishes||[]).map(function(f){return{color:f.color||'#C4976A',name:f.name||'',outOfStock:f.outOfStock||false,photos:f.photos||[],sku:f.sku||'',price:Number(f.price)||0,delivery:f.delivery||null,fabrics:(f.fabrics||[]).map(function(fab){return{name:fab.name||'',outOfStock:fab.outOfStock||false,photos:fab.photos||[],swatch:fab.swatch||'',type:fab.type||'',price:Number(fab.price)||0,delivery:fab.delivery||null};})};})};
+      delivery:s.delivery||null,finishes:(s.finishes||[]).map(function(f){return{color:f.color||'#C4976A',name:f.name||'',swatch:f.swatch||'',outOfStock:f.outOfStock||false,photos:f.photos||[],sku:f.sku||'',price:Number(f.price)||0,delivery:f.delivery||null,fabrics:(f.fabrics||[]).map(function(fab){return{name:fab.name||'',outOfStock:fab.outOfStock||false,photos:fab.photos||[],swatch:fab.swatch||'',type:fab.type||'',price:Number(fab.price)||0,delivery:fab.delivery||null};})};})};
   });
   var grid=document.getElementById('top-size-grid');grid.innerHTML='';
   sizes.forEach(function(sz,j){
@@ -1252,7 +1252,7 @@ function selectTopSize(el,sz,fallbackImg){
   } else if(finishes.length){
     finishes.forEach(function(f,j){
       var div=document.createElement('div');div.className='fin-opt'+(j===0&&!f.outOfStock?' active':'')+(f.outOfStock?' oos':'');
-      var sw=document.createElement('div');sw.className='fin-swatch';sw.style.background=f.color;
+      var sw=document.createElement('div');sw.className='fin-swatch';sw.style.background=f.color;if(f.swatch){sw.style.backgroundImage='url("'+String(f.swatch).replace(/"/g,'%22')+'")';sw.style.backgroundSize='cover';sw.style.backgroundPosition='center';}
       var lb=document.createElement('span');lb.className='fin-name';lb.textContent=f.name+(f.outOfStock?' — Out of Stock':'');
       div.appendChild(sw);div.appendChild(lb);
       div._f=f;
