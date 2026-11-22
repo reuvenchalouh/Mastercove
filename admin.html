@@ -359,7 +359,12 @@ textarea.o-input{resize:vertical;min-height:56px;line-height:1.6;}
 .save-order-btn{background:var(--walnut);color:#fff;border:none;padding:10px 22px;border-radius:2px;font-size:13px;font-weight:500;cursor:pointer;font-family:'Outfit',sans-serif;transition:background 0.2s;}
 .save-order-btn:hover{background:#5A3D2A;}
 .order-card{background:var(--white);border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-bottom:16px;}
-.order-card-head{padding:14px 20px;background:var(--sand);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.order-card-head{padding:14px 20px;background:var(--sand);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;cursor:pointer;user-select:none;}
+.order-card.collapsed .order-card-head{border-bottom:none;}
+.order-card.collapsed .order-detail{display:none;}
+.order-chev{display:inline-block;margin-left:10px;color:var(--slate);font-size:12px;transition:transform .2s;}
+.order-card.collapsed .order-chev{transform:rotate(-90deg);}
+.order-card.collapsed{margin-bottom:8px;}
 .order-num{background:var(--ink);color:var(--maple);font-size:11px;font-weight:600;padding:4px 10px;border-radius:2px;letter-spacing:0.08em;}
 .order-customer{font-size:13px;font-weight:600;}
 .order-date{font-size:11px;color:var(--mist);}
@@ -898,6 +903,8 @@ async function adminUpload(path, file){
         <option value="shipped">Shipped</option>
         <option value="delivered">Delivered</option>
       </select>
+      <button onclick="setAllOrders(true)" style="padding:7px 12px;background:var(--white);color:var(--ink);border:1px solid var(--border);border-radius:2px;font-family:'Outfit',sans-serif;font-size:12px;cursor:pointer;">Open all</button>
+      <button onclick="setAllOrders(false)" style="padding:7px 12px;background:var(--white);color:var(--ink);border:1px solid var(--border);border-radius:2px;font-family:'Outfit',sans-serif;font-size:12px;cursor:pointer;">Close all</button>
       <button onclick="refreshTab(this,loadOrdersFromSupabase)" style="padding:7px 14px;background:var(--walnut);color:#fff;border:none;border-radius:2px;font-family:'Outfit',sans-serif;font-size:12px;cursor:pointer;">↻ Refresh</button>
     </div>
     <div id="orders-list"></div>
@@ -2445,8 +2452,10 @@ function renderOrders(){
     var finL='';if(o.product&&o.variant){var mp=products.find(function(p){return p.name&&o.product.indexOf(p.name)>=0;});if(mp&&mp.finishes){var mf=mp.finishes.find(function(f){return f.name&&o.variant.indexOf(f.name)>=0;});if(mf&&mf.link)finL=mf.link;}}
     var dL=finL||o.link||'';
     var trackHtml='';if(SF.indexOf(o.status)>=SF.indexOf('shipped')){trackHtml='<div class="order-field full"><label>Tracking</label><div style="display:flex;gap:8px;"><input class="sup-link-input" id="tracking'+o.id+'" value="'+(o.trackingNumber||'')+'" placeholder="Tracking number"/><button class="go-btn grey" onclick="saveTrackingNumber('+o.id+')">Save</button></div>'+(o.trackingNumber?'<div style="margin-top:6px;"><a href="https://www.google.com/search?q='+encodeURIComponent(o.trackingNumber)+'" target="_blank" style="font-size:11.5px;color:var(--walnut);">Track Package</a></div>':'')+'</div>';}
-    return '<div class="order-card">'
-      +'<div class="order-card-head"><div style="display:flex;align-items:center;gap:10px;flex:1;"><span class="order-num">'+(o.orderNumber||'MC-????')+'</span><div><div class="order-customer">'+o.customer+' -- '+o.product+(o.variant?' ('+o.variant+')':'')+'</div><div class="order-date">Placed: '+o.createdAt+'</div></div></div><span><span class="order-status '+SC[o.status]+'">'+SL[o.status]+'</span>'+returnBadge(o)+'</span></div>'
+    var isOpen=(o.id in orderOpen)?orderOpen[o.id]:o.status==='new';
+    return '<div class="order-card'+(isOpen?'':' collapsed')+'" id="ocard'+o.id+'">'
+      +'<div class="order-card-head" onclick="toggleOrderCard('+o.id+',event)" title="Click to open or close"><div style="display:flex;align-items:center;gap:10px;flex:1;"><span class="order-num">'+(o.orderNumber||'MC-????')+'</span><div><div class="order-customer">'+o.customer+' -- '+o.product+(o.variant?' ('+o.variant+')':'')+'</div><div class="order-date">Placed: '+o.createdAt+'</div></div></div><span><span class="order-status '+SC[o.status]+'">'+SL[o.status]+'</span>'+returnBadge(o)+'<span class="order-chev">&#9660;</span></span></div>'
+      +'<div class="order-detail">'
       +'<div class="order-timeline">'+tl+'</div>'
       +((function(){var m=String(o.notes||'').match(/DELIVERY UPGRADE:[^\n]*/);return m?'<div style="margin:0 20px 12px;padding:10px 14px;background:#fdf1ec;border:1px solid #e8b9a6;border-left:4px solid #b5432a;border-radius:3px;font-size:13px;color:#7a2e1c;"><b>&#9888; '+m[0].replace(/</g,'&lt;')+'</b></div>':'';})())
       +'<div class="order-body">'
@@ -2461,9 +2470,13 @@ function renderOrders(){
       +trackHtml
       +'</div>'
       +'<div class="order-actions">'+(o.status!=='delivered'?'<button class="o-act-btn" onclick="advanceStatus('+o.id+')">Mark: '+SL[nextS||'delivered']+'</button>':'<span style="font-size:12px;color:var(--green);">Complete</span>')+(o.status!=='new'?'<button class="o-act-btn" onclick="goBackStatus('+o.id+')" style="color:var(--mist);">Undo</button>':'')+(o.email?'<a href="mailto:'+o.email+'?subject=Your+Order+Update" class="o-act-btn">Email Customer</a>':'')+'<button class="o-del-btn" onclick="deleteOrder('+o.id+')">Delete</button></div>'
-      +'</div>';
+      +'</div></div>';
   }).join('');
 }
+// Orders open and close by clicking their header; new orders start open, the rest start closed
+var orderOpen={};
+function toggleOrderCard(id,e){if(e&&e.target&&e.target.closest&&e.target.closest('a,button,input,textarea,select'))return;var c=document.getElementById('ocard'+id);if(!c)return;var open=c.classList.contains('collapsed');c.classList.toggle('collapsed',!open);orderOpen[id]=open;}
+function setAllOrders(open){orders.forEach(function(o){orderOpen[o.id]=open;});renderOrders();}
 
 function showView(v){
   document.querySelectorAll('.view').forEach(function(el){el.classList.remove('active');});document.getElementById('view-'+v).classList.add('active');
