@@ -148,7 +148,13 @@ async function checkVariant(handle, variant) {
   } catch (e) {
     if (e && e.message === 'HTTP 429') throw e; // don't double the load when rate-limited
   }
-  return readStatus(await fetchPolitely(base.replace(/[?&]$/, '')));
+  try {
+    return readStatus(await fetchPolitely(base.replace(/[?&]$/, '')));
+  } catch (e) {
+    // Modway took the product page down: treat it as unavailable instead of "couldn't check"
+    if (e && e.message === 'HTTP 404') return { code: 'out_of_stock', text: 'No longer on Modway', closeout: false };
+    throw e;
+  }
 }
 
 // Decides whether an option should be out of stock on mastercove.com
@@ -352,13 +358,26 @@ async function runSync() {
 
   const allKeys = Object.keys(pages).sort();
   let sliceKeys = allKeys.slice();
-  // Start at a different page each day, so if a run ever runs out of time,
-  // it's never the same pages that get skipped two days in a row
-  if (sliceKeys.length) {
-    const day = Math.floor(Date.now() / 86400000);
-    const off = day % sliceKeys.length;
+  // Pick up where the last run stopped, so every page gets checked in turn even though
+  // one run only has time for about half of them. (The old version moved the start by just
+  // one page a day, so the same half of the catalog was checked every night.)
+  let resumeKey = null, retryKeys = [];
+  try {
+    const { data: prev } = await supabase.from('stock_check_runs').select('details')
+      .eq('supplier', 'modway').not('details', 'is', null).order('started_at', { ascending: false }).limit(1);
+    const d = prev && prev[0] && prev[0].details;
+    resumeKey = d && d.nextKey || null;
+    retryKeys = (d && Array.isArray(d.failedKeys) ? d.failedKeys : []).filter(k => k in pages);
+  } catch (e) { /* start from the top */ }
+  if (sliceKeys.length && resumeKey) {
+    let off = sliceKeys.findIndex(k => k >= resumeKey);
+    if (off < 0) off = 0;
     sliceKeys = sliceKeys.slice(off).concat(sliceKeys.slice(0, off));
   }
+  // Pages that failed last run (Modway rate limits) go first, so nothing waits a whole cycle
+  const retrySet = new Set(retryKeys);
+  const rotation = sliceKeys.filter(k => !retrySet.has(k));
+  sliceKeys = retryKeys.concat(rotation);
   const results = {};
   let failed = 0;
   const errorTypes = {};
@@ -378,6 +397,9 @@ async function runSync() {
   if (failed) console.log('Check errors:', errorSummary);
 
   const total = attempted.size;
+  // Where tomorrow's run should start: the first page this run didn't get to
+  const nextKey = rotation.find(k => !attempted.has(k)) || rotation[0] || null;
+  const failedKeys = [...attempted].filter(k => !results[k]).slice(0, 500);
   if (!allKeys.length) return { statusCode: 200, body: 'No Modway products found' };
   if (!total) return { statusCode: 200, body: 'Nothing checked this run' };
   if (failed / total > MAX_FAILURE_RATE) {
@@ -513,5 +535,5 @@ async function runSync() {
   await emailOwner(wentOut, cameBack, unchecked, closeouts, removed, review);
   const summary = `Checked ${total} of ${sliceKeys.length} Modway variants (${failed} failed). ${wentOut.length} marked out, ${cameBack.length} back in, ${closeouts.length} closeout, ${removed.length} removed (out ${REMOVE_AFTER_DAYS}+ days), ${changed.size} products updated.`;
   console.log(summary);
-  return { statusCode: 200, body: summary, details: { errors: errorTypes, wentOut, cameBack, closeouts, removed, review } };
+  return { statusCode: 200, body: summary, details: { errors: errorTypes, wentOut, cameBack, closeouts, removed, review, nextKey, failedKeys } };
 }
