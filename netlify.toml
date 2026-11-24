@@ -43,12 +43,23 @@
 [functions."review-reminders"]
   schedule = "0 15 * * *"
 
-# Modway stock check: every morning at 7:00am New York time. Starts modway-stock-check-background,
-# which checks every Modway variant in one run and marks finishes/fabrics/sizes in or out of stock.
+# Modway stock check: twice a day, 6:00am and 6:00pm New York time. Starts modway-stock-check-background.
+# One run has time for about half of the Modway pages; each run picks up where the last one stopped,
+# so every Modway option is checked at least once a day.
 [functions."modway-stock-sync"]
-  schedule = "0 11 * * *"
+  schedule = "0 11,23 * * *"
 
 # HerNest stock check: every morning at 7:50am New York time (after the Modway sync).
 # Starts hernest-stock-check-background, which checks every HerNest product page.
 [functions."hernest-stock-sync"]
   schedule = "50 11 * * *"
+
+# Crate & Barrel / CB2 stock check: every morning at 7:30am New York time.
+# Starts cb-stock-check-background, which checks every CB2 / Crate & Barrel option page.
+[functions."cb-stock-sync"]
+  schedule = "30 11 * * *"
+
+# Stock watchdog: every morning at 9:00am New York time. Emails you if any supplier's stock
+# check hasn't finished in the last 2 days (Alpine: 2 weekdays, since its feed skips weekends).
+[functions."stock-watchdog"]
+  schedule = "0 14 * * *"
