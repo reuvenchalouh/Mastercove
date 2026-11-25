@@ -82,6 +82,8 @@ function readPage(html, sku) {
       const b = html.indexOf("')", a + 12);
       if (b > a) text = unescapeJs(html.slice(a + 12, b));
     }
+    // Current pages carry the product data as plain JSON right after the container name
+    if (!text || !/availabilityMessage|isNla/.test(text)) text = html.slice(i, i + 400000);
   }
   if (!text) return null;
   // The page carries the chosen SKU's details; make sure it's the SKU we asked for
