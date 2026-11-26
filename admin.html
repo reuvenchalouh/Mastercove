@@ -958,7 +958,7 @@ async function adminUpload(path, file){
   <div class="view" id="view-subs">
     <div class="panel" style="margin-bottom:20px;">
       <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
-        <div><h3>Promo Email — 5% off (COMPLETE5)</h3><p id="camp-status">Sends from orders@mastercove.com, one email per subscriber, with an unsubscribe link. Never sends to the same person twice.</p></div>
+        <div><h3>Promo Email — <select id="camp-pick" onchange="campaignStatus()" style="font:inherit;padding:2px 6px;border:1px solid var(--border);border-radius:2px;background:var(--white);"><option value="blackfriday10">Black Friday — 10% off $2,000+ (BLACKFRIDAY10)</option><option value="complete5">Thank-you — 5% off (COMPLETE5)</option></select></h3><p id="camp-status">Sends from orders@mastercove.com, one email per subscriber, with an unsubscribe link. Never sends to the same person twice.</p></div>
         <div style="display:flex;gap:8px;">
           <button onclick="campaignTest()" style="padding:8px 14px;background:var(--white);border:1px solid var(--border);border-radius:2px;font-family:'Outfit',sans-serif;font-size:12.5px;cursor:pointer;">Send test to me</button>
           <button id="camp-send-btn" onclick="campaignSendAll()" style="padding:8px 14px;background:var(--walnut);color:#fff;border:none;border-radius:2px;font-family:'Outfit',sans-serif;font-size:12.5px;cursor:pointer;">Send to all subscribers</button>
@@ -3233,13 +3233,15 @@ async function fetchOrdersQuiet(){
     return (j.orders||[]).map(function(o){return{email:String(o.email||'').trim().toLowerCase(),customer:o.customer||'',orderNumber:o.order_number||'',product:o.product||'',createdAt:o.created_at||'',items:Array.isArray(o.items)?o.items:[],productIds:Array.isArray(o.product_ids)?o.product_ids:[]};});
   }catch(e){return [];}
 }
-async function campaignCall(payload){var r=await fetch('/.netlify/functions/send-campaign',{method:'POST',headers:{'Content-Type':'application/json','x-admin-password':ADMIN_PW},body:JSON.stringify(Object.assign({campaign:'complete5'},payload))});var j={};try{j=await r.json();}catch(e){}if(!r.ok||!j.ok)throw new Error(j.error||('Error '+r.status));return j;}
+function campPick(){var e=document.getElementById('camp-pick');return e?e.value:'complete5';}
+function campLabel(){var e=document.getElementById('camp-pick');return e?e.options[e.selectedIndex].text:'promo';}
+async function campaignCall(payload){var r=await fetch('/.netlify/functions/send-campaign',{method:'POST',headers:{'Content-Type':'application/json','x-admin-password':ADMIN_PW},body:JSON.stringify(Object.assign({campaign:campPick()},payload))});var j={};try{j=await r.json();}catch(e){}if(!r.ok||!j.ok)throw new Error(j.error||('Error '+r.status));return j;}
 async function campaignStatus(){var el=document.getElementById('camp-status');if(!el)return;try{var j=await campaignCall({action:'status'});el.textContent='Sent to '+j.sent+' so far · '+j.remaining+' still to send. From orders@mastercove.com with an unsubscribe link; never sends to the same person twice.';}catch(e){el.textContent='Could not check status: '+e.message;}}
 async function campaignTest(){try{var j=await campaignCall({action:'test',testTo:'mastercovestore@gmail.com'});showToast('Test sent to '+j.test,'success');}catch(e){showToast('Test failed: '+e.message,'error');}}
 async function campaignSendAll(){
   var st;try{st=await campaignCall({action:'status'});}catch(e){showToast('Could not check status: '+e.message,'error');return;}
   if(!st.remaining){showToast('Everyone already got this email','success');return;}
-  if(!confirm('Send the 5% off email to '+st.remaining+' subscribers now? This cannot be undone.'))return;
+  if(!confirm('Send the "'+campLabel()+'" email to '+st.remaining+' subscribers now? This cannot be undone.'))return;
   var btn=document.getElementById('camp-send-btn');btn.disabled=true;var total=0;
   try{while(true){btn.textContent='Sending… '+total+' sent';var j=await campaignCall({action:'send'});total+=j.sentNow;if(!j.remaining||!j.sentNow)break;await new Promise(function(r){setTimeout(r,1200);});}
     showToast('Promo email sent to '+total+' subscribers','success');}
