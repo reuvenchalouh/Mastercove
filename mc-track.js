@@ -1,3 +1,15 @@
+/* Sale popup: loads /mc-sale.js, which switches itself off when the sale ends.
+   While a sale runs, the 10%-off signup popup waits until the sale is over. */
+(function () {
+  try {
+    var END = Date.parse('2026-12-01T05:00:00Z');
+    if (Date.now() < END) {
+      try { if (Number(localStorage.getItem('mc_popup_until') || 0) < END) localStorage.setItem('mc_popup_until', String(END)); } catch (e) {}
+      var s = document.createElement('script'); s.src = '/mc-sale.js?v=1'; s.async = true;
+      (document.head || document.documentElement).appendChild(s);
+    }
+  } catch (e) {}
+})();
 /* Master Cove visitor stats (for the admin Dashboard).
    Anonymous: a random visitor id stored in this browser, no names, emails or IP addresses.
    Records page views, the category being browsed, products viewed, add-to-cart, checkout,
