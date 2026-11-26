@@ -3117,8 +3117,8 @@ async function drPublishReady(){
 /* ── SUPPLIER SYNC REPORT ── */
 // Reads the nightly stock checks (table stock_check_runs) for Modway, HerNest and Alpine.
 var syDays=14, syData=null;
-var SY_NAMES={modway:'Modway',hernest:'HerNest',alpine:'Alpine',cb:'CB2 / Crate & Barrel'};
-var SY_SCHEDULE={modway:'twice a day, 6:00 am and 6:00 pm',cb:'every morning at 6:30',hernest:'every morning at 6:50',alpine:'every evening after Alpine\'s inventory email'};
+var SY_NAMES={modway:'Modway',hernest:'HerNest',alpine:'Alpine',cb2:'CB2',cnb:'Crate & Barrel',cbk:'C&B Kids',cb:'CB2 / Crate & Barrel'};
+var SY_SCHEDULE={modway:'twice a day, 6:00 am and 6:00 pm',cb2:'every morning at 6:30',cnb:'every morning at 6:30',cbk:'every morning at 6:30',hernest:'every morning at 6:50',alpine:'every evening after Alpine\'s inventory email'};
 function sySetDays(n){syDays=n;loadSync();}
 async function loadSync(){
   document.querySelectorAll('[data-sd]').forEach(function(b){b.classList.toggle('active',+b.getAttribute('data-sd')===syDays);});
@@ -3138,8 +3138,9 @@ function renderSync(){
   var match=function(c){return !q||String(c.product||'').toLowerCase().indexOf(q)>=0||String(c.label||'').toLowerCase().indexOf(q)>=0;};
   // Status per supplier (latest run)
   var warnCount=0;
-  document.getElementById('sy-status').innerHTML=['modway','hernest','alpine','cb'].map(function(sup){
+  document.getElementById('sy-status').innerHTML=['modway','hernest','alpine','cb2','cnb','cbk'].map(function(sup){
     var last=runs.find(function(r){return r.supplier===sup;});
+    if(!last&&sup==='cbk')return '';
     if(!last)return '<div class="sy-sup"><h4><span class="sy-dot off"></span>'+SY_NAMES[sup]+'</h4><p>No checks yet'+(sup==='alpine'?' — starts with the first Alpine products and the daily inventory email':'')+'.</p></div>';
     var s=String(last.summary||''),dot='',note='';
     var age=(Date.now()-new Date(last.started_at))/3600000;
@@ -3158,7 +3159,7 @@ function renderSync(){
   }).join('');
   // Needs attention: link problems from the latest run of each supplier + whole listings sold out 6+ months
   var attn=[],seen={};
-  ['modway','hernest','alpine','cb'].forEach(function(sup){
+  ['modway','hernest','alpine','cb2','cnb','cbk'].forEach(function(sup){
     var last=runs.find(function(r){return r.supplier===sup&&r.summary!=='running';});if(!last)return;
     (last.went_out||[]).concat(last.review||[]).forEach(function(c){
       if(!(syLinkProblem(c)||(last.review||[]).indexOf(c)>=0)||!match(c))return;
