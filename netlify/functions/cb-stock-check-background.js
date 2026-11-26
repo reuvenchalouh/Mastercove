@@ -8,7 +8,7 @@
 //   "No longer available"                          -> out of stock
 //   custom-order (made to order) options           -> stay in stock unless no longer available
 // Owner locks (table stock_locks, key "cb:<sku>") always win. Logs the run (stock_check_runs,
-// supplier 'cb') and emails a summary. If most pages can't be read, nothing is changed.
+// one row each for 'cb2', 'cnb' (Crate & Barrel) and 'cbk' (Crate & Barrel Kids)) and emails a summary. If most pages can't be read, nothing is changed.
 const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 const { Resend } = require('resend');
@@ -169,17 +169,30 @@ async function isAllowed(event) {
   return !error && data === true;
 }
 
+// Each vendor gets its own line in Supplier Sync: CB2, Crate & Barrel, Crate & Barrel Kids
+const VENDORS = { cb2: 'CB2', cnb: 'Crate & Barrel', cbk: 'Crate & Barrel Kids' };
+const vendorOf = (p) => p.brand === 'CB2' ? 'cb2' : (/kids/i.test(p.brand || '') ? 'cbk' : 'cnb');
+
 exports.handler = async function(event) {
   if (!(await isAllowed(event))) return { statusCode: 401, body: 'Not authorized' };
-  const { data: run } = await supabase.from('stock_check_runs').insert({ supplier: 'cb', mode: 'apply', summary: 'running' }).select('id').single();
+  const { data: run } = await supabase.from('stock_check_runs').insert({ supplier: 'cb2', mode: 'apply', summary: 'running' }).select('id').single();
   const runId = run && run.id;
+  const finished = () => new Date().toISOString();
   try {
     const res = await runSync();
-    if (runId) await supabase.from('stock_check_runs').update({ finished_at: new Date().toISOString(), summary: res.body, details: res.details || null }).eq('id', runId);
-    return { statusCode: res.statusCode, body: res.body };
+    // One log row per vendor (the first reuses the "running" row)
+    const rows = res.runs.length ? res.runs : [{ supplier: 'cb2', body: res.body, details: null }];
+    let first = rows.find(r => r.supplier === 'cb2');
+    for (const r of rows) {
+      if (r === first && runId) await supabase.from('stock_check_runs').update({ finished_at: finished(), summary: r.body, details: r.details }).eq('id', runId);
+      else await supabase.from('stock_check_runs').insert({ supplier: r.supplier, mode: 'apply', summary: r.body, details: r.details, finished_at: finished() });
+    }
+    if (!first && runId) await supabase.from('stock_check_runs').delete().eq('id', runId);
+    return { statusCode: 200, body: rows.map(r => VENDORS[r.supplier] + ': ' + r.body).join('\n') };
   } catch (e) {
     console.error('CB sync crashed:', e);
-    if (runId) await supabase.from('stock_check_runs').update({ finished_at: new Date().toISOString(), summary: 'crashed: ' + (e && e.message) }).eq('id', runId);
+    if (runId) await supabase.from('stock_check_runs').update({ finished_at: finished(), summary: 'crashed: ' + (e && e.message) }).eq('id', runId);
+    await supabase.from('stock_check_runs').insert({ supplier: 'cnb', mode: 'apply', summary: 'crashed: ' + (e && e.message), finished_at: finished() });
     await email('CB2 / Crate & Barrel stock check FAILED: nothing was changed', `<p>The check crashed: ${escapeHtml(e && e.message)}</p>`);
     return { statusCode: 500, body: 'crashed' };
   }
@@ -191,9 +204,9 @@ async function runSync() {
   if (error) throw new Error('Could not load products: ' + error.message);
 
   const options = [];
-  for (const p of products) for (const o of collectOptions(p)) options.push({ ...o, sku: skuOf(o.link), product: p });
-  const pages = {};
-  for (const o of options) if (o.sku && !pages[o.sku]) pages[o.sku] = o.link.replace(/[?#].*$/, '');
+  for (const p of products) for (const o of collectOptions(p)) options.push({ ...o, sku: skuOf(o.link), product: p, vendor: vendorOf(p) });
+  const pages = {}, pageVendor = {};
+  for (const o of options) if (o.sku && !pages[o.sku]) { pages[o.sku] = o.link.replace(/[?#].*$/, ''); pageVendor[o.sku] = o.vendor; }
 
   const { data: lockRows } = await supabase.from('stock_locks').select('supplier_pid,locked_out');
   const locks = Object.fromEntries((lockRows || []).filter(r => String(r.supplier_pid).startsWith('cb:')).map(r => [String(r.supplier_pid).slice(3), r.locked_out !== false]));
@@ -201,16 +214,16 @@ async function runSync() {
   // Resume where the last run stopped (in case a run ever runs out of time), failed pages first
   let keys = Object.keys(pages).sort();
   try {
-    const { data: prev } = await supabase.from('stock_check_runs').select('details').eq('supplier', 'cb')
-      .not('details', 'is', null).order('started_at', { ascending: false }).limit(1);
-    const d = prev && prev[0] && prev[0].details;
+    const { data: prev } = await supabase.from('stock_check_runs').select('details').in('supplier', ['cb', 'cb2', 'cnb', 'cbk'])
+      .not('details', 'is', null).order('started_at', { ascending: false }).limit(3);
+    const d = { nextKey: null, failedKeys: [].concat(...(prev || []).map(r => (r.details && r.details.failedKeys) || [])) };
     if (d && d.nextKey) { let off = keys.findIndex(k => k >= d.nextKey); if (off > 0) keys = keys.slice(off).concat(keys.slice(0, off)); }
     const retry = (d && Array.isArray(d.failedKeys) ? d.failedKeys : []).filter(k => k in pages);
     const rs = new Set(retry);
     keys = retry.concat(keys.filter(k => !rs.has(k)));
   } catch (e) { /* start from the top */ }
 
-  const results = {}, attempted = new Set(), errorTypes = {};
+  const results = {}, attempted = new Set(), errorTypes = {}, keyError = {};
   let i = 0;
   await Promise.all(Array.from({ length: PARALLEL }, async () => {
     while (i < keys.length && Date.now() < started + TIME_BUDGET_MS) {
@@ -218,10 +231,11 @@ async function runSync() {
       attempted.add(k);
       try {
         const s = readPage(await fetchText(pages[k]), k);
-        if (s) results[k] = s; else errorTypes['no availability on page'] = (errorTypes['no availability on page'] || 0) + 1;
+        if (s) results[k] = s; else { keyError[k] = 'no availability on page'; errorTypes[keyError[k]] = (errorTypes[keyError[k]] || 0) + 1; }
       } catch (e) {
         const msg = (e && e.name === 'AbortError') ? 'timed out' : ((e && e.message) || 'error');
         errorTypes[msg] = (errorTypes[msg] || 0) + 1;
+        keyError[k] = msg;
       }
       await sleep(PAUSE_MS);
     }
@@ -230,10 +244,19 @@ async function runSync() {
   const nextKey = keys.find(k => !attempted.has(k)) || null;
   const errText = Object.entries(errorTypes).map(([k, v]) => `${k}: ${v}`).join(', ');
 
+  // Split counts by vendor for the log
+  const perVendor = (fn) => Object.keys(VENDORS).filter(v => Object.values(pageVendor).includes(v)).map(v => fn(v));
+  const vStats = (v) => {
+    const att = [...attempted].filter(k => pageVendor[k] === v), failed = att.filter(k => !results[k]);
+    const errs = {}; failed.forEach(k => { const m = keyError[k] || 'error'; errs[m] = (errs[m] || 0) + 1; });
+    const total = Object.keys(pages).filter(k => pageVendor[k] === v).length;
+    return { att, failed, errs, total, errText: Object.entries(errs).map(([k, n]) => `${k}: ${n}`).join(', ') };
+  };
+
   if (attempted.size && failedKeys.length / attempted.size > MAX_FAILURE_RATE) {
     const body = `Could not read ${failedKeys.length} of ${attempted.size} supplier pages (${errText}). Nothing was changed.`;
     await email('CB2 / Crate & Barrel stock check FAILED: nothing was changed', `<p>${escapeHtml(body)}</p>`);
-    return { statusCode: 200, body, details: { errors: errorTypes, nextKey, failedKeys: failedKeys.slice(0, 500) } };
+    return { statusCode: 200, body, runs: perVendor(v => { const st = vStats(v); return { supplier: v, body: `Could not read ${st.failed.length} of ${st.att.length} ${VENDORS[v]} pages (${st.errText}). Nothing was changed.`, details: { errors: st.errs, nextKey: null, failedKeys: st.failed.slice(0, 500) } }; }) };
   }
 
   const changed = new Map(), wentOut = [], cameBack = [];
@@ -241,7 +264,7 @@ async function runSync() {
   for (const o of options) {
     if (o.sku in locks) {
       const want = locks[o.sku];
-      if ((o.obj.outOfStock === true) !== want) { o.obj.outOfStock = want; changed.set(o.product.id, o.product); (want ? wentOut : cameBack).push({ product: o.product.name, label: o.label, why: 'Locked by owner', status: o.product.status }); }
+      if ((o.obj.outOfStock === true) !== want) { o.obj.outOfStock = want; changed.set(o.product.id, o.product); (want ? wentOut : cameBack).push({ product: o.product.name, label: o.label, why: 'Locked by owner', status: o.product.status, vendor: o.vendor }); }
       continue;
     }
     const s = results[o.sku];
@@ -253,7 +276,7 @@ async function runSync() {
     if (dec.out !== now) {
       o.obj.outOfStock = dec.out;
       changed.set(o.product.id, o.product);
-      (dec.out ? wentOut : cameBack).push({ product: o.product.name, label: o.label, why: dec.why || s.msg, status: o.product.status });
+      (dec.out ? wentOut : cameBack).push({ product: o.product.name, label: o.label, why: dec.why || s.msg, status: o.product.status, vendor: o.vendor });
     }
     if (dec.out && !o.obj.outSince) { o.obj.outSince = today; changed.set(o.product.id, o.product); }
     if (!dec.out && o.obj.outSince) { delete o.obj.outSince; changed.set(o.product.id, o.product); }
@@ -266,14 +289,19 @@ async function runSync() {
 
   const live = (l) => l.filter(x => x.status === 'active');
   if (live(wentOut).length || live(cameBack).length) {
-    const rows = (l) => l.map(c => `<li>${escapeHtml(c.product)} — <b>${escapeHtml(c.label || 'default')}</b> <span style="color:#A8A09A;">(${escapeHtml(c.why || '')})</span></li>`).join('');
+    const rows = (l) => l.map(c => `<li>${escapeHtml(VENDORS[c.vendor] || '')}: ${escapeHtml(c.product)} — <b>${escapeHtml(c.label || 'default')}</b> <span style="color:#A8A09A;">(${escapeHtml(c.why || '')})</span></li>`).join('');
     await email(`CB2 / Crate & Barrel stock: ${live(wentOut).length} out, ${live(cameBack).length} back in`,
       `<div style="font-family:Arial,sans-serif;font-size:14px;">
         ${live(wentOut).length ? `<p><b>Marked OUT of stock:</b></p><ul>${rows(live(wentOut))}</ul>` : ''}
         ${live(cameBack).length ? `<p><b>Back IN stock:</b></p><ul>${rows(live(cameBack))}</ul>` : ''}
         ${failedKeys.length ? `<p style="color:#A8A09A;">${failedKeys.length} page(s) couldn't be read today and will be retried first next run.</p>` : ''}</div>`);
   }
-  const summary = `Checked ${attempted.size - failedKeys.length} of ${keys.length} CB2 / Crate & Barrel pages (${failedKeys.length} failed${errText ? ': ' + errText : ''}). ${wentOut.length} marked out, ${cameBack.length} back in, ${changed.size} products updated.`;
-  console.log(summary);
-  return { statusCode: 200, body: summary, details: { errors: errorTypes, wentOut, cameBack, nextKey, failedKeys: failedKeys.slice(0, 500) } };
+  const runs = perVendor(v => {
+    const st = vStats(v), out = wentOut.filter(c => c.vendor === v), back = cameBack.filter(c => c.vendor === v);
+    const upd = [...changed.values()].filter(p => vendorOf(p) === v).length;
+    return { supplier: v, body: `Checked ${st.att.length - st.failed.length} of ${st.total} ${VENDORS[v]} pages (${st.failed.length} failed${st.errText ? ': ' + st.errText : ''}). ${out.length} marked out, ${back.length} back in, ${upd} products updated.`,
+      details: { errors: st.errs, wentOut: out, cameBack: back, nextKey: null, failedKeys: st.failed.slice(0, 500) } };
+  });
+  console.log(runs.map(r => r.body).join(' | '));
+  return { statusCode: 200, body: runs.map(r => r.body).join(' | '), runs };
 }
