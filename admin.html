@@ -629,7 +629,7 @@ async function adminUpload(path, file){
     </div>
 
     <div class="db-panel" style="margin-bottom:16px;" id="db-chart-panel">
-      <div class="db-ph"><h3 id="db-chart-title">Visitors per day</h3><div class="db-legend"><span><i style="background:#6B4C35;border-radius:50%"></i><span id="db-cur-lbl">This period</span></span><span><i style="background:#D4AA7D;border-radius:50%"></i><span id="db-prev-lbl">Same days the week before</span></span></div></div>
+      <div class="db-ph"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;"><h3 id="db-chart-title" style="margin:0">Visitors per day</h3><div class="db-ranges" id="db-vmode"><button class="db-range" data-vm="bar" onclick="dbSetVMode('bar')" style="padding:4px 11px;font-size:11.5px;">Bars</button><button class="db-range" data-vm="line" onclick="dbSetVMode('line')" style="padding:4px 11px;font-size:11.5px;">Line</button></div></div><div class="db-legend"><span><i style="background:#6B4C35;border-radius:50%"></i><span id="db-cur-lbl">This period</span></span><span><i style="background:#D4AA7D;border-radius:50%"></i><span id="db-prev-lbl">Same days the week before</span></span></div></div>
       <div class="db-chart" id="db-chart"></div>
       <div class="db-axis" id="db-axis"></div>
     </div>
@@ -2738,7 +2738,12 @@ function renderDashTopProducts(S,d){
         '<td>'+dbNum(x.views)+'</td><td>'+dbNum(x.adds)+'</td><td>'+dbNum(x.orders)+'</td><td>'+(x.views?dbPct(x.orders,x.views):'—')+'</td><td class="strong">'+(x.rev?dbMoney(x.rev):'$0')+'</td></tr>';
     }).join('')+'</tbody></table></div>';
 }
+// Visitors chart style: bars or line (remembered in this browser)
+var dbVMode=(function(){try{return localStorage.getItem('mc_vchart')||'bar';}catch(e){return 'bar';}})(), dbVLast=null;
+function dbSetVMode(m){dbVMode=m;try{localStorage.setItem('mc_vchart',m);}catch(e){}if(dbVLast)renderDashVisitors(dbVLast[0],dbVLast[1]);}
 function renderDashVisitors(d,R){
+  dbVLast=[d,R];
+  document.querySelectorAll('[data-vm]').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-vm')===dbVMode);});
   dbLive(d.live_now);
   var ses=+d.sessions||0;
   // Tapered funnel
@@ -2804,6 +2809,18 @@ function renderDashVisitors(d,R){
     for(var v=0;v<=top+1e-9;v+=step)s+='<line x1="'+L+'" x2="'+(W-Rp)+'" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="'+(v?'#EDE5D8':'#DDD5C8')+'" stroke-dasharray="'+(v?'3 4':'')+'"/><text x="'+(L-8)+'" y="'+(Y(v)+3.5)+'" text-anchor="end">'+dbNum(v)+'</text>';
     var bar=function(x,v,col){var h=Math.max(0,Y(0)-Y(v));if(!h)return '';var r=Math.min(5,bw/2,h);return '<path d="M'+x+' '+Y(0)+'V'+(Y(v)+r)+'Q'+x+' '+Y(v)+' '+(x+r)+' '+Y(v)+'H'+(x+bw-r)+'Q'+(x+bw)+' '+Y(v)+' '+(x+bw)+' '+(Y(v)+r)+'V'+Y(0)+'Z" fill="'+col+'"/>';};
     var every=Math.ceil(n/Math.max(4,Math.floor(W/64)));
+    if(dbVMode==='line'){
+      // Line chart: one point per day/week/month, previous period as a dashed line
+      var px=function(i){return L+gw*i+gw/2;};
+      var path=function(key){return bars.map(function(b,i){return (i?'L':'M')+px(i).toFixed(1)+' '+Y(b[key]).toFixed(1);}).join('');};
+      if(hasPrev)s+='<path d="'+path('p')+'" fill="none" stroke="#D4AA7D" stroke-width="2" stroke-dasharray="5 4" stroke-linejoin="round"/>';
+      s+='<path d="'+path('v')+'L'+px(n-1).toFixed(1)+' '+Y(0)+'L'+px(0).toFixed(1)+' '+Y(0)+'Z" fill="rgba(107,76,53,.08)"/><path d="'+path('v')+'" fill="none" stroke="#6B4C35" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
+      bars.forEach(function(b,i){
+        var cx=px(i);
+        s+='<g class="gb-g" data-i="'+i+'"><rect x="'+(L+gw*i)+'" y="'+T+'" width="'+gw+'" height="'+(H-T-B)+'" fill="transparent" class="gb-hit"/>'+(n<=40?'<circle cx="'+cx+'" cy="'+Y(b.v)+'" r="3.5" fill="#6B4C35"/>':'')+(hasPrev&&n<=40?'<circle cx="'+cx+'" cy="'+Y(b.p)+'" r="3" fill="#D4AA7D"/>':'')+'</g>';
+        if(i%every===0)s+='<text x="'+cx+'" y="'+(H-8)+'" text-anchor="middle">'+b.lbl+'</text>';
+      });
+    }else
     bars.forEach(function(b,i){
       var cx=L+gw*i+gw/2,x2=cx-bw-gap/2,x1=hasPrev?cx+gap/2:cx-bw/2; // previous period on the left (light), this period on the right (dark)
       s+='<g class="gb-g" data-i="'+i+'"><rect x="'+(L+gw*i)+'" y="'+T+'" width="'+gw+'" height="'+(H-T-B)+'" fill="transparent" class="gb-hit"/>'+bar(x1,b.v,'#6B4C35')+(hasPrev?bar(x2,b.p,'#D4AA7D'):'')+'</g>';
