@@ -24,6 +24,37 @@ const unsubToken = (email) => crypto.createHmac('sha256', process.env.SUPABASE_S
 const unsubUrl = (email) => 'https://mastercove.com/.netlify/functions/unsubscribe?e=' + encodeURIComponent(email) + '&t=' + unsubToken(email);
 
 const CAMPAIGNS = {
+  blackfriday10: {
+    subject: 'Black Friday: 10% off orders of $2,000+, through Monday',
+    html: (email) => {
+      const shop = 'https://mastercove.com/?utm_source=email&utm_medium=newsletter&utm_campaign=blackfriday10';
+      return `<!DOCTYPE html><html><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
+<body style="margin:0;padding:0;background:#f6f1e9;">
+<div style="display:none;max-height:0;overflow:hidden;">Our Black Friday sale is on: 10% off orders of $2,000 or more with code BLACKFRIDAY10, through Cyber Monday.</div>
+<div style="background:#f6f1e9;padding:24px 0;font-family:Helvetica,Arial,sans-serif;color:#2b2b2b;">
+<table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;margin:0 auto;">
+<tr><td><a href="${shop}"><img src="https://mastercove.com/email/blackfriday-10.jpg" alt="Black Friday: 10% off orders of $2,000 or more. Use code BLACKFRIDAY10" width="600" style="display:block;width:100%;height:auto;border:0;"></a></td></tr>
+<tr><td style="padding:32px 36px 8px;font-size:16px;line-height:1.6;">
+<p style="margin:0 0 14px;">Our Black Friday sale is here.</p>
+<p style="margin:0 0 14px;">From now through Cyber Monday, take <b>10% off any order of $2,000 or more</b>, on every solid wood piece on the site: dressers, beds, dining tables, sideboards, media consoles, desks and more. It's a good moment to finish a room or furnish a whole one.</p>
+<p style="margin:0 0 22px;">Use code <b style="letter-spacing:1px;color:#8a6a2f;">BLACKFRIDAY10</b> at checkout. Hurry, the sale ends <b>Monday, November 30 at midnight ET</b>.</p>
+</td></tr>
+<tr><td align="center" style="padding:0 36px 30px;"><a href="${shop}" style="display:inline-block;background:#1f2330;color:#f3ead9;text-decoration:none;font-size:14px;letter-spacing:2px;padding:15px 34px;">SHOP THE SALE</a></td></tr>
+<tr><td style="padding:0 36px 30px;font-size:14px;line-height:1.6;color:#555;">Questions about a piece? Just reply to this email, we're happy to help.<br><br>Master Cove<br><a href="https://mastercove.com" style="color:#8a6a2f;">mastercove.com</a></td></tr>
+<tr><td style="padding:16px 36px 22px;border-top:1px solid #eee;font-size:11.5px;line-height:1.5;color:#999;">10% off the product subtotal on orders of $2,000 or more. Ends November 30, 2026 at 11:59 pm ET. Can't be combined with other codes.<br><br>You're receiving this because you signed up at mastercove.com. Master Cove LLC, Brooklyn, NY.<br><a href="${unsubUrl(email)}" style="color:#999;">Unsubscribe</a></td></tr>
+</table></div></body></html>`;
+    },
+    text: (email) => `Black Friday at Master Cove: 10% off orders of $2,000 or more. Use code BLACKFRIDAY10 at checkout.
+
+From now through Cyber Monday, take 10% off any order of $2,000 or more, on every solid wood piece on the site. The sale ends Monday, November 30 at midnight ET.
+
+Shop the sale: https://mastercove.com/?utm_source=email&utm_medium=newsletter&utm_campaign=blackfriday10
+
+10% off the product subtotal on orders of $2,000 or more. Can't be combined with other codes.
+
+Master Cove LLC, Brooklyn, NY
+Unsubscribe: ${unsubUrl(email)}`
+  },
   complete5: {
     subject: 'A little thank-you: 5% off your next piece',
     html: (email) => {
