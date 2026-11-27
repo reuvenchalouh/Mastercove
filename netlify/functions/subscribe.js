@@ -63,7 +63,7 @@ function welcomeEmail() {
         <p style="font-size:14px;color:#5C5750;line-height:1.7;margin:0 0 14px;">Thanks for joining us. Here's 10% off your first order — use this code at checkout:</p>
         <div style="background:#F5EFE6;border:1px dashed #B8895A;border-radius:4px;padding:18px;text-align:center;margin:22px 0;">
           <div style="font-size:26px;letter-spacing:4px;font-weight:600;color:#1C1A17;">${WELCOME_CODE}</div>
-          <div style="font-size:12px;color:#A8A09A;margin-top:6px;">10% off · free shipping on every order</div>
+          <div style="font-size:12px;color:#A8A09A;margin-top:6px;">10% off · free shipping on most orders</div>
         </div>
         <p style="font-size:14px;color:#5C5750;line-height:1.7;margin:0 0 22px;">Every piece is chosen for real wood, honest materials and lasting build — delivered free to your door, with 30-day returns.</p>
         <div style="text-align:center;"><a href="https://mastercove.com/" style="display:inline-block;background:#1C1A17;color:#fff;text-decoration:none;padding:13px 28px;border-radius:2px;font-size:13px;letter-spacing:.05em;">Shop Now</a></div>

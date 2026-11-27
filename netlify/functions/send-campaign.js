@@ -25,6 +25,7 @@ const unsubUrl = (email) => 'https://mastercove.com/.netlify/functions/unsubscri
 
 const CAMPAIGNS = {
   blackfriday10: {
+    label: 'Black Friday — 10% off $2,000+ (BLACKFRIDAY10)',
     subject: 'Black Friday: 10% off orders of $2,000+, through Monday',
     html: (email) => {
       const shop = 'https://mastercove.com/?utm_source=email&utm_medium=newsletter&utm_campaign=blackfriday10';
@@ -56,6 +57,7 @@ Master Cove LLC, Brooklyn, NY
 Unsubscribe: ${unsubUrl(email)}`
   },
   complete5: {
+    label: 'Thank-you — 5% off (COMPLETE5)',
     subject: 'A little thank-you: 5% off your next piece',
     html: (email) => {
       const shop = 'https://mastercove.com/?utm_source=email&utm_medium=newsletter&utm_campaign=complete5';
@@ -66,7 +68,7 @@ Unsubscribe: ${unsubUrl(email)}`
 <tr><td><a href="${shop}"><img src="https://mastercove.com/email/promo-5off.jpg" alt="5% off your next piece. Use code COMPLETE5" width="600" style="display:block;width:100%;height:auto;border:0;"></a></td></tr>
 <tr><td style="padding:32px 36px 8px;font-size:16px;line-height:1.6;">
 <p style="margin:0 0 14px;">Thank you for being part of Master Cove.</p>
-<p style="margin:0 0 14px;">We've just added new solid wood pieces, including TV consoles, sideboards, dressers and full bedroom collections, and every order ships free to your door.</p>
+<p style="margin:0 0 14px;">We've just added new solid wood pieces, including TV consoles, sideboards, dressers and full bedroom collections, and most orders ship free to your door.</p>
 <p style="margin:0 0 22px;">As a thank-you, take <b>5% off your next piece</b> with code <b style="letter-spacing:1px;color:#8a6a2f;">COMPLETE5</b> at checkout.</p>
 </td></tr>
 <tr><td align="center" style="padding:0 36px 30px;"><a href="${shop}" style="display:inline-block;background:#1f2330;color:#f3ead9;text-decoration:none;font-size:14px;letter-spacing:2px;padding:15px 34px;">SHOP NOW</a></td></tr>
@@ -76,7 +78,7 @@ Unsubscribe: ${unsubUrl(email)}`
     },
     text: (email) => `5% off your next piece. Use code COMPLETE5 at checkout.
 
-Thank you for being part of Master Cove. We've just added new solid wood pieces, including TV consoles, sideboards, dressers and full bedroom collections, and every order ships free to your door.
+Thank you for being part of Master Cove. We've just added new solid wood pieces, including TV consoles, sideboards, dressers and full bedroom collections, and most orders ship free to your door.
 
 Shop now: https://mastercove.com/?utm_source=email&utm_medium=newsletter&utm_campaign=complete5
 
@@ -112,6 +114,23 @@ exports.handler = async function (event) {
   if (!(await isAdmin(event))) return json(401, { error: 'Not authorized.' });
   try {
     const body = JSON.parse(event.body || '{}');
+    if (body.action === 'history') {
+      // Every campaign with when it went out, how many got it and how many are still waiting.
+      const { data: subs } = await supabase.from('subscribers').select('email').is('unsubscribed_at', null);
+      const valid = (e) => /^[a-z0-9._%+-]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/.test(e) && !/\.\.|^\.|\.@/.test(e);
+      const list = [...new Set((subs || []).map((x) => String(x.email).trim().toLowerCase()))].filter(valid);
+      const out = [];
+      for (const key of Object.keys(CAMPAIGNS)) {
+        const { data: sent } = await supabase.from('campaign_sends').select('email,sent_at').eq('campaign', key);
+        const rows = sent || [];
+        const got = new Set(rows.map((r) => r.email));
+        const times = rows.map((r) => r.sent_at).filter(Boolean).sort();
+        out.push({ key, label: CAMPAIGNS[key].label || key, subject: CAMPAIGNS[key].subject, sent: rows.length,
+          remaining: list.filter((e) => !got.has(e)).length, first: times[0] || null, last: times[times.length - 1] || null });
+      }
+      return json(200, { ok: true, data: out });
+    }
+
     const campaign = String(body.campaign || 'complete5');
     const c = CAMPAIGNS[campaign];
     if (!c) return json(400, { error: 'Unknown campaign.' });

@@ -165,6 +165,98 @@ exports.handler = async function(event) {
       return json(200, { success: true });
     }
 
+
+    // ---- Bulk edit from the Products list: publish / unpublish / change category ----
+    if (action === 'products_bulk') {
+      const ids = Array.isArray(body.ids) ? body.ids.filter((x) => x !== null && x !== undefined) : [];
+      if (!ids.length || ids.length > 2000) return json(400, { error: 'Pick 1 to 2000 products.' });
+      const set = body.set || {};
+      const upd = {};
+      if (set.status !== undefined) {
+        if (!['active', 'draft'].includes(set.status)) return json(400, { error: 'Bad status.' });
+        upd.status = set.status;
+      }
+      if (set.cat !== undefined) {
+        const cat = String(set.cat || '').trim();
+        if (!/^[a-z]{2,30}$/.test(cat)) return json(400, { error: 'Bad category.' });
+        upd.cat = cat;
+      }
+      if (!Object.keys(upd).length) return json(400, { error: 'Nothing to change.' });
+      let changed = 0;
+      for (let i = 0; i < ids.length; i += 200) {
+        const { data, error } = await supabase.from('products').update(upd).in('id', ids.slice(i, i + 200)).select('id');
+        if (error) throw error;
+        changed += (data || []).length;
+      }
+      return json(200, { success: true, changed });
+    }
+
+    // ---- Site sale (popup + top bar), switched on/off from the Promo Codes page ----
+    // Saved in sync_settings under 'site_sale'. Saving also keeps the matching promo code in step
+    // (same percent, minimum, last day, and on/off), so the code works exactly while the sale runs.
+    if (action === 'sale_get') {
+      const { data, error } = await supabase.from('sync_settings').select('value,updated_at').eq('key', 'site_sale').maybeSingle();
+      if (error) throw error;
+      let sale = null;
+      try { sale = data && data.value ? JSON.parse(data.value) : null; } catch (e) { sale = null; }
+      return json(200, { data: sale, updated_at: data ? data.updated_at : null });
+    }
+
+    if (action === 'sale_set') {
+      const s = body.sale || {};
+      const code = String(s.code || '').trim().toUpperCase().replace(/\s+/g, '');
+      if (!/^[A-Z0-9_-]{2,40}$/.test(code)) return json(400, { error: 'Code must be 2–40 letters or numbers (no spaces).' });
+      const pct = Number(s.percent);
+      if (!(pct > 0 && pct <= 90)) return json(400, { error: 'Percent off must be between 1 and 90.' });
+      const min = Math.max(0, Number(s.min) || 0);
+      const start = String(s.start || '').slice(0, 10), end = String(s.end || '').slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end)) return json(400, { error: 'Pick a start and end date.' });
+      if (end < start) return json(400, { error: 'The end date is before the start date.' });
+      const clean = (v, n) => String(v || '').replace(/[<>]/g, '').trim().slice(0, n);
+      const sale = { on: s.on === true, code, percent: pct, min, start, end, tag: clean(s.tag, 60) || 'Sale', sub: clean(s.sub, 200) };
+      const { error } = await supabase.from('sync_settings').upsert({ key: 'site_sale', value: JSON.stringify(sale), updated_at: new Date().toISOString() });
+      if (error) throw error;
+      const { error: e2 } = await supabase.from('promo_codes').upsert({ code, percent_off: pct, min_order: min, expires_at: end, active: sale.on });
+      if (e2) throw e2;
+      return json(200, { success: true, data: sale });
+    }
+
+    // ---- Crate & Barrel / CB2 stock check through the owner's browser ("Check now" on Supplier Sync) ----
+    const CB_HOSTS = ['www.crateandbarrel.com', 'www.cb2.com'];
+    if (action === 'cb_prepare') {
+      const out = {};
+      for (const h of CB_HOSTS) {
+        const { data, error } = await supabase.rpc('cb_chrome_prepare', { p_host: h });
+        if (error) throw error;
+        out[h] = data;
+      }
+      return json(200, { success: true, data: out });
+    }
+
+    if (action === 'cb_status') {
+      const keys = CB_HOSTS.flatMap((h) => ['cb-skus-' + h, 'cb-res2-' + h]);
+      const { data, error } = await supabase.from('al_stage').select('k,data,created_at').in('k', keys);
+      if (error) throw error;
+      const by = {};
+      (data || []).forEach((r) => { by[r.k] = r; });
+      const out = {};
+      CB_HOSTS.forEach((h) => {
+        const sk = by['cb-skus-' + h], rs = by['cb-res2-' + h];
+        const total = sk && Array.isArray(sk.data) ? sk.data.length : 0;
+        const done = rs && rs.data && typeof rs.data === 'object' ? Object.keys(rs.data).length : 0;
+        out[h] = { total, done, ready: total > 0 && done >= total, at: rs ? rs.created_at : null };
+      });
+      return json(200, { data: out });
+    }
+
+    if (action === 'cb_apply') {
+      const h = String(body.host || '');
+      if (!CB_HOSTS.includes(h)) return json(400, { error: 'Bad site.' });
+      const { data, error } = await supabase.rpc('cb_chrome_apply', { p_host: h });
+      if (error) throw error;
+      return json(200, { success: true, summary: data });
+    }
+
     return json(400, { error: 'Unknown action.' });
   } catch (err) {
     console.error('Admin-api error:', err.message);
