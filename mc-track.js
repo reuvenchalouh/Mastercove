@@ -1,13 +1,14 @@
-/* Sale popup: loads /mc-sale.js, which switches itself off when the sale ends.
-   While a sale runs, the 10%-off signup popup waits until the sale is over. */
+/* Sale popup + top bar: loads /mc-sale.js, which asks the server whether a sale is running
+   (switched on/off in admin -> Promo Codes -> Site Sale). While a sale runs, the 10%-off
+   signup popup stays quiet. */
 (function () {
   try {
-    var END = Date.parse('2026-12-01T05:00:00Z');
-    if (Date.now() < END) {
-      try { if (Number(localStorage.getItem('mc_popup_until') || 0) < END) localStorage.setItem('mc_popup_until', String(END)); } catch (e) {}
-      var s = document.createElement('script'); s.src = '/mc-sale.js?v=1'; s.async = true;
-      (document.head || document.documentElement).appendChild(s);
-    }
+    try {
+      var c = JSON.parse(localStorage.getItem('mc_sale_cache') || 'null');
+      if (c && c.end > Date.now() && Number(localStorage.getItem('mc_popup_until') || 0) < c.end) localStorage.setItem('mc_popup_until', String(c.end));
+    } catch (e) {}
+    var s = document.createElement('script'); s.src = '/mc-sale.js?v=2'; s.async = true;
+    (document.head || document.documentElement).appendChild(s);
   } catch (e) {}
 })();
 /* Master Cove visitor stats (for the admin Dashboard).

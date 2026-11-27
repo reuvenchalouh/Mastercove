@@ -690,6 +690,18 @@ async function adminUpload(path, file){
       </div>
     </div>
     <div class="sy-status" id="sy-status"></div>
+    <div class="db-panel" id="cb-now-panel" style="margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:260px;">
+          <h3>Check Crate &amp; Barrel / CB2 now</h3>
+          <p class="db-note" style="margin:4px 0 0;">Their sites block automatic checks, so this runs in your own Chrome. It also runs by itself every morning at 8:17.<br>
+          <b>One-time setup:</b> drag this button to your bookmarks bar →
+          <a id="cb-bookmarklet" href="#" onclick="return false;" style="display:inline-block;margin:2px 0;padding:3px 10px;background:var(--walnut);color:#fff;border-radius:2px;text-decoration:none;font-size:12px;cursor:grab;">MC Stock Check</a></p>
+        </div>
+        <button onclick="cbCheckNow()" id="cb-now-btn" style="padding:9px 18px;background:var(--walnut);color:#fff;border:none;border-radius:2px;font-family:'Outfit',sans-serif;font-size:13px;cursor:pointer;">Check now</button>
+      </div>
+      <div id="cb-now-steps" style="display:none;margin-top:12px;font-size:13px;line-height:1.7;"></div>
+    </div>
     <div class="db-panel" id="sy-attn-panel" style="margin-bottom:16px;display:none;">
       <h3>Needs your attention</h3>
       <p class="db-note">Only things you can fix: a whole listing sold out for 6+ months (delete or keep it), or an Alpine option whose SKU is missing or wrong, so its stock can't be checked.</p>
@@ -729,8 +741,19 @@ async function adminUpload(path, file){
             <input type="text" id="search-input" placeholder="Search products…" oninput="if(this.value.trim())currentFilterCat='';renderTable()"/>
           </div>
         </div>
+        <div id="bulk-bar" style="display:none;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 16px;background:var(--linen);border-bottom:1px solid var(--border);font-size:12.5px;">
+          <b id="bulk-count">0 selected</b>
+          <button class="act-btn" onclick="bulkSet({status:'active'})">Publish</button>
+          <button class="act-btn" onclick="bulkSet({status:'draft'})">Unpublish (Draft)</button>
+          <span style="color:var(--mist);">Move to</span>
+          <select id="bulk-cat" style="padding:5px 8px;border:1px solid var(--border);border-radius:2px;font-family:'Outfit',sans-serif;font-size:12.5px;background:var(--white);"></select>
+          <button class="act-btn" onclick="bulkSet({cat:document.getElementById('bulk-cat').value})">Move</button>
+          <button class="act-btn" onclick="bulkSelectAll(true)">Select all shown</button>
+          <button class="act-btn" onclick="bulkClear()">Clear</button>
+        </div>
         <table class="prod-table">
           <thead><tr>
+            <th style="width:28px;padding-right:0;"><input type="checkbox" id="bulk-all" title="Select all shown" onclick="bulkSelectAll(this.checked)"/></th>
             <th onclick="sortTable('name')" style="cursor:pointer;user-select:none;">Product <span id="sort-name">↕</span></th>
             <th onclick="sortTable('cat')" style="cursor:pointer;user-select:none;">Category <span id="sort-cat">↕</span></th>
             <th onclick="sortTable('price')" style="cursor:pointer;user-select:none;">Price <span id="sort-price">↕</span></th>
@@ -934,6 +957,24 @@ async function adminUpload(path, file){
   </div>
 
   <div class="view" id="view-promos">
+    <div class="panel" style="margin-bottom:20px;" id="sale-panel">
+      <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div><h3>Site Sale <span id="sale-state" class="promo-pill" style="margin-left:6px;background:#EEE;color:#888;">Off</span></h3><p>Shows a popup on the site and changes the black bar at the top of every page. Checkout applies the code automatically. The code below is turned on and off with the sale, with the same percent, minimum and last day.</p></div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" id="sale-on" style="width:18px;height:18px;"/> Sale is on</label>
+      </div>
+      <div style="padding:18px 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;align-items:end;">
+        <div><label class="promo-lbl">Code</label><input class="finput" id="sale-code" placeholder="BLACKFRIDAY10" style="text-transform:uppercase;"/></div>
+        <div><label class="promo-lbl">Percent off</label><input class="finput" id="sale-pct" type="number" min="1" max="90" step="1" placeholder="10"/></div>
+        <div><label class="promo-lbl">Minimum order ($)</label><input class="finput" id="sale-min" type="number" min="0" step="1" placeholder="0 = none"/></div>
+        <div><label class="promo-lbl">First day</label><input class="finput" id="sale-start" type="date"/></div>
+        <div><label class="promo-lbl">Last day (ends midnight ET)</label><input class="finput" id="sale-end" type="date"/></div>
+      </div>
+      <div style="padding:0 20px 18px;display:grid;grid-template-columns:1fr 2fr auto;gap:14px;align-items:end;">
+        <div><label class="promo-lbl">Sale name (top bar &amp; popup)</label><input class="finput" id="sale-tag" placeholder="Black Friday · Cyber Monday" maxlength="60"/></div>
+        <div><label class="promo-lbl">Popup sentence (optional)</label><input class="finput" id="sale-sub" placeholder="Our Black Friday sale is on now through Cyber Monday, across every piece on the site." maxlength="200"/></div>
+        <div><button onclick="saveSale()" id="sale-save" style="padding:9px 18px;background:var(--walnut);color:#fff;border:none;border-radius:2px;font-family:'Outfit',sans-serif;font-size:13px;cursor:pointer;">Save Sale</button></div>
+      </div>
+    </div>
     <div class="panel" style="margin-bottom:20px;">
       <div class="panel-head">
         <div><h3>Create a Promo Code</h3><p>Percentage off the product subtotal (shipping isn't discounted). Saving an existing code updates it.</p></div>
@@ -964,6 +1005,14 @@ async function adminUpload(path, file){
           <button id="camp-send-btn" onclick="campaignSendAll()" style="padding:8px 14px;background:var(--walnut);color:#fff;border:none;border-radius:2px;font-family:'Outfit',sans-serif;font-size:12.5px;cursor:pointer;">Send to all subscribers</button>
         </div>
       </div>
+    </div>
+    <div id="camp-remind" style="display:none;margin-bottom:20px;padding:12px 16px;background:#FFF6E5;border:1px solid #F0D9A8;border-radius:4px;font-size:13px;color:#7A5410;"></div>
+    <div class="panel" style="margin-bottom:20px;">
+      <div class="panel-head"><div><h3>Email History</h3><p>Every promo email: when it went out, how many subscribers got it and how many are still waiting (your email service sends up to 100 a day).</p></div></div>
+      <table class="prod-table">
+        <thead><tr><th>Email</th><th>First sent</th><th>Last sent</th><th>Sent to</th><th>Still to send</th></tr></thead>
+        <tbody id="camp-hist"><tr><td colspan="5" style="color:var(--mist);">Loading…</td></tr></tbody>
+      </table>
     </div>
     <div class="panel" style="margin-bottom:20px;">
       <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
@@ -1967,7 +2016,8 @@ function renderTable(){
   });
   if(sortCol){filtered.sort(function(a,b){var av=sortCol==='price'?(a.price||0):(a[sortCol]||'').toString().toLowerCase();var bv=sortCol==='price'?(b.price||0):(b[sortCol]||'').toString().toLowerCase();if(av<bv)return -1*sortDir;if(av>bv)return 1*sortDir;return 0;});}
   var tbody=document.getElementById('prod-tbody');
-  if(!filtered.length){tbody.innerHTML='<tr><td colspan="8"><div class="empty-state"><div class="ei">'+(products.length?'🔍':'🪵')+'</div><p>'+(products.length?'No products match.':'No products yet. Add your first listing using the form →')+'</p></div></td></tr>';return;}
+  window._shownIds=filtered.map(function(p){return p.id;});bulkUpdateBar();
+  if(!filtered.length){tbody.innerHTML='<tr><td colspan="9"><div class="empty-state"><div class="ei">'+(products.length?'🔍':'🪵')+'</div><p>'+(products.length?'No products match.':'No products yet. Add your first listing using the form →')+'</p></div></td></tr>';return;}
   tbody.innerHTML=filtered.map(function(p){
     var pFinishes=getAllFinishes(p);
     var pSwatches=getDisplaySwatches(p);
@@ -1977,6 +2027,7 @@ function renderTable(){
     }).join('');
     var thumbSrc=getAdminThumb(p);
     return '<tr class="slide-in">'
+      +'<td style="padding-right:0;"><input type="checkbox" class="bulk-cb" '+(bulkSel[p.id]?'checked ':'')+'onclick="bulkToggle('+p.id+',this.checked)"/></td>'
       +'<td><div class="prod-thumb-cell"><div class="prod-thumb">'+(thumbSrc?'<img src="'+thumbSrc+'" onerror="this.style.display=\'none\'"/>':'')+'</div><div><div class="prod-name">'+p.name+'</div><div class="prod-brand">'+p.brand+'</div></div></div></td>'
       +'<td><span class="cat-tag">'+(CAT[p.cat]||p.cat||'—')+'</span></td>'
       +'<td><div style="font-weight:500;">$'+Number(p.price).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+'</div>'+(p.was?'<div style="font-size:11px;color:var(--mist);text-decoration:line-through;">$'+Number(p.was).toLocaleString()+'</div>':'')+'</td>'
@@ -1989,6 +2040,34 @@ function renderTable(){
   }).join('');
 }
 
+
+/* ── BULK EDIT (Products list) ── */
+var bulkSel={};
+function bulkIds(){return Object.keys(bulkSel).filter(function(k){return bulkSel[k];}).map(Number);}
+function bulkUpdateBar(){
+  var n=bulkIds().length,bar=document.getElementById('bulk-bar');if(!bar)return;
+  bar.style.display=n?'flex':'none';document.getElementById('bulk-count').textContent=n+' selected';
+  var sel=document.getElementById('bulk-cat');
+  if(sel&&!sel.options.length){sel.innerHTML=Object.keys(CAT).map(function(k){return '<option value="'+k+'">'+CAT[k]+'</option>';}).join('');}
+  var all=document.getElementById('bulk-all');
+  if(all){var shown=window._shownIds||[];all.checked=shown.length>0&&shown.every(function(id){return bulkSel[id];});}
+}
+function bulkToggle(id,on){if(on)bulkSel[id]=true;else delete bulkSel[id];bulkUpdateBar();}
+function bulkSelectAll(on){(window._shownIds||[]).forEach(function(id){if(on)bulkSel[id]=true;else delete bulkSel[id];});renderTable();}
+function bulkClear(){bulkSel={};renderTable();}
+async function bulkSet(set){
+  var ids=bulkIds();if(!ids.length)return;
+  var what=set.status?(set.status==='active'?'Publish':'Unpublish (set to Draft)'):('Move to '+(CAT[set.cat]||set.cat));
+  if(!confirm(what+' — '+ids.length+' product'+(ids.length===1?'':'s')+'?'))return;
+  var r=await adminDb({action:'products_bulk',ids:ids,set:set});
+  if(r.error){showToast('Bulk change failed: '+r.error.message,'error');return;}
+  ids.forEach(function(id){var p=products.find(function(x){return x.id===id;});if(!p)return;
+    if(set.status)p.status=set.status;if(set.cat)p.cat=set.cat;
+    try{_savedSnap[p.id]=JSON.stringify(productToRow(p));}catch(e){}});
+  bulkSel={};renderTable();try{updateStats();}catch(e){}
+  var n=(r.data&&r.data.changed!=null)?r.data.changed:ids.length;
+  showToast(what+': '+n+' updated','success');
+}
 /* ── OUT OF STOCK TAB ── */
 // Estimated back-in-stock date: the supplier's restock date saved by the daily stock check,
 // or worked back from a preorder delivery estimate. Returns {t: sortable time, label} or N/A.
@@ -3135,8 +3214,42 @@ async function drPublishReady(){
 // Reads the nightly stock checks (table stock_check_runs) for Modway, HerNest and Alpine.
 var syDays=14, syData=null;
 var SY_NAMES={modway:'Modway',hernest:'HerNest',alpine:'Alpine',cb2:'CB2',cnb:'Crate & Barrel',cbk:'C&B Kids',cb:'CB2 / Crate & Barrel'};
-var SY_SCHEDULE={modway:'twice a day, 6:00 am and 6:00 pm',cb2:'every morning at 6:30',cnb:'every morning at 6:30',cbk:'every morning at 6:30',hernest:'every morning at 6:50',alpine:'every evening after Alpine\'s inventory email'};
+var SY_SCHEDULE={modway:'twice a day, 6:00 am and 6:00 pm',cb2:'every morning at 8:17 through your Chrome (computer must be on)',cnb:'every morning at 8:17 through your Chrome (computer must be on)',cbk:'every morning at 8:17 through your Chrome (computer must be on)',hernest:'every morning at 6:50',alpine:'every evening after Alpine\'s inventory email'};
 function sySetDays(n){syDays=n;loadSync();}
+
+/* ── CRATE & BARREL / CB2: "Check now" through the owner's Chrome ── */
+var CB_BOOKMARKLET="javascript:(function(){var K='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsYWZma3dmd211ZHZlcm56anVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMzU4MDksImV4cCI6MjA5MTYxMTgwOX0.BEz8_GNKPTQB90LJBJTZFyJYFF-9ypdfbEsLAfEESqY';fetch('https://slaffkwfwmudvernzjua.supabase.co/rest/v1/rpc/al_stage_get',{method:'POST',headers:{apikey:K,Authorization:'Bearer '+K,'Content-Type':'application/json'},body:JSON.stringify({p_token:'mc-al-R8v31kQz',p_k:'cb-chrome-script'})}).then(function(r){return r.json();}).then(function(d){(0,eval)(d.js);}).catch(function(e){alert('Master Cove stock check could not start: '+e.message);});})();";
+document.addEventListener('DOMContentLoaded',function(){var a=document.getElementById('cb-bookmarklet');if(a)a.setAttribute('href',CB_BOOKMARKLET);});
+var cbPoll=null,cbApplied={};
+var CB_SITES=[{host:'www.crateandbarrel.com',name:'Crate & Barrel'},{host:'www.cb2.com',name:'CB2'}];
+async function cbCheckNow(){
+  var btn=document.getElementById('cb-now-btn');btn.disabled=true;btn.textContent='Getting ready…';
+  var r=await adminDb({action:'cb_prepare'});
+  btn.disabled=false;btn.textContent='Check now';
+  if(r.error){showToast('Could not start: '+r.error.message,'error');return;}
+  cbApplied={};
+  var steps=document.getElementById('cb-now-steps');steps.style.display='block';
+  steps.innerHTML='<b>Now:</b> open each site below, then click the <b>MC Stock Check</b> bookmark on that tab. A box in the corner shows progress (about 10 minutes). Keep the tabs open; this page applies the results by itself.<br>'
+    +CB_SITES.map(function(s){return '<div style="margin-top:4px;"><a href="https://'+s.host+'/" target="_blank" rel="noopener" style="color:var(--walnut);font-weight:500;">Open '+s.name+' ↗</a> — <span id="cbst-'+s.host.replace(/\W/g,'')+'">waiting for the bookmark…</span></div>';}).join('');
+  if(cbPoll)clearInterval(cbPoll);
+  var started=Date.now();
+  cbPoll=setInterval(async function(){
+    if(Date.now()-started>60*60*1000){clearInterval(cbPoll);return;}
+    var st=await adminDb({action:'cb_status'});if(st.error)return;
+    var all=true;
+    for(var i=0;i<CB_SITES.length;i++){
+      var site=CB_SITES[i],x=(st.data||{})[site.host]||{},el=document.getElementById('cbst-'+site.host.replace(/\W/g,''));
+      if(cbApplied[site.host]){continue;}
+      if(x.ready){
+        cbApplied[site.host]='applying';if(el)el.textContent='applying results…';
+        var ap=await adminDb({action:'cb_apply',host:site.host});
+        cbApplied[site.host]=ap.error?'error':'done';
+        if(el)el.innerHTML=ap.error?'<span style="color:var(--red);">could not apply: '+ap.error.message+'</span>':'<span style="color:#3E7B4F;">✓ '+((ap.data&&ap.data.summary)||'done')+'</span>';
+      }else{all=false;if(el&&x.total)el.textContent='waiting for the bookmark… ('+x.total+' pages to check)';}
+    }
+    if(all&&CB_SITES.every(function(s){return cbApplied[s.host];})){clearInterval(cbPoll);cbPoll=null;showToast('Crate & Barrel / CB2 check finished','success');try{loadSync();}catch(e){}}
+  },8000);
+}
 async function loadSync(){
   document.querySelectorAll('[data-sd]').forEach(function(b){b.classList.toggle('active',+b.getAttribute('data-sd')===syDays);});
   var r=await adminDb({action:'sync_report',days:syDays});
@@ -3236,7 +3349,31 @@ async function fetchOrdersQuiet(){
 function campPick(){var e=document.getElementById('camp-pick');return e?e.value:'complete5';}
 function campLabel(){var e=document.getElementById('camp-pick');return e?e.options[e.selectedIndex].text:'promo';}
 async function campaignCall(payload){var r=await fetch('/.netlify/functions/send-campaign',{method:'POST',headers:{'Content-Type':'application/json','x-admin-password':ADMIN_PW},body:JSON.stringify(Object.assign({campaign:campPick()},payload))});var j={};try{j=await r.json();}catch(e){}if(!r.ok||!j.ok)throw new Error(j.error||('Error '+r.status));return j;}
-async function campaignStatus(){var el=document.getElementById('camp-status');if(!el)return;try{var j=await campaignCall({action:'status'});el.textContent='Sent to '+j.sent+' so far · '+j.remaining+' still to send. From orders@mastercove.com with an unsubscribe link; never sends to the same person twice.';}catch(e){el.textContent='Could not check status: '+e.message;}}
+
+async function loadCampaignHistory(){
+  var tb=document.getElementById('camp-hist');if(!tb)return;
+  var j;try{j=await campaignCall({action:'history'});}catch(e){tb.innerHTML='<tr><td colspan="5" style="color:var(--red);">Could not load: '+e.message+'</td></tr>';return;}
+  var rows=(j.data||[]);
+  function d(t){return t?new Date(t).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'—';}
+  var started=rows.filter(function(r){return r.sent>0;});
+  tb.innerHTML=started.length?started.map(function(r){
+    return '<tr><td><b>'+r.label+'</b><div style="font-size:11.5px;color:var(--mist);">'+(r.subject||'')+'</div></td><td>'+d(r.first)+'</td><td>'+d(r.last)+'</td><td>'+r.sent+'</td><td>'+(r.remaining?'<b style="color:#9A6B12;">'+r.remaining+'</b>':'<span style="color:#3E7B4F;">Done</span>')+'</td></tr>';
+  }).join(''):'<tr><td colspan="5" style="color:var(--mist);">No promo emails sent yet.</td></tr>';
+  var waiting=started.filter(function(r){return r.remaining>0&&r.last&&(Date.now()-new Date(r.last).getTime())<7*24*3600*1000;}); // only emails still being sent this week
+  var box=document.getElementById('camp-remind');
+  if(box){
+    if(waiting.length){
+      box.style.display='block';
+      box.innerHTML=waiting.map(function(r){
+        var ready=!r.last||(Date.now()-new Date(r.last).getTime())>24*3600*1000;
+        return '<b>'+r.remaining+' subscriber'+(r.remaining===1?'':'s')+' still haven\'t received "'+r.label+'".</b> '
+          +(ready?'You can send the next 100 now: pick it in the Promo Email box and press <b>Send to all subscribers</b>.'
+                 :'Your 100-a-day limit resets about '+new Date(new Date(r.last).getTime()+24*3600*1000).toLocaleString('en-US',{weekday:'short',hour:'numeric',minute:'2-digit'})+'. Press <b>Send to all subscribers</b> after that.');
+      }).join('<br>');
+    }else box.style.display='none';
+  }
+}
+async function campaignStatus(){var el=document.getElementById('camp-status');if(!el)return;loadCampaignHistory();try{var j=await campaignCall({action:'status'});el.textContent='Sent to '+j.sent+' so far · '+j.remaining+' still to send. From orders@mastercove.com with an unsubscribe link; never sends to the same person twice.';}catch(e){el.textContent='Could not check status: '+e.message;}}
 async function campaignTest(){try{var j=await campaignCall({action:'test',testTo:'mastercovestore@gmail.com'});showToast('Test sent to '+j.test,'success');}catch(e){showToast('Test failed: '+e.message,'error');}}
 async function campaignSendAll(){
   var st;try{st=await campaignCall({action:'status'});}catch(e){showToast('Could not check status: '+e.message,'error');return;}
@@ -3323,7 +3460,7 @@ function emailOffer(i){
   } else {
     lines.push('As a thank-you, here\'s an extra '+pctTxt+'% off your next piece:');lines.push('https://mastercove.com/');
   }
-  lines.push('','Use code '+code+' at checkout. Free shipping on every order, as always.','','Warmly,','Reuven','Master Cove','(347) 206-0372');
+  lines.push('','Use code '+code+' at checkout. Free shipping on most orders, as always.','','Warmly,','Reuven','Master Cove','(347) 206-0372');
   var subject='A thank-you from Master Cove — '+pctTxt+'% off to complete your collection';
   var url='https://mail.google.com/mail/?authuser=mastercovestore@gmail.com&view=cm&fs=1&to='+encodeURIComponent(c.sub.email)+'&su='+encodeURIComponent(subject)+'&body='+encodeURIComponent(lines.join('\n'));
   window.open(url,'_blank');
@@ -3352,7 +3489,54 @@ function downloadSubsCsv(){
 var promoList=[];
 function promoEsc(t){return String(t==null?'':t).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 function todayNYStr(){return new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'});}
+
+/* ── SITE SALE (popup + top bar) ── */
+var saleData=null;
+async function loadSale(){
+  var r=await adminDb({action:'sale_get'});
+  if(r.error){showToast('Could not load the sale: '+r.error.message,'error');return;}
+  saleData=r.data||null;var s=saleData||{};
+  document.getElementById('sale-on').checked=!!s.on;
+  document.getElementById('sale-code').value=s.code||'';
+  document.getElementById('sale-pct').value=s.percent||'';
+  document.getElementById('sale-min').value=s.min||'';
+  document.getElementById('sale-start').value=s.start||'';
+  document.getElementById('sale-end').value=s.end||'';
+  document.getElementById('sale-tag').value=s.tag||'';
+  document.getElementById('sale-sub').value=s.sub||'';
+  renderSaleState();
+}
+function renderSaleState(){
+  var el=document.getElementById('sale-state');if(!el)return;var s=saleData||{};var today=todayNYStr();
+  var txt='Off',bg='#EEE',fg='#888';
+  if(s.on&&s.start&&s.end){
+    if(today<s.start){txt='Scheduled · starts '+new Date(s.start+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});bg='#FFF6E5';fg='#9A6B12';}
+    else if(today>s.end){txt='Ended';bg='#FBF0EE';fg='var(--red)';}
+    else{txt='Live now · ends '+new Date(s.end+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});bg='#EAF3EC';fg='#3E7B4F';}
+  }
+  el.textContent=txt;el.style.background=bg;el.style.color=fg;
+}
+async function saveSale(){
+  var sale={on:document.getElementById('sale-on').checked,
+    code:document.getElementById('sale-code').value.trim().toUpperCase().replace(/\s+/g,''),
+    percent:parseFloat(document.getElementById('sale-pct').value),
+    min:parseFloat(document.getElementById('sale-min').value)||0,
+    start:document.getElementById('sale-start').value,end:document.getElementById('sale-end').value,
+    tag:document.getElementById('sale-tag').value.trim(),sub:document.getElementById('sale-sub').value.trim()};
+  if(!/^[A-Z0-9_-]{2,40}$/.test(sale.code)){showToast('Code: 2–40 letters/numbers, no spaces','error');return;}
+  if(!(sale.percent>0&&sale.percent<=90)){showToast('Percent off must be 1–90','error');return;}
+  if(!sale.start||!sale.end){showToast('Pick the first and last day','error');return;}
+  if(sale.end<sale.start){showToast('The last day is before the first day','error');return;}
+  var btn=document.getElementById('sale-save');btn.disabled=true;btn.textContent='Saving…';
+  var r=await adminDb({action:'sale_set',sale:sale});
+  btn.disabled=false;btn.textContent='Save Sale';
+  if(r.error){showToast(r.error.message,'error');return;}
+  saleData=r.data||sale;renderSaleState();
+  showToast(sale.on?'Sale saved. The site picks it up within a minute.':'Sale turned off (code '+sale.code+' turned off too).','success');
+  loadPromos();
+}
 async function loadPromos(){
+  if(!saleData)loadSale();
   var r=await adminDb({action:'promo_list'});
   if(r.error){document.getElementById('promo-tbody').innerHTML='<tr><td colspan="7" style="color:var(--red);">Could not load codes: '+promoEsc(r.error.message)+'</td></tr>';return;}
   promoList=r.data||[];renderPromos();

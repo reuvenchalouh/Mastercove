@@ -26,6 +26,12 @@
   status = 301
   force = true
 
+[[redirects]]
+  from = "/products/keynote-upholstered-platform-bed"
+  to = "/products/keynote-storage-platform-bed"
+  status = 301
+  force = true
+
 # Category and room pages: /shop/sofas, /shop/bedroom-furniture, ... show the shop page,
 # filled in for that category by netlify/edge-functions/category-seo.js
 [[redirects]]
@@ -54,10 +60,9 @@
 [functions."hernest-stock-sync"]
   schedule = "50 11 * * *"
 
-# Crate & Barrel / CB2 stock check: every morning at 7:30am New York time.
-# Starts cb-stock-check-background, which checks every CB2 / Crate & Barrel option page.
-[functions."cb-stock-sync"]
-  schedule = "30 11 * * *"
+# Crate & Barrel / CB2 stock check: no longer scheduled here. Their sites block server requests (HTTP 403),
+# so the check now runs every morning at 8:17am through the owner's Chrome (a Claude scheduled task)
+# and writes its results to Supplier Sync. cb-stock-sync / cb-stock-check-background are kept for manual use.
 
 # Stock watchdog: every morning at 9:00am New York time. Emails you if any supplier's stock
 # check hasn't finished in the last 2 days (Alpine: 2 weekdays, since its feed skips weekends).
