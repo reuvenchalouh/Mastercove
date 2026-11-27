@@ -28,7 +28,7 @@ function card(p) {
   return `<div class="prod-card"><div class="prod-img"><a class="prod-img-link" href="${href}" aria-label="${esc(p.name)}">${img}</a></div>` +
     `<div class="prod-info"><a class="prod-name" href="${href}">${esc(p.name)}</a>` +
     (p.dims ? `<div class="prod-dims">${esc(p.dims)}</div>` : '') +
-    `<div class="prod-footer"><div><span class="price">${sized ? 'From ' : ''}${money(p.price)}</span><div class="unit-tag">free shipping</div></div></div></div></div>`;
+    `<div class="prod-footer"><div><span class="price">${sized ? 'From ' : ''}${money(p.price)}</span>${Number(p.shipping_cost) > 0 ? `<div class="unit-tag" style="color:var(--walnut);">+ $${Number(p.shipping_cost).toLocaleString()} shipping</div>` : '<div class="unit-tag">free shipping</div>'}</div></div></div></div>`;
 }
 // Removes one tag (first match) from the page
 const drop = (html, re) => html.replace(re, '');
@@ -58,7 +58,7 @@ export default async (request, context) => {
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), 2500);
     const filter = page.cat ? `cat=eq.${encodeURIComponent(page.cat)}` : `cat=in.(${page.cats.map(encodeURIComponent).join(',')})`;
-    const r = await fetch(`${SB}?status=eq.active&${filter}&select=id,name,slug,img,price,dims,finishes,top_sizes&order=created_at.desc&limit=300`, {
+    const r = await fetch(`${SB}?status=eq.active&${filter}&select=id,name,slug,img,price,dims,finishes,top_sizes,shipping_cost&order=created_at.desc&limit=300`, {
       headers: { apikey: KEY, Authorization: 'Bearer ' + KEY }, signal: ctrl.signal
     }).finally(() => clearTimeout(t));
     if (r.ok) rows = (await r.json()).filter((p) => !fullyOut(p));
@@ -100,7 +100,7 @@ export default async (request, context) => {
   html = cut(html, '<!-- home-about:start', '<!-- home-about:end -->');
   html = html.replace(/<div class="sec-title" id="section-title">[\s\S]*?<\/div>/, `<h1 class="sec-title" id="section-title">${esc(page.name)}</h1>`);
   html = html.replace(/<div class="sec-sub" id="section-sub">[\s\S]*?<\/div>/,
-    `<div class="sec-sub" id="section-sub">${rows.length ? rows.length + ' pieces · ' : ''}Free shipping on every order</div><p class="cat-intro" id="cat-intro">${esc(page.intro)}</p>`);
+    `<div class="sec-sub" id="section-sub">${rows.length ? rows.length + ' pieces · ' : ''}Free shipping on most orders</div><p class="cat-intro" id="cat-intro">${esc(page.intro)}</p>`);
   if (rows.length) html = html.replace('<div class="prod-grid" id="pgrid"></div>', () => `<div class="prod-grid" id="pgrid">${rows.slice(0, CARDS).map(card).join('')}</div>`);
 
   return new Response(html, { status: 200, headers });

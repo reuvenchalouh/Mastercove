@@ -60,7 +60,7 @@ export default async (request, context) => {
     const nm = shortName(want);
     title = `The ${nm} Collection — Master Cove`;
     const names = list.slice(0, 4).map((p) => String(p.name).replace(/^The\s+/i, '')).join(', ');
-    desc = `Shop the ${nm} Collection at Master Cove: ${list.length} coordinated piece${list.length === 1 ? '' : 's'}, including ${names}. Free shipping on every order.`;
+    desc = `Shop the ${nm} Collection at Master Cove: ${list.length} coordinated piece${list.length === 1 ? '' : 's'}, including ${names}. Free shipping on most orders.`;
     canonical = `${SITE}/collections.html?collection=${encodeURIComponent(want)}`;
     img = coverOf(list);
     links = `<nav aria-label="${esc(nm)} collection pieces" style="${HIDDEN}"><h2>The ${esc(nm)} Collection</h2><ul>` +
@@ -70,7 +70,7 @@ export default async (request, context) => {
   } else {
     const keys = [...groups.keys()].sort((a, b) => groups.get(b).length - groups.get(a).length);
     title = 'Furniture Collections — Master Cove';
-    desc = `Shop ${keys.length} furniture collections at Master Cove: coordinated bedroom, living, dining and entryway pieces designed to work together. Free shipping on every order.`;
+    desc = `Shop ${keys.length} furniture collections at Master Cove: coordinated bedroom, living, dining and entryway pieces designed to work together. Free shipping on most orders.`;
     canonical = `${SITE}/collections.html`;
     img = keys.length ? coverOf(groups.get(keys[0])) : '';
     links = `<nav aria-label="All collections" style="${HIDDEN}"><ul>` +

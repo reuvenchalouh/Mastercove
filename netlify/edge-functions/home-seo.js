@@ -37,7 +37,7 @@ function card(p) {
   return `<div class="prod-card"><div class="prod-img"><a class="prod-img-link" href="${href}" aria-label="${esc(p.name)}">${img}</a></div>` +
     `<div class="prod-info"><a class="prod-name" href="${href}">${esc(p.name)}</a>` +
     (p.dims ? `<div class="prod-dims">${esc(p.dims)}</div>` : '') +
-    `<div class="prod-footer"><div><span class="price">${sized ? 'From ' : ''}${money(p.price)}</span><div class="unit-tag">free shipping</div></div></div></div></div>`;
+    `<div class="prod-footer"><div><span class="price">${sized ? 'From ' : ''}${money(p.price)}</span>${Number(p.shipping_cost) > 0 ? `<div class="unit-tag" style="color:var(--walnut);">+ $${Number(p.shipping_cost).toLocaleString()} shipping</div>` : '<div class="unit-tag">free shipping</div>'}</div></div></div></div>`;
 }
 
 export default async (request, context) => {
@@ -62,7 +62,7 @@ export default async (request, context) => {
   try {
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), 2500);
-    const r = await fetch(`${SB}?status=eq.active&select=id,name,slug,img,price,dims,finishes,top_sizes&order=created_at.desc&limit=40`, {
+    const r = await fetch(`${SB}?status=eq.active&select=id,name,slug,img,price,dims,finishes,top_sizes,shipping_cost&order=created_at.desc&limit=40`, {
       headers: { apikey: KEY, Authorization: 'Bearer ' + KEY }, signal: ctrl.signal
     }).finally(() => clearTimeout(t));
     if (!r.ok) throw new Error('db ' + r.status);
